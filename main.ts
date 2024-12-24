@@ -1,20 +1,42 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { ChatOpenAI } from "@langchain/openai";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import { PromptTemplate } from "@langchain/core/prompts";
+import { RunnableSequence } from "@langchain/core/runnables";
 
 // Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
 	mySetting: string;
+	openAIApiKey: string;
+}
+
+interface DiffuseResult {
+    content: string;
+    metadata: {
+        timestamp: string;
+        fileName: string;
+    };
+    parsed: {
+        summary: string;
+    };
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+	mySetting: 'default',
+	openAIApiKey: ''
 }
 
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
+	private model: ChatOpenAI | undefined;
+	private chain: RunnableSequence | undefined;
 
 	async onload() {
 		await this.loadSettings();
+		
+		// Initialize the LangChain components
+		this.initializeLangChain();
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
@@ -65,6 +87,38 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+		// Add the diffuse command
+		this.addCommand({
+			id: 'diffuse-note',
+			name: 'Diffuse current note',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.diffuseNote(markdownView);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
+
+		// Add the summarize command
+		this.addCommand({
+			id: 'summarize-note',
+			name: 'Summarize current note',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.summarizeNote(markdownView);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 
@@ -88,6 +142,94 @@ export default class MyPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	private initializeLangChain() {
+		if (!this.settings.openAIApiKey) {
+			this.model = undefined;
+			this.chain = undefined;
+			return;
+		}
+
+		this.model = new ChatOpenAI({
+			openAIApiKey: this.settings.openAIApiKey,
+			temperature: 0,
+			modelName: "gpt-3.5-turbo",
+		});
+
+		const summarizePrompt = PromptTemplate.fromTemplate(
+			`Summarize the following text in a concise way:
+			
+			{text}
+			
+			Summary:`
+		);
+
+		this.chain = RunnableSequence.from([
+			summarizePrompt,
+			this.model,
+			new StringOutputParser(),
+		]);
+	}
+
+	async diffuseNote(markdownView: MarkdownView) {
+		if (!this.settings.openAIApiKey) {
+			new Notice('Please set your OpenAI API key in the plugin settings');
+			return;
+		}
+
+		const editor = markdownView.editor;
+		const content = editor.getValue();
+		const fileName = markdownView.file?.basename || 'untitled';
+		
+		try {
+			new Notice('Diffusing note...');
+			
+			// Create the diffusion result
+			const result: DiffuseResult = {
+				content: content,
+				metadata: {
+					timestamp: new Date().toISOString(),
+					fileName: fileName
+				}
+			};
+			
+			console.log('Diffuse result:', result);
+			new Notice('Note has been diffused! Check the console for details.');
+			return result;
+		} catch (error) {
+			console.error('Error during diffusion:', error);
+			new Notice('Error during diffusion. Check the console for details.');
+		}
+	}
+
+	async summarizeNote(markdownView: MarkdownView) {
+		if (!this.settings.openAIApiKey) {
+			new Notice('Please set your OpenAI API key in the plugin settings');
+			return;
+		}
+
+		if (!this.chain) {
+			new Notice('LangChain not properly initialized. Please check your API key.');
+			return;
+		}
+
+		const editor = markdownView.editor;
+		const content = editor.getValue();
+		
+		try {
+			new Notice('Summarizing note...');
+			const summary = await this.chain.invoke({
+				text: content
+			});
+			
+			console.log('Summary result:', summary);
+			new Notice('Note has been summarized! Check the console for details.');
+			return summary;
+		} catch (error) {
+			console.error('Error during summarization:', error);
+			new Notice('Error during summarization. Check the console for details.');
+		}
 	}
 }
 
@@ -121,10 +263,22 @@ class SampleSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
+			.setName('OpenAI API Key')
+			.setDesc('Enter your OpenAI API key')
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
+				.setPlaceholder('Enter your key')
+				.setValue(this.plugin.settings.openAIApiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.openAIApiKey = value;
+					await this.plugin.saveSettings();
+					(this.plugin as any).initializeLangChain();
+				}));
+
+		new Setting(containerEl)
+			.setName('Setting')
+			.setDesc('Description')
+			.addText(text => text
+				.setPlaceholder('Enter your setting')
 				.setValue(this.plugin.settings.mySetting)
 				.onChange(async (value) => {
 					this.plugin.settings.mySetting = value;
