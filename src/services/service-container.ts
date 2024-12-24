@@ -6,6 +6,7 @@ import { FilePathService } from "./file-path.service";
 import { OpenAIModelService } from "./openai-model.service";
 import { NoteSummarizationService } from "./note-summarization.service";
 import { ContentFusionService } from "./content-fusion.service";
+import { DocumentCleaningService } from "./document-cleaning.service";
 
 export class ServiceContainer {
     private static instance: ServiceContainer;
@@ -18,9 +19,11 @@ export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
     public readonly filePathService: FilePathService;
     public readonly knowledgeDiffusionService: KnowledgeDiffusionService;
+    public readonly documentCleaningService: DocumentCleaningService;
 
     private constructor(private app: App) {
         // Initialize services in dependency order
+        this.documentCleaningService = new DocumentCleaningService();
         this.openAIModelService = new OpenAIModelService();
         this.noteSummarizationService = new NoteSummarizationService(this.openAIModelService);
         this.contentFusionService = new ContentFusionService(this.openAIModelService);

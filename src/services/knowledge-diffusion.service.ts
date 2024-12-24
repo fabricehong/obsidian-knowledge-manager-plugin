@@ -2,11 +2,13 @@ import { DiffusionRepresentation, HeaderNode, IntegrationPart, RootNode } from "
 import { Notice, TFile, Vault } from "obsidian";
 import { ContentFusionService } from "./content-fusion.service";
 import { FilePathService } from "./file-path.service";
+import { REFERENCE_LINE_REGEX } from '../constants/regex';
+import { ValidationService } from './validation.service';
 
 export class KnowledgeDiffusionService {
     constructor(
         private readonly contentFusionService: ContentFusionService,
-        private readonly filePathService: FilePathService
+        private readonly filePathService: FilePathService,
     ) {}
 
     private headerNodeToMarkdown(node: HeaderNode): string {
@@ -23,7 +25,7 @@ export class KnowledgeDiffusionService {
     }
 
     private extractRefDestination(content: string): string | null {
-        const match = content.match(/\|\s*ref:\s*\[\[(.*?)\]\]/);
+        const match = content.match(REFERENCE_LINE_REGEX);
         return match ? match[1].trim() : null;
     }
 
@@ -84,6 +86,9 @@ export class KnowledgeDiffusionService {
     }
 
     buildDiffusionRepresentation(root: RootNode): DiffusionRepresentation[] {
+        // Validate the document structure first
+        ValidationService.validateNodeReferences(root);
+
         const diffusionMap = new Map<string, IntegrationPart[]>();
         
         // Process root content for refs

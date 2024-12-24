@@ -91,6 +91,22 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        // Add the remove references content command
+        this.addCommand({
+            id: 'remove-refs-content',
+            name: 'Remove References Content',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.removeRefsContent(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
         // Add settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
     }
@@ -157,7 +173,42 @@ export default class KnowledgeManagerPlugin extends Plugin {
             new Notice('Note has been diffused! Check the console for details.');
         } catch (error) {
             console.error('Error during diffusion:', error);
-            new Notice('Error during diffusion. Check the console for details.');
+            new Notice(`Error during diffusion: ${error.message}`); 
+        }
+    }
+
+    private async removeRefsContent(view: MarkdownView) {
+        try {
+            new Notice('Cleaning references content...');
+            
+            const editor = view.editor;
+            const content = editor.getValue();
+            const file = view.file;
+            
+            if (!file) {
+                new Notice('No file is currently open');
+                return;
+            }
+
+            const cache = this.app.metadataCache.getFileCache(file);
+            if (!cache) {
+                new Notice('No cache found for the current file');
+                return;
+            }
+
+            // Build the document tree using document structure service
+            const rootNode = this.serviceContainer.documentStructureService.buildHeaderTree(cache, content);
+            
+            // Clean the content using document cleaning service
+            const cleanedContent = this.serviceContainer.documentCleaningService.cleanNode(rootNode);
+            
+            // Update the editor with the cleaned content
+            editor.setValue(cleanedContent);
+            
+            new Notice('References content has been removed');
+        } catch (error) {
+            console.error('Error while removing references:', error);
+            new Notice(`Error while removing references: ${error.message}`);
         }
     }
 }

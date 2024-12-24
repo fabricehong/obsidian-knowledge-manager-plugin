@@ -10,9 +10,12 @@ describe('KnowledgeDiffusionService', () => {
     let mockFilePathService: FilePathService;
 
     beforeEach(() => {
-        const mockOpenAIModelService = new OpenAIModelService();
-        mockContentFusionService = new ContentFusionService(mockOpenAIModelService);
-        mockFilePathService = new FilePathService();
+        mockContentFusionService = {
+            fuseContents: jest.fn()
+        } as any;
+        mockFilePathService = {
+            extractDestination: jest.fn()
+        } as any;
         service = new KnowledgeDiffusionService(mockContentFusionService, mockFilePathService);
     });
 
@@ -41,10 +44,6 @@ describe('KnowledgeDiffusionService', () => {
                 children: [{
                     level: 1,
                     heading: 'Section 1',
-                    position: {
-                        start: { line: 0, col: 0, offset: 0 },
-                        end: { line: 0, col: 0, offset: 0 }
-                    },
                     content: 'Intro text\n| ref: [[note1]]\nContent for note 1',
                     children: []
                 }]
@@ -68,18 +67,10 @@ describe('KnowledgeDiffusionService', () => {
                 children: [{
                     level: 1,
                     heading: 'Section 1',
-                    position: {
-                        start: { line: 0, col: 0, offset: 0 },
-                        end: { line: 0, col: 0, offset: 0 }
-                    },
                     content: 'Intro text\n| ref: [[note1]]',
                     children: [{
                         level: 2,
                         heading: 'Subsection',
-                        position: {
-                            start: { line: 0, col: 0, offset: 0 },
-                            end: { line: 0, col: 0, offset: 0 }
-                        },
                         content: 'Subsection content',
                         children: []
                     }]
@@ -100,32 +91,41 @@ describe('KnowledgeDiffusionService', () => {
 
         it('should handle multiple references to the same destination', () => {
             const root: RootNode = {
-                content: '| ref: [[note1]]\nRoot content',
-                children: [{
-                    level: 1,
-                    heading: 'Section 1',
-                    position: {
-                        start: { line: 0, col: 0, offset: 0 },
-                        end: { line: 0, col: 0, offset: 0 }
+                content: 'Root content',
+                children: [
+                    {
+                        level: 1,
+                        heading: 'Section 1',
+                        content: '| ref: [[note1]]\nSection content1',
+                        children: []
                     },
-                    content: '| ref: [[note1]]\nSection content',
-                    children: []
-                }]
+                    {
+                        level: 1,
+                        heading: 'Section 2',
+                        content: '| ref: [[note2]]\nSection content2',
+                        children: []
+                    },
+                ]
             };
 
             const result = service.buildDiffusionRepresentation(root);
 
-            expect(result).toHaveLength(1);
+            expect(result).toHaveLength(2);
             expect(result[0].destination).toBe('note1');
-            expect(result[0].toIntegrate).toHaveLength(2);
+            expect(result[0].toIntegrate).toHaveLength(1);
             expect(result[0].toIntegrate).toEqual([
                 {
-                    breadcrumbs: [],
-                    content: 'Root content'
-                },
-                {
                     breadcrumbs: ['Section 1'],
-                    content: 'Section content'
+                    content: 'Section content1'
+                },
+            ]);
+
+            expect(result[1].destination).toBe('note2');
+            expect(result[1].toIntegrate).toHaveLength(1);
+            expect(result[1].toIntegrate).toEqual([
+                {
+                    breadcrumbs: ['Section 2'],
+                    content: 'Section content2'
                 }
             ]);
         });
@@ -137,48 +137,28 @@ describe('KnowledgeDiffusionService', () => {
                     {
                         level: 1,
                         heading: 'Résumé',
-                        position: {
-                            start: { line: 0, col: 0, offset: 0 },
-                            end: { line: 0, col: 0, offset: 0 }
-                        },
                         content: 'Mon résumé',
                         children: [
                             {
                                 level: 2,
                                 heading: 'sous section',
-                                position: {
-                                    start: { line: 0, col: 0, offset: 0 },
-                                    end: { line: 0, col: 0, offset: 0 }
-                                },
                                 content: 'un texte d\'intro\n| ref: [[knowledge 1]]\ndu texte ici',
                                 children: []
                             },
                             {
                                 level: 2,
                                 heading: 'Des choses ici',
-                                position: {
-                                    start: { line: 0, col: 0, offset: 0 },
-                                    end: { line: 0, col: 0, offset: 0 }
-                                },
                                 content: 'un autre texte d\'intro\n| ref: [[knowledge 2]]',
                                 children: [
                                     {
                                         level: 3,
                                         heading: 'première sub',
-                                        position: {
-                                            start: { line: 0, col: 0, offset: 0 },
-                                            end: { line: 0, col: 0, offset: 0 }
-                                        },
                                         content: 'un peu ici',
                                         children: []
                                     },
                                     {
                                         level: 3,
                                         heading: 'deuxième sub',
-                                        position: {
-                                            start: { line: 0, col: 0, offset: 0 },
-                                            end: { line: 0, col: 0, offset: 0 }
-                                        },
                                         content: 'et aussi la.',
                                         children: []
                                     }
@@ -189,10 +169,6 @@ describe('KnowledgeDiffusionService', () => {
                     {
                         level: 1,
                         heading: 'Transcript',
-                        position: {
-                            start: { line: 0, col: 0, offset: 0 },
-                            end: { line: 0, col: 0, offset: 0 }
-                        },
                         content: '| ref: [[knowledge 1]]\n\nFabrice:\nSalut\n\nEdouard:\nA bientot !',
                         children: []
                     }
@@ -228,16 +204,12 @@ describe('KnowledgeDiffusionService', () => {
 
         it('should handle empty or malformed references', () => {
             const root: RootNode = {
-                content: '| ref: [[]]\nEmpty ref',
+                content: '',
                 children: [{
                     level: 1,
                     heading: 'Section',
-                    position: {
-                        start: { line: 0, col: 0, offset: 0 },
-                        end: { line: 0, col: 0, offset: 0 }
-                    },
-                    content: '| ref:\nMalformed ref\n| ref: [[  ]]\nEmpty brackets',
-                    children: []
+                    children: [],
+                    content: '| ref:\nMalformed ref\n| ref: [[  ]]\nEmpty brackets'
                 }]
             };
 

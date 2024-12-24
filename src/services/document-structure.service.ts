@@ -39,10 +39,6 @@ export class DocumentStructureService {
             const node: HeaderNode = {
                 level: heading.level,
                 heading: heading.heading,
-                position: {
-                    start: { ...heading.position.start },
-                    end: { ...heading.position.end }
-                },
                 children: [],
                 content: this.extractContent(fileContent, heading, nextHeading)
             };

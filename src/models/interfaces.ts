@@ -19,10 +19,6 @@ export interface DirectoryNode {
 export interface HeaderNode {
     level: number;
     heading: string;
-    position: {
-        start: { line: number; col: number; offset: number; };
-        end: { line: number; col: number; offset: number; };
-    };
     children: HeaderNode[];
     content: string;  // Content under this heading before any subheadings
 }
