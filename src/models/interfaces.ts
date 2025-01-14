@@ -1,9 +1,13 @@
 export interface PluginSettings {
     openAIApiKey: string;
+    translationPromptTemplate: string;
+    templateDirectory: string;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
-    openAIApiKey: ''
+    openAIApiKey: '',
+    translationPromptTemplate: '',
+    templateDirectory: 'knowledge-manager-templates',
 }
 
 export interface FileNode {

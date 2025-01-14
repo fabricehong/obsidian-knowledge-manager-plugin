@@ -1,8 +1,12 @@
-import { App, Editor, MarkdownView, Notice, Plugin, TFolder } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, TFolder, TFile } from 'obsidian';
 import { PluginSettings, DEFAULT_SETTINGS } from './models/interfaces';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { ServiceContainer } from './services/service-container';
+import { TemplateManager } from './services/template-manager';
+import { getTemplates } from './templates';
+import { readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
@@ -13,7 +17,21 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
         // Initialize service container
         this.serviceContainer = ServiceContainer.initialize(this.app);
-        await this.serviceContainer.initializeWithSettings(this.settings);
+
+        // Wait for app to be fully loaded before initializing templates
+        this.app.workspace.onLayoutReady(async () => {
+            const templateManager = new TemplateManager(this.app);
+            const success = await templateManager.initialize(this.settings.templateDirectory);
+            
+            // Update translation prompt template path if needed
+            if (success && !this.settings.translationPromptTemplate) {
+                const translationTemplate = `${this.settings.templateDirectory}/translation-prompt.md`;
+                if (this.app.vault.getAbstractFileByPath(translationTemplate)) {
+                    this.settings.translationPromptTemplate = translationTemplate;
+                    await this.saveSettings();
+                }
+            }
+        });
 
         // Add the diffuse command
         this.addCommand({
@@ -107,7 +125,37 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
-        // Add settings tab
+        // Add command to print translation prompt template
+        this.addCommand({
+            id: 'print-translation-template',
+            name: 'Print Translation Prompt Template',
+            callback: async () => {
+                const templatePath = this.settings.translationPromptTemplate;
+                if (!templatePath) {
+                    new Notice('No translation prompt template set in settings');
+                    return;
+                }
+
+                try {
+                    const file = this.app.vault.getAbstractFileByPath(templatePath);
+                    if (file instanceof TFile) {
+                        const content = await this.app.vault.read(file);
+                        console.log('Translation Prompt Template Content:');
+                        console.log('----------------------------------------');
+                        console.log(content);
+                        console.log('----------------------------------------');
+                        new Notice('Translation prompt template content printed to console');
+                    } else {
+                        new Notice('Template file not found: ' + templatePath);
+                    }
+                } catch (error) {
+                    console.error('Error reading template file:', error);
+                    new Notice('Error reading template file');
+                }
+            }
+        });
+
+        // Add the settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
     }
 

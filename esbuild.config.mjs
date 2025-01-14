@@ -1,6 +1,8 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import fs from "fs";
+import path from "path";
 
 const banner =
 `/*
@@ -9,38 +11,79 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-const prod = process.argv[2] === 'production';
+const prod = process.argv[2] === "production";
 
-await esbuild.build({
-	banner: {
-		js: banner,
-	},
-	entryPoints: ['src/main.ts'],
-	bundle: true,
-	external: [
-		"obsidian",
-		"electron",
-		"@codemirror/autocomplete",
-		"@codemirror/collab",
-		"@codemirror/commands",
-		"@codemirror/language",
-		"@codemirror/lint",
-		"@codemirror/search",
-		"@codemirror/state",
-		"@codemirror/view",
-		"@lezer/common",
-		"@lezer/highlight",
-		"@lezer/lr",
-		...builtins],
-	format: "cjs",
-	target: "es2018",
-	logLevel: "info",
-	sourcemap: prod ? false : "inline",
-	treeShaking: true,
-	outfile: "main.js",
-	minify: prod,
+// Plugin to handle template files
+const templatePlugin = {
+    name: 'template-plugin',
+    setup(build) {
+        // Handle import.meta.glob
+        build.onResolve({ filter: /\?glob/ }, args => {
+            return {
+                namespace: 'template-glob',
+                path: args.path
+            }
+        });
+
+        build.onLoad({ filter: /.*/, namespace: 'template-glob' }, async (args) => {
+            const templatesDir = path.resolve('./templates');
+            const files = fs.readdirSync(templatesDir)
+                .filter(file => file.endsWith('.md'));
+
+            const imports = files.map(file => {
+                const content = fs.readFileSync(path.join(templatesDir, file), 'utf8');
+                return `"${file}": ${JSON.stringify(content)}`;
+            });
+
+            return {
+                contents: `
+                    const templates = {
+                        ${imports.join(',\n')}
+                    };
+                    export default templates;
+                `,
+                loader: 'js'
+            };
+        });
+    }
+};
+
+const context = await esbuild.context({
+    banner: {
+        js: banner,
+    },
+    entryPoints: ["src/main.ts"],
+    bundle: true,
+    external: [
+        "obsidian",
+        "electron",
+        "@codemirror/autocomplete",
+        "@codemirror/collab",
+        "@codemirror/commands",
+        "@codemirror/language",
+        "@codemirror/lint",
+        "@codemirror/search",
+        "@codemirror/state",
+        "@codemirror/view",
+        "@lezer/common",
+        "@lezer/highlight",
+        "@lezer/lr",
+        ...builtins],
+    format: "cjs",
+    target: "es2018",
+    logLevel: "info",
+    sourcemap: prod ? false : "inline",
+    treeShaking: true,
+    outfile: "main.js",
+    loader: {
+        '.md': 'text'  
+    },
+    plugins: [templatePlugin]
 });
 
 if (prod) {
-	process.exit(0);
+    await context.rebuild();
+    process.exit(0);
+} else {
+    await context.watch();
 }
