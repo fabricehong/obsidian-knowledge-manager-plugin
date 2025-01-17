@@ -1,9 +1,9 @@
-import { DiffusionRepresentation, HeaderNode, IntegrationPart, RootNode } from "../models/interfaces";
+import { DiffusionRepresentation, HeaderNode, IntegrationPart, RootNode } from "../../models/interfaces";
 import { Notice, TFile, Vault } from "obsidian";
-import { ContentFusionService } from "./content-fusion.service";
+import { ContentFusionService } from "../content-fusion.service";
 import { FilePathService } from "./file-path.service";
-import { REFERENCE_LINE_REGEX } from '../constants/regex';
-import { ValidationService } from './validation.service';
+import { REFERENCE_LINE_REGEX } from '../../constants/regex';
+import { ValidationService } from '../validation.service';
 
 export class KnowledgeDiffusionService {
     constructor(

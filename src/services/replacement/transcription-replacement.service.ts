@@ -1,5 +1,5 @@
-import { ReplacementReport, ReplacementMatch } from '../models/interfaces';
-import { ReplacementSpecs } from '../models/schemas';
+import { ReplacementReport, ReplacementMatch } from '../../models/interfaces';
+import { ReplacementSpecs } from '../../models/schemas';
 
 /**
  * Service for handling transcription replacements

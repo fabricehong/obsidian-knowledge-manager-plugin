@@ -1,12 +1,12 @@
-import { YamlBlockService } from '../yaml-block.service';
+import { ReplacementSpecsParsingService } from './replacement-specs-parsing.service';
 import { ReplacementSpecs } from '../../models/schemas';
 import { YamlValidationError } from '../../models/errors';
 
 describe('YamlBlockService', () => {
-    let service: YamlBlockService;
+    let service: ReplacementSpecsParsingService;
 
     beforeEach(() => {
-        service = new YamlBlockService();
+        service = new ReplacementSpecsParsingService();
     });
 
     describe('fromYamlBlock', () => {

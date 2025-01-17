@@ -7,9 +7,9 @@ import { TemplateManager } from './services/template-manager';
 import { getTemplates } from './templates';
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { TranscriptFileService } from './services/transcript-file.service';
-import { TranscriptionReplacementService } from './services/transcription-replacement.service';
-import { YamlBlockService } from './services/yaml-block.service';
+import { TranscriptFileService } from './services/replacement/transcript-file.service';
+import { TranscriptionReplacementService } from './services/replacement/transcription-replacement.service';
+import { ReplacementSpecsParsingService } from './services/replacement/replacement-specs-parsing.service';
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
@@ -344,7 +344,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
     }
 
     private async replaceTranscription(markdownView: MarkdownView) {
-        await this.serviceContainer.replacementSpecsService.replaceTranscription(
+        await this.serviceContainer.editorTranscriptionReplacementService.replaceTranscription(
             markdownView,
             this.settings.replacementSpecsTag,
             this.settings.headerContainingTranscript,

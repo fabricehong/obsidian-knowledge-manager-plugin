@@ -1,23 +1,22 @@
 import { App, MarkdownView, Notice, TFile } from "obsidian";
-import { ReplacementSpecs } from "../models/schemas";
-import { ReplacementReport } from "../models/interfaces";
-import { DocumentStructureService } from "./document-structure.service";
+import { ReplacementSpecs } from "../../models/schemas";
+import { ReplacementReport } from "../../models/interfaces";
+import { DocumentStructureService } from "../document-structure.service";
 import { TranscriptionReplacementService } from "./transcription-replacement.service";
-import { YamlBlockService } from "./yaml-block.service";
-import { ReplacementReportModal } from '../ui/replacement-report.modal';
-import { YamlValidationError } from '../models/errors';
-import KnowledgeManagerPlugin from "../main";
+import { ReplacementSpecsParsingService } from "./replacement-specs-parsing.service";
+import { ReplacementReportModal } from '../../ui/replacement-report.modal';
+import { YamlValidationError } from '../../models/errors';
 
-export class ReplacementSpecsService {
+export class EditorTranscriptionReplacementService {
     private documentStructureService: DocumentStructureService;
-    private yamlBlockService: YamlBlockService;
+    private yamlBlockService: ReplacementSpecsParsingService;
     private transcriptionReplacementService: TranscriptionReplacementService;
     private app: App;
 
     constructor(
         app: App,
         documentStructureService: DocumentStructureService,
-        yamlBlockService: YamlBlockService,
+        yamlBlockService: ReplacementSpecsParsingService,
         transcriptionReplacementService: TranscriptionReplacementService
     ) {
         this.app = app;

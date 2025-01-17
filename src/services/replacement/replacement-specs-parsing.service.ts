@@ -1,12 +1,12 @@
 import { dump, load } from 'js-yaml';
 import { z } from 'zod';
-import { ReplacementSpecSchema, ReplacementSpecs } from '../models/schemas';
-import { YamlValidationError } from '../models/errors';
+import { ReplacementSpecSchema, ReplacementSpecs } from '../../models/schemas';
+import { YamlValidationError } from '../../models/errors';
 
 /**
  * Service for handling YAML blocks in markdown files
  */
-export class YamlBlockService {
+export class ReplacementSpecsParsingService {
     /**
      * Extract YAML block from markdown content
      */

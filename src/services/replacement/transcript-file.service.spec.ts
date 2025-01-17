@@ -1,4 +1,4 @@
-import { TranscriptFileService } from '../transcript-file.service';
+import { TranscriptFileService } from './transcript-file.service';
 
 describe('TranscriptFileService', () => {
     let service: TranscriptFileService;

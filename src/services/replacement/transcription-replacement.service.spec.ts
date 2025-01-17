@@ -1,4 +1,4 @@
-import { TranscriptionReplacementService } from '../transcription-replacement.service';
+import { TranscriptionReplacementService } from './transcription-replacement.service';
 import { ReplacementSpecs } from '../../models/interfaces';
 
 describe('TranscriptionReplacementService', () => {

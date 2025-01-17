@@ -1,4 +1,4 @@
-import { DocumentCleaningService } from '../document-cleaning.service';
+import { DocumentCleaningService } from './document-cleaning.service';
 import { HeaderNode, RootNode } from '../../models/interfaces';
 
 describe('DocumentCleaningService', () => {

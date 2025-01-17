@@ -1,6 +1,6 @@
-import { KnowledgeDiffusionService } from '../knowledge-diffusion.service';
+import { KnowledgeDiffusionService } from './knowledge-diffusion.service';
 import { ContentFusionService } from '../content-fusion.service';
-import { FilePathService } from '../file-path.service';
+import { FilePathService } from './file-path.service';
 import { OpenAIModelService } from '../openai-model.service';
 import { HeaderNode, RootNode } from '../../models/interfaces';
 
