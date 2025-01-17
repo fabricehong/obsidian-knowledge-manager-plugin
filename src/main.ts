@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView, Notice, Plugin, TFolder, TFile } from 'obsidian';
-import { PluginSettings, DEFAULT_SETTINGS } from './models/interfaces';
+import { PluginSettings, DEFAULT_SETTINGS, HeaderNode, RootNode } from './models/interfaces';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { ServiceContainer } from './services/service-container';
@@ -7,10 +7,12 @@ import { TemplateManager } from './services/template-manager';
 import { getTemplates } from './templates';
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
+import { TranscriptFileService } from './services/transcript-file.service';
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
     private serviceContainer: ServiceContainer;
+    private static readonly REPLACEMENTS_HEADER = 'Replacements';
 
     async onload() {
         await this.loadSettings();
@@ -155,6 +157,38 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        // Add the add replacements section command
+        this.addCommand({
+            id: 'add-replacements-section',
+            name: 'Add section: replacements',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.addReplacementsSection(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the replace transcription command
+        this.addCommand({
+            id: 'replace-transcription',
+            name: 'Replace transcription',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.replaceTranscription(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
         // Add the settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
     }
@@ -248,7 +282,10 @@ export default class KnowledgeManagerPlugin extends Plugin {
             const rootNode = this.serviceContainer.documentStructureService.buildHeaderTree(cache, content);
             
             // Clean the content using document cleaning service
-            const cleanedContent = this.serviceContainer.documentCleaningService.cleanNode(rootNode);
+            const cleanedRootNode = this.serviceContainer.documentCleaningService.cleanNode(rootNode) as RootNode;
+            
+            // Convert back to markdown
+            const cleanedContent = this.serviceContainer.documentStructureService.renderToMarkdown(cleanedRootNode);
             
             // Update the editor with the cleaned content
             editor.setValue(cleanedContent);
@@ -258,5 +295,114 @@ export default class KnowledgeManagerPlugin extends Plugin {
             console.error('Error while removing references:', error);
             new Notice(`Error while removing references: ${error.message}`);
         }
+    }
+
+    private async addReplacementsSection(markdownView: MarkdownView) {
+        const file = markdownView.file;
+        if (!file) return;
+
+        const content = await this.app.vault.read(file);
+        const metadata = this.app.metadataCache.getFileCache(file);
+        const rootNode = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
+        console.log("All headers found:", rootNode.children.map(child => `"${child.heading}"`));
+        console.log("Looking for header:", `"${this.settings.headerContainingTranscript}"`);
+
+        // Check if Replacements section already exists
+        const existingReplacements = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
+            rootNode,
+            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
+        );
+
+        if (existingReplacements) {
+            new Notice('Replacements section already exists');
+            return;
+        }
+
+        // Find the transcript header
+        const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
+            rootNode,
+            this.settings.headerContainingTranscript
+        );
+
+        if (!transcriptHeader) {
+            new Notice('No transcript header found');
+            return;
+        }
+
+        // Parse the transcript to get interventions
+        const interventions = this.serviceContainer.transcriptFileService.parseTranscript(transcriptHeader.content);
+
+        // Get unique speakers
+        const uniqueSpeakers = [...new Set(interventions.map(i => i.speaker))];
+
+        // Create replacement specs from speakers
+        const replacementSpecs = this.serviceContainer.transcriptionReplacementService.createFromSpeakers(uniqueSpeakers);
+
+        // Convert to YAML
+        const yamlContent = this.serviceContainer.transcriptionReplacementService.toYaml(replacementSpecs);
+
+        // Create the replacements header
+        const replacementsHeader: HeaderNode = {
+            level: 1,
+            heading: KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
+            content: this.serviceContainer.transcriptionReplacementService.toYamlBlock(yamlContent),
+            children: []
+        };
+
+        // Add the replacements section to the root node
+        rootNode.children.unshift(replacementsHeader);
+
+        // Convert back to markdown and update the file
+        const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(rootNode);
+        await this.app.vault.modify(file, newContent);
+        
+        new Notice('Added replacements section');
+    }
+
+    private async replaceTranscription(markdownView: MarkdownView) {
+        const file = markdownView.file;
+        if (!file) return;
+
+        const content = await this.app.vault.read(file);
+        const metadata = this.app.metadataCache.getFileCache(file);
+        const rootNode = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
+
+        // Find the replacements header
+        const replacementsHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
+            rootNode,
+            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
+        );
+
+        if (!replacementsHeader) {
+            new Notice('No replacements section found');
+            return;
+        }
+
+        // Extract and parse YAML content
+        const yamlContent = this.serviceContainer.transcriptionReplacementService.fromYamlBlock(replacementsHeader.content);
+        const replacementSpecs = this.serviceContainer.transcriptionReplacementService.fromYaml(yamlContent);
+
+        // Find the transcript header
+        const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
+            rootNode,
+            this.settings.headerContainingTranscript
+        );
+
+        if (!transcriptHeader) {
+            new Notice('No transcript header found');
+            return;
+        }
+
+        // Apply replacements
+        transcriptHeader.content = this.serviceContainer.transcriptionReplacementService.applyReplacements(
+            transcriptHeader.content,
+            replacementSpecs
+        );
+
+        // Convert back to markdown and update the file
+        const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(rootNode);
+        await this.app.vault.modify(file, newContent);
+        
+        new Notice('Transcription replaced');
     }
 }

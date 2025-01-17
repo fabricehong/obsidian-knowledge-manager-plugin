@@ -229,4 +229,139 @@ H2-2 content`;
             });
         });
     });
+
+    describe('renderToMarkdown', () => {
+        it('should render a simple document with no headers', () => {
+            const root: RootNode = {
+                content: 'Just some content\nwith multiple lines',
+                children: []
+            };
+
+            const expected = 'Just some content\nwith multiple lines';
+            expect(service.renderToMarkdown(root)).toBe(expected);
+        });
+
+        it('should render a document with one header', () => {
+            const root: RootNode = {
+                content: 'Initial content',
+                children: [
+                    {
+                        level: 1,
+                        heading: 'First Section',
+                        content: 'Section content',
+                        children: []
+                    }
+                ]
+            };
+
+            const expected = 'Initial content\n\n# First Section\nSection content';
+            expect(service.renderToMarkdown(root)).toBe(expected);
+        });
+
+        it('should render a document with nested headers', () => {
+            const root: RootNode = {
+                content: 'Initial content',
+                children: [
+                    {
+                        level: 1,
+                        heading: 'First Section',
+                        content: 'First section content',
+                        children: [
+                            {
+                                level: 2,
+                                heading: 'Subsection',
+                                content: 'Subsection content',
+                                children: []
+                            }
+                        ]
+                    },
+                    {
+                        level: 1,
+                        heading: 'Second Section',
+                        content: 'Second section content',
+                        children: []
+                    }
+                ]
+            };
+
+            const expected = 'Initial content\n\n' +
+                '# First Section\n' +
+                'First section content\n\n' +
+                '## Subsection\n' +
+                'Subsection content\n\n' +
+                '# Second Section\n' +
+                'Second section content';
+            expect(service.renderToMarkdown(root)).toBe(expected);
+        });
+
+        it('should handle empty content fields', () => {
+            const root: RootNode = {
+                content: '',
+                children: [
+                    {
+                        level: 1,
+                        heading: 'Empty Section',
+                        content: '',
+                        children: []
+                    }
+                ]
+            };
+
+            const expected = '# Empty Section';
+            expect(service.renderToMarkdown(root)).toBe(expected);
+        });
+
+        it('should preserve existing newlines in content', () => {
+            const root: RootNode = {
+                content: 'Line 1\n\nLine 2\nLine 3',
+                children: [
+                    {
+                        level: 1,
+                        heading: 'Section',
+                        content: 'Section line 1\n\nSection line 2',
+                        children: []
+                    }
+                ]
+            };
+
+            const expected = 'Line 1\n\nLine 2\nLine 3\n\n' +
+                '# Section\n' +
+                'Section line 1\n\nSection line 2';
+            expect(service.renderToMarkdown(root)).toBe(expected);
+        });
+
+        it('should handle different header levels', () => {
+            const root: RootNode = {
+                content: '',
+                children: [
+                    {
+                        level: 1,
+                        heading: 'H1',
+                        content: 'Level 1',
+                        children: []
+                    },
+                    {
+                        level: 2,
+                        heading: 'H2',
+                        content: 'Level 2',
+                        children: []
+                    },
+                    {
+                        level: 3,
+                        heading: 'H3',
+                        content: 'Level 3',
+                        children: []
+                    }
+                ]
+            };
+
+            const expected = '# H1\n' +
+                'Level 1\n\n' +
+                '## H2\n' +
+                'Level 2\n\n' +
+                '### H3\n' +
+                'Level 3';
+            expect(service.renderToMarkdown(root)).toBe(expected);
+        });
+    });
 });

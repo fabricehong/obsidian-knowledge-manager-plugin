@@ -31,6 +31,17 @@ export class SettingsTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
+            .setName('Header containing transcript')
+            .setDesc('The header name that contains the original transcript')
+            .addText(text => text
+                .setPlaceholder('Original')
+                .setValue(this.plugin.settings.headerContainingTranscript)
+                .onChange(async (value) => {
+                    this.plugin.settings.headerContainingTranscript = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
             .setName('Translation Prompt Template')
             .setDesc('Template file to use for translation prompts')
             .addText(text => {

@@ -28,17 +28,26 @@ describe('DocumentCleaningService', () => {
                 ]
             };
 
-            const expected = `Initial content
-
-# Section 1
-Section content
-| ref: [[note1]]
-
-# Section 2
-| ref: [[note2]]`;
+            const expected: RootNode = {
+                content: 'Initial content',
+                children: [
+                    {
+                        level: 1,
+                        heading: 'Section 1',
+                        children: [],
+                        content: 'Section content\n| ref: [[note1]]'
+                    },
+                    {
+                        level: 1,
+                        heading: 'Section 2',
+                        children: [],
+                        content: '| ref: [[note2]]'
+                    }
+                ]
+            };
 
             const result = service.cleanNode(root);
-            expect(result).toBe(expected);
+            expect(result).toEqual(expected);
         });
     });
 
@@ -75,16 +84,26 @@ Section content
                 ]
             };
 
-            const expected = `Initial content
-
-# Section 1
-| ref: [[note1]]
-
-# Section 2
-section 2 content`;
+            const expected: RootNode = {
+                content: 'Initial content',
+                children: [
+                    {
+                        level: 1,
+                        heading: 'Section 1',
+                        children: [],  // Children should be empty because of reference
+                        content: '| ref: [[note1]]'
+                    },
+                    {
+                        level: 1,
+                        heading: 'Section 2',
+                        children: [],
+                        content: 'section 2 content'
+                    }
+                ]
+            };
 
             const result = service.cleanNode(root);
-            expect(result).toBe(expected);
+            expect(result).toEqual(expected);
         });
 
         it('should handle empty document', () => {
@@ -93,8 +112,13 @@ section 2 content`;
                 children: []
             };
 
+            const expected: RootNode = {
+                content: '',
+                children: []
+            };
+
             const result = service.cleanNode(root);
-            expect(result).toBe('');
+            expect(result).toEqual(expected);
         });
 
         it('should handle malformed references', () => {
@@ -103,12 +127,13 @@ section 2 content`;
                 children: []
             };
 
-            const expected = `Content
-| ref: [malformed
-More content`;
+            const expected: RootNode = {
+                content: 'Content\n| ref: [malformed\nMore content',
+                children: []
+            };
 
             const result = service.cleanNode(root);
-            expect(result).toBe(expected);
+            expect(result).toEqual(expected);
         });
 
         it('should throw error when child has reference and parent has reference', () => {
@@ -131,7 +156,7 @@ More content`;
                 ]
             };
 
-            expect(() => service.cleanNode(root)).toThrow('Invalid document structure');
+            expect(() => service.cleanNode(root)).toThrow('Invalid document structure: Found references in children of a node that already has references. Parent node: Section 1. Children with refs: Subsection 1.1');
         });
     });
 });

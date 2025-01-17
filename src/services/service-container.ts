@@ -7,6 +7,8 @@ import { OpenAIModelService } from "./openai-model.service";
 import { NoteSummarizationService } from "./note-summarization.service";
 import { ContentFusionService } from "./content-fusion.service";
 import { DocumentCleaningService } from "./document-cleaning.service";
+import { TranscriptFileService } from "./transcript-file.service";
+import { TranscriptionReplacementService } from "./transcription-replacement.service";
 
 export class ServiceContainer {
     private static instance: ServiceContainer;
@@ -20,6 +22,8 @@ export class ServiceContainer {
     public readonly filePathService: FilePathService;
     public readonly knowledgeDiffusionService: KnowledgeDiffusionService;
     public readonly documentCleaningService: DocumentCleaningService;
+    public readonly transcriptFileService: TranscriptFileService;
+    public readonly transcriptionReplacementService: TranscriptionReplacementService;
 
     private constructor(private app: App) {
         // Initialize services in dependency order
@@ -30,6 +34,8 @@ export class ServiceContainer {
         this.vaultMapperService = new VaultMapperService(this.app.vault);
         this.documentStructureService = new DocumentStructureService();
         this.filePathService = new FilePathService();
+        this.transcriptFileService = new TranscriptFileService();
+        this.transcriptionReplacementService = new TranscriptionReplacementService();
         this.knowledgeDiffusionService = new KnowledgeDiffusionService(
             this.contentFusionService,
             this.filePathService

@@ -4,11 +4,9 @@ import { REFERENCE_LINE_REGEX } from '../constants/regex';
 import { ValidationService } from "./validation.service";
 
 export class DocumentCleaningService {
-    cleanNode(node: RootNode | HeaderNode): string {
+    cleanNode(node: RootNode | HeaderNode): RootNode | HeaderNode {
         // Validate the document structure first
         ValidationService.validateNodeReferences(node);
-
-        let result = '';
 
         // Process current node's content
         if (node.content) {
@@ -23,28 +21,25 @@ export class DocumentCleaningService {
                     break;
                 }
             }
-            result += cleanedContent.trim();
+            node.content = cleanedContent.trim();
 
             // If there's a reference in a non-root node, don't process its children
             if (hasReference && 'level' in node) {
-                return result;
+                node.children = [];
+                return node;
             }
         }
 
         // Process children if this is the root node or no reference was found
         if ('children' in node) {
+            const newChildren: HeaderNode[] = [];
             for (const child of node.children) {
-                if (result) {
-                    result += '\n\n';
-                }
-                result += '#'.repeat(child.level) + ' ' + child.heading + '\n';
-                const childContent = this.cleanNode(child);
-                if (childContent) {
-                    result += childContent;
-                }
+                const cleanedChild = this.cleanNode(child) as HeaderNode;
+                newChildren.push(cleanedChild);
             }
+            node.children = newChildren;
         }
 
-        return result.trim();
+        return node;
     }
 }
