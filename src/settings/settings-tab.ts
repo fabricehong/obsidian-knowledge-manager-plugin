@@ -91,5 +91,16 @@ export class SettingsTab extends PluginSettingTab {
                         }
                     ).open();
                 }));
+
+        new Setting(containerEl)
+            .setName('Replacement Specs Tag')
+            .setDesc('The tag used to identify replacement specifications in your notes')
+            .addText(text => text
+                .setPlaceholder('ReplacementSpecs')
+                .setValue(this.plugin.settings.replacementSpecsTag)
+                .onChange(async (value) => {
+                    this.plugin.settings.replacementSpecsTag = value;
+                    await this.plugin.saveSettings();
+                }));
     }
 }

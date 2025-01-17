@@ -9,6 +9,8 @@ import { ContentFusionService } from "./content-fusion.service";
 import { DocumentCleaningService } from "./document-cleaning.service";
 import { TranscriptFileService } from "./transcript-file.service";
 import { TranscriptionReplacementService } from "./transcription-replacement.service";
+import { YamlBlockService } from "./yaml-block.service";
+import { ReplacementSpecsService } from "./replacement-specs.service";
 
 export class ServiceContainer {
     private static instance: ServiceContainer;
@@ -24,6 +26,8 @@ export class ServiceContainer {
     public readonly documentCleaningService: DocumentCleaningService;
     public readonly transcriptFileService: TranscriptFileService;
     public readonly transcriptionReplacementService: TranscriptionReplacementService;
+    public readonly yamlBlockService: YamlBlockService;
+    public readonly replacementSpecsService: ReplacementSpecsService;
 
     private constructor(private app: App) {
         // Initialize services in dependency order
@@ -36,9 +40,20 @@ export class ServiceContainer {
         this.filePathService = new FilePathService();
         this.transcriptFileService = new TranscriptFileService();
         this.transcriptionReplacementService = new TranscriptionReplacementService();
+        this.yamlBlockService = new YamlBlockService();
+        this.replacementSpecsService = this.buildReplacementSpecsService();
         this.knowledgeDiffusionService = new KnowledgeDiffusionService(
             this.contentFusionService,
             this.filePathService
+        );
+    }
+
+    private buildReplacementSpecsService(): ReplacementSpecsService {
+        return new ReplacementSpecsService(
+            this.app,
+            this.documentStructureService,
+            this.yamlBlockService,
+            this.transcriptionReplacementService
         );
     }
 

@@ -1,56 +1,14 @@
-import { ReplacementSpec, ReplacementSpecs } from "../models/interfaces";
-import * as yaml from 'yaml';
+import { ReplacementReport, ReplacementMatch } from '../models/interfaces';
+import { ReplacementSpecs } from '../models/schemas';
 
+/**
+ * Service for handling transcription replacements
+ */
 export class TranscriptionReplacementService {
     /**
-     * Converts a ReplacementSpecs object into YAML format
-     */
-    toYaml(specs: ReplacementSpecs): string {
-        const yamlObj = {
-            [specs.category]: {
-                replacements: specs.replacements.map(rep => ({
-                    target: rep.target,
-                    toSearch: rep.toSearch
-                }))
-            }
-        };
-        return yaml.stringify(yamlObj);
-    }
-
-    /**
-     * Wraps a YAML string in a code block
-     */
-    toYamlBlock(yamlContent: string): string {
-        return `\`\`\`yaml\n${yamlContent.trim()}\n\`\`\``;
-    }
-
-    /**
-     * Extracts YAML content from a code block
-     */
-    fromYamlBlock(content: string): string {
-        const match = content.match(/```yaml\n([\s\S]*?)\n```/);
-        return match ? match[1] : content;
-    }
-
-    /**
-     * Parses a YAML string into a ReplacementSpecs object
-     */
-    fromYaml(yamlContent: string): ReplacementSpecs {
-        const parsed = yaml.parse(yamlContent);
-        const category = Object.keys(parsed)[0];
-        const replacements: ReplacementSpec[] = parsed[category].replacements.map((rep: any) => ({
-            target: rep.target,
-            toSearch: rep.toSearch
-        }));
-
-        return {
-            category,
-            replacements
-        };
-    }
-
-    /**
-     * Creates a ReplacementSpecs object from a list of speakers
+     * Creates replacement specs from a list of speakers
+     * @param speakers List of speaker names
+     * @returns ReplacementSpecs object with each speaker as a target
      */
     createFromSpeakers(speakers: string[]): ReplacementSpecs {
         return {
@@ -63,47 +21,87 @@ export class TranscriptionReplacementService {
     }
 
     /**
-     * Applies replacement specs to a text content
+     * Applies a set of text replacement rules to a given content and returns both the modified content
+     * and a report of what was actually replaced.
+     * 
+     * The algorithm works as follows:
+     * 1. It processes longer words before shorter ones to ensure that larger phrases are not broken up
+     *    (e.g., "New York" won't be partially replaced if "York" is also in the replacement list)
+     * 2. It only replaces complete words, not parts of words
+     *    (e.g., "cat" won't match inside "category")
+     * 3. It ensures each part of the text is only replaced once, preventing chain reactions
+     *    (e.g., if A→B and B→C are both rules, A will not become C)
+     * 4. When conflicts occur between different replacement rules, it keeps the first successful replacement
+     * 
+     * @example
+     * // Given these replacement specs:
+     * // Spec 1: "NY" → "New York"
+     * // Spec 2: "NYC" → "New York City"
+     * // Spec 3: "New York" → "NY State"
+     * 
+     * const text = "I love NYC and NY";
+     * // Result: "I love New York City and New York"
+     * // Note: "NYC" is replaced first (being longer), then "NY"
+     * 
      * @param content The text content to apply replacements to
-     * @param specs The replacement specifications
-     * @returns The text with all replacements applied
+     * @param specs Array of replacement specifications, each containing search terms and their target replacement
+     * @returns The text with all replacements applied according to the rules above
      */
-    applyReplacements(content: string, specs: ReplacementSpecs): string {
+    applyReplacements(content: string, specs: ReplacementSpecs[]): { content: string, reports: ReplacementReport[] } {
         let result = content;
+        const reports: ReplacementReport[] = [];
         
-        // Sort replacements by length of search terms (longest first)
-        // This ensures that "John Smith" is replaced before "John"
-        const sortedReplacements = [...specs.replacements].sort((a, b) => {
-            const maxLengthA = Math.max(...a.toSearch.map(s => s.length));
-            const maxLengthB = Math.max(...b.toSearch.map(s => s.length));
-            return maxLengthB - maxLengthA;
-        });
+        // Process each spec separately to avoid cross-spec interference
+        for (const spec of specs) {
+            if (!spec?.replacements) continue;
+            
+            const matches: ReplacementMatch[] = [];
+            
+            // Sort replacements by length of search terms (longest first)
+            const validReplacements = spec.replacements.filter(r => Array.isArray(r?.toSearch) && r.toSearch.length > 0);
+            const sortedReplacements = [...validReplacements].sort((a, b) => {
+                const maxLengthA = Math.max(...a.toSearch.map(s => s?.length || 0));
+                const maxLengthB = Math.max(...b.toSearch.map(s => s?.length || 0));
+                return maxLengthB - maxLengthA;
+            });
 
-        // First pass: replace with temporary tokens
-        const tempTokens = new Map<string, string>();
-        let tokenCounter = 0;
-
-        for (const replacement of sortedReplacements) {
-            // Sort search terms by length (longest first)
-            const sortedSearchTerms = [...replacement.toSearch].sort((a, b) => b.length - a.length);
-            for (const searchTerm of sortedSearchTerms) {
-                // Escape special regex characters and add word boundary
-                const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const regex = new RegExp(`\\b${escapedTerm}\\b`, 'g');
+            // Create a single regex for all search terms in this spec
+            for (const replacement of sortedReplacements) {
+                if (!replacement.target) continue;
                 
-                // Create a unique temporary token
-                const tempToken = `__TEMP_TOKEN_${tokenCounter++}__`;
-                tempTokens.set(tempToken, replacement.target);
+                const escapedTerms = replacement.toSearch
+                    .filter(term => typeof term === 'string' && term.length > 0)
+                    .map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+                    .sort((a, b) => b.length - a.length);  // Sort by length descending
                 
-                result = result.replace(regex, tempToken);
+                if (escapedTerms.length === 0) continue;
+                
+                // Join all terms with | for alternation
+                const pattern = escapedTerms.join('|');
+                const regex = new RegExp(`\\b(${pattern})\\b`, 'g');
+                
+                // Find and collect all matches before replacing
+                let match;
+                while ((match = regex.exec(result)) !== null) {
+                    matches.push({
+                        target: replacement.target,
+                        toSearch: match[1]  // The actual matched string
+                    });
+                }
+                
+                // Replace all matches with the target
+                result = result.replace(regex, replacement.target);
+            }
+            
+            // Only add to report if we found matches
+            if (matches.length > 0) {
+                reports.push({
+                    category: spec.category || 'Uncategorized',
+                    replacements: matches
+                });
             }
         }
 
-        // Second pass: replace temporary tokens with final values
-        for (const [token, target] of tempTokens) {
-            result = result.replace(new RegExp(token, 'g'), target);
-        }
-
-        return result;
+        return { content: result, reports };
     }
 }

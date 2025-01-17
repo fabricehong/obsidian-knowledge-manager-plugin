@@ -3,6 +3,7 @@ export interface PluginSettings {
     translationPromptTemplate: string;
     templateDirectory: string;
     headerContainingTranscript: string;
+    replacementSpecsTag: string;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -10,6 +11,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     translationPromptTemplate: '',
     templateDirectory: 'knowledge-manager-templates',
     headerContainingTranscript: 'Original',
+    replacementSpecsTag: 'replacement-specs',
 }
 
 export interface FileNode {
@@ -69,4 +71,14 @@ export interface ReplacementSpec {
 export interface ReplacementSpecs {
     category: string;
     replacements: ReplacementSpec[];
+}
+
+export interface ReplacementReport {
+    category: string;
+    replacements: ReplacementMatch[];
+}
+
+export interface ReplacementMatch {
+    target: string;
+    toSearch: string;  // The actual string that matched
 }

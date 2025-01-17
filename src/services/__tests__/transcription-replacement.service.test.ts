@@ -8,160 +8,69 @@ describe('TranscriptionReplacementService', () => {
         service = new TranscriptionReplacementService();
     });
 
-    describe('toYaml', () => {
-        it('should convert ReplacementSpecs to YAML format', () => {
-            const specs: ReplacementSpecs = {
-                category: 'Speakers',
-                replacements: [
-                    {
-                        target: 'John Smith',
-                        toSearch: ['John Smith', 'John']
-                    },
-                    {
-                        target: 'Jane Doe',
-                        toSearch: ['Jane Doe', 'Jane']
-                    }
-                ]
-            };
-
-            const expected = `Speakers:
-  replacements:
-    - target: John Smith
-      toSearch:
-        - John Smith
-        - John
-    - target: Jane Doe
-      toSearch:
-        - Jane Doe
-        - Jane
-`;
-            expect(service.toYaml(specs)).toBe(expected);
-        });
-    });
-
-    describe('fromYaml', () => {
-        it('should parse YAML into ReplacementSpecs', () => {
-            const yamlContent = `Speakers:
-  replacements:
-    - target: John Smith
-      toSearch:
-        - John Smith
-        - John
-    - target: Jane Doe
-      toSearch:
-        - Jane Doe
-        - Jane`;
-
-            const expected: ReplacementSpecs = {
-                category: 'Speakers',
-                replacements: [
-                    {
-                        target: 'John Smith',
-                        toSearch: ['John Smith', 'John']
-                    },
-                    {
-                        target: 'Jane Doe',
-                        toSearch: ['Jane Doe', 'Jane']
-                    }
-                ]
-            };
-
-            expect(service.fromYaml(yamlContent)).toEqual(expected);
-        });
-    });
-
-    describe('toYamlBlock', () => {
-        it('should wrap YAML content in a code block', () => {
-            const input = 'Speakers:\n  replacements:\n    - target: John Smith\n      toSearch:\n        - John Smith';
-            const expected = '```yaml\nSpeakers:\n  replacements:\n    - target: John Smith\n      toSearch:\n        - John Smith\n```';
-            expect(service.toYamlBlock(input)).toBe(expected);
-        });
-
-        it('should trim extra whitespace', () => {
-            const input = '\nSpeakers:\n  replacements: []\n\n';
-            const expected = '```yaml\nSpeakers:\n  replacements: []\n```';
-            expect(service.toYamlBlock(input)).toBe(expected);
-        });
-    });
-
-    describe('fromYamlBlock', () => {
-        it('should extract YAML content from a code block', () => {
-            const input = '```yaml\nSpeakers:\n  replacements:\n    - target: John Smith\n      toSearch:\n        - John Smith\n```';
-            const expected = 'Speakers:\n  replacements:\n    - target: John Smith\n      toSearch:\n        - John Smith';
-            expect(service.fromYamlBlock(input)).toBe(expected);
-        });
-
-        it('should return original content if no code block is found', () => {
-            const input = 'Speakers:\n  replacements:\n    - target: John Smith';
-            expect(service.fromYamlBlock(input)).toBe(input);
-        });
-
-        it('should handle multiline YAML content', () => {
-            const input = '```yaml\nSpeakers:\n  replacements:\n    - target: John Smith\n      toSearch:\n        - John Smith\n        - John\n    - target: Jane Doe\n      toSearch:\n        - Jane Doe\n```';
-            const expected = 'Speakers:\n  replacements:\n    - target: John Smith\n      toSearch:\n        - John Smith\n        - John\n    - target: Jane Doe\n      toSearch:\n        - Jane Doe';
-            expect(service.fromYamlBlock(input)).toBe(expected);
-        });
-    });
-
     describe('createFromSpeakers', () => {
-        it('should create ReplacementSpecs from speaker list', () => {
-            const speakers = ['John Smith', 'Jane Doe'];
+        it('should create replacement specs from speakers', () => {
+            const speakers = ['John', 'Jane'];
             const expected: ReplacementSpecs = {
                 category: 'Speakers',
                 replacements: [
                     {
-                        target: 'John Smith',
-                        toSearch: ['John Smith']
+                        target: 'John',
+                        toSearch: ['John']
                     },
                     {
-                        target: 'Jane Doe',
-                        toSearch: ['Jane Doe']
+                        target: 'Jane',
+                        toSearch: ['Jane']
                     }
                 ]
             };
-
             expect(service.createFromSpeakers(speakers)).toEqual(expected);
         });
 
-        it('should handle empty speaker list', () => {
+        it('should handle empty speakers list', () => {
             const expected: ReplacementSpecs = {
                 category: 'Speakers',
                 replacements: []
             };
-
             expect(service.createFromSpeakers([])).toEqual(expected);
         });
     });
 
     describe('applyReplacements', () => {
         it('should replace text according to replacement specs', () => {
-            const content = 'John: Hello\nJohn Smith: Hi\nJane: Hey';
+            const content = 'John: Hello\nJohn: Hi\nJane: Hey';
             const specs: ReplacementSpecs = {
                 category: 'Speakers',
                 replacements: [
                     {
                         target: 'John Smith',
-                        toSearch: ['John Smith', 'John']
+                        toSearch: ['John', 'John Smith']
                     },
                     {
                         target: 'Jane Doe',
-                        toSearch: ['Jane']
+                        toSearch: ['Jane', 'Jane Doe']
                     }
                 ]
             };
 
             const expected = 'John Smith: Hello\nJohn Smith: Hi\nJane Doe: Hey';
-            expect(service.applyReplacements(content, specs)).toBe(expected);
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.content).toBe(expected);
+            expect(result.reports).toHaveLength(1);
+            expect(result.reports[0].category).toBe('Speakers');
+            expect(result.reports[0].replacements).toHaveLength(3);
         });
 
         it('should handle empty replacements', () => {
             const content = 'Hello World';
             const specs: ReplacementSpecs = {
-                category: 'Speakers',
+                category: 'Empty',
                 replacements: []
             };
 
-            expect(service.applyReplacements(content, specs)).toBe(content);
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.content).toBe(content);
+            expect(result.reports).toHaveLength(0);
         });
 
         it('should handle multiple occurrences of the same term', () => {
@@ -171,13 +80,45 @@ describe('TranscriptionReplacementService', () => {
                 replacements: [
                     {
                         target: 'John Smith',
-                        toSearch: ['John']
+                        toSearch: ['John', 'John Smith']
                     }
                 ]
             };
 
             const expected = 'John Smith: Hi John Smith, this is John Smith speaking';
-            expect(service.applyReplacements(content, specs)).toBe(expected);
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.content).toBe(expected);
+            expect(result.reports).toHaveLength(1);
+            expect(result.reports[0].replacements).toHaveLength(3);
+        });
+
+        it('should handle multiple ReplacementSpecs', () => {
+            const content = 'John: Hello Bob, this is John speaking to Bob Smith';
+            const speakersSpecs: ReplacementSpecs = {
+                category: 'Speakers',
+                replacements: [
+                    {
+                        target: 'John Smith',
+                        toSearch: ['John', 'John Smith']
+                    }
+                ]
+            };
+            const namesSpecs: ReplacementSpecs = {
+                category: 'Names',
+                replacements: [
+                    {
+                        target: 'Robert Smith',
+                        toSearch: ['Bob', 'Bob Smith']
+                    }
+                ]
+            };
+
+            const expected = 'John Smith: Hello Robert Smith, this is John Smith speaking to Robert Smith';
+            const result = service.applyReplacements(content, [speakersSpecs, namesSpecs]);
+            expect(result.content).toBe(expected);
+            expect(result.reports).toHaveLength(2);
+            expect(result.reports[0].category).toBe('Speakers');
+            expect(result.reports[1].category).toBe('Names');
         });
     });
 });

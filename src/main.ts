@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView, Notice, Plugin, TFolder, TFile } from 'obsidian';
-import { PluginSettings, DEFAULT_SETTINGS, HeaderNode, RootNode } from './models/interfaces';
+import { PluginSettings, DEFAULT_SETTINGS, HeaderNode, RootNode, ReplacementSpecs } from './models/interfaces';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { ServiceContainer } from './services/service-container';
@@ -8,6 +8,8 @@ import { getTemplates } from './templates';
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { TranscriptFileService } from './services/transcript-file.service';
+import { TranscriptionReplacementService } from './services/transcription-replacement.service';
+import { YamlBlockService } from './services/yaml-block.service';
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
@@ -304,53 +306,35 @@ export default class KnowledgeManagerPlugin extends Plugin {
         const content = await this.app.vault.read(file);
         const metadata = this.app.metadataCache.getFileCache(file);
         const rootNode = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
-        console.log("All headers found:", rootNode.children.map(child => `"${child.heading}"`));
-        console.log("Looking for header:", `"${this.settings.headerContainingTranscript}"`);
 
-        // Check if Replacements section already exists
-        const existingReplacements = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            rootNode,
-            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
-        );
-
-        if (existingReplacements) {
-            new Notice('Replacements section already exists');
-            return;
-        }
-
-        // Find the transcript header
+        // Find transcript header
         const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
             rootNode,
             this.settings.headerContainingTranscript
         );
 
         if (!transcriptHeader) {
-            new Notice('No transcript header found');
+            new Notice(`Header '${this.settings.headerContainingTranscript}' not found`);
             return;
         }
 
-        // Parse the transcript to get interventions
+        // Parse transcript and get unique speakers
         const interventions = this.serviceContainer.transcriptFileService.parseTranscript(transcriptHeader.content);
+        const speakers = this.serviceContainer.transcriptFileService.getUniqueSpeakers(interventions);
 
-        // Get unique speakers
-        const uniqueSpeakers = [...new Set(interventions.map(i => i.speaker))];
+        // Create initial replacement specs from speakers
+        const specs = this.serviceContainer.transcriptionReplacementService.createFromSpeakers(speakers);
 
-        // Create replacement specs from speakers
-        const replacementSpecs = this.serviceContainer.transcriptionReplacementService.createFromSpeakers(uniqueSpeakers);
+        // Convert to YAML and wrap in code block
+        const yamlContent = this.serviceContainer.yamlBlockService.toYaml(specs);
+        const codeBlock = this.serviceContainer.yamlBlockService.toYamlBlock(yamlContent);
 
-        // Convert to YAML
-        const yamlContent = this.serviceContainer.transcriptionReplacementService.toYaml(replacementSpecs);
-
-        // Create the replacements header
-        const replacementsHeader: HeaderNode = {
-            level: 1,
-            heading: KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
-            content: this.serviceContainer.transcriptionReplacementService.toYamlBlock(yamlContent),
-            children: []
-        };
-
-        // Add the replacements section to the root node
-        rootNode.children.unshift(replacementsHeader);
+        // Add new header node
+        const newHeader = new HeaderNode();
+        newHeader.level = 2;
+        newHeader.heading = KnowledgeManagerPlugin.REPLACEMENTS_HEADER;
+        newHeader.content = codeBlock;
+        rootNode.children.push(newHeader);
 
         // Convert back to markdown and update the file
         const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(rootNode);
@@ -360,49 +344,11 @@ export default class KnowledgeManagerPlugin extends Plugin {
     }
 
     private async replaceTranscription(markdownView: MarkdownView) {
-        const file = markdownView.file;
-        if (!file) return;
-
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        const rootNode = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
-
-        // Find the replacements header
-        const replacementsHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            rootNode,
-            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
+        await this.serviceContainer.replacementSpecsService.replaceTranscription(
+            markdownView,
+            this.settings.replacementSpecsTag,
+            this.settings.headerContainingTranscript,
+            KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
         );
-
-        if (!replacementsHeader) {
-            new Notice('No replacements section found');
-            return;
-        }
-
-        // Extract and parse YAML content
-        const yamlContent = this.serviceContainer.transcriptionReplacementService.fromYamlBlock(replacementsHeader.content);
-        const replacementSpecs = this.serviceContainer.transcriptionReplacementService.fromYaml(yamlContent);
-
-        // Find the transcript header
-        const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            rootNode,
-            this.settings.headerContainingTranscript
-        );
-
-        if (!transcriptHeader) {
-            new Notice('No transcript header found');
-            return;
-        }
-
-        // Apply replacements
-        transcriptHeader.content = this.serviceContainer.transcriptionReplacementService.applyReplacements(
-            transcriptHeader.content,
-            replacementSpecs
-        );
-
-        // Convert back to markdown and update the file
-        const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(rootNode);
-        await this.app.vault.modify(file, newContent);
-        
-        new Notice('Transcription replaced');
     }
 }
