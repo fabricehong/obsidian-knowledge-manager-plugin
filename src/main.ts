@@ -191,6 +191,22 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        // Add the translate to Italian command
+        this.addCommand({
+            id: 'translate-to-italian',
+            name: 'Translate current file to Italian',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.translateToItalian(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
         // Add the settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
     }
@@ -350,5 +366,14 @@ export default class KnowledgeManagerPlugin extends Plugin {
             this.settings.headerContainingTranscript,
             KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
         );
+    }
+
+    private async translateToItalian(markdownView: MarkdownView) {
+        try {
+            await this.serviceContainer.documentTranslationService.translateToItalian(markdownView);
+            new Notice('Document translated to Italian');
+        } catch (error) {
+            new Notice('Failed to translate document: ' + error.message);
+        }
     }
 }

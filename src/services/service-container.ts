@@ -11,6 +11,7 @@ import { TranscriptFileService } from "./replacement/transcript-file.service";
 import { TranscriptionReplacementService } from "./replacement/transcription-replacement.service";
 import { ReplacementSpecsParsingService } from "./replacement/replacement-specs-parsing.service";
 import { EditorTranscriptionReplacementService } from "./replacement/editor-transcription-replacement.service";
+import { DocumentTranslationService } from "./translation/document-translation.service";
 
 export class ServiceContainer {
     private static instance: ServiceContainer;
@@ -28,6 +29,7 @@ export class ServiceContainer {
     public readonly transcriptionReplacementService: TranscriptionReplacementService;
     public readonly yamlBlockService: ReplacementSpecsParsingService;
     public readonly editorTranscriptionReplacementService: EditorTranscriptionReplacementService;
+    public readonly documentTranslationService: DocumentTranslationService;
 
     private constructor(private app: App) {
         // Initialize services in dependency order
@@ -47,6 +49,7 @@ export class ServiceContainer {
             this.yamlBlockService,
             this.transcriptionReplacementService
         );
+        this.documentTranslationService = new DocumentTranslationService(this.openAIModelService);
         this.knowledgeDiffusionService = new KnowledgeDiffusionService(
             this.contentFusionService,
             this.filePathService
