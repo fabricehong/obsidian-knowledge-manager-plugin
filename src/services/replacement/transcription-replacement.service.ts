@@ -1,3 +1,4 @@
+import { SPEAKER_DELIMITER } from '../../constants/delimiters';
 import { ReplacementReport, ReplacementMatch } from '../../models/interfaces';
 import { ReplacementSpecs } from '../../models/schemas';
 
@@ -14,8 +15,8 @@ export class TranscriptionReplacementService {
         return {
             category: 'Speakers',
             replacements: speakers.map(speaker => ({
-                target: speaker,
-                toSearch: [speaker]
+                target: `${speaker}${SPEAKER_DELIMITER}`,
+                toSearch: [`${speaker}${SPEAKER_DELIMITER}`]
             }))
         };
     }

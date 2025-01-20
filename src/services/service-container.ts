@@ -1,22 +1,19 @@
 import { App } from "obsidian";
-import { DocumentStructureService } from "./document-structure.service";
-import { TranscriptionReplacementService } from "./replacement/transcription-replacement.service";
-import { EditorTranscriptionReplacementService } from "./replacement/editor-transcription-replacement.service";
-import { EditorVocabularyReplacementService } from "./replacement/editor-vocabulary-replacement.service";
-import { YamlReplacementService } from "./replacement/yaml-replacement.service";
-import { YamlVocabularyService } from "./replacement/yaml-vocabulary.service";
+import { DoubleMetaphoneAlgorithm } from "../vocabulary/doubleMetaphone";
 import { TextCorrector } from "../vocabulary/textCorrector";
-import { ValidationService } from "./validation.service";
-import { FilePathService } from "./diffusion/file-path.service";
-import { DocumentCleaningService } from "./diffusion/document-cleaning.service";
 import { ContentFusionService } from "./content-fusion.service";
+import { DocumentCleaningService } from "./diffusion/document-cleaning.service";
+import { FilePathService } from "./diffusion/file-path.service";
+import { KnowledgeDiffusionService } from "./diffusion/knowledge-diffusion.service";
+import { DocumentStructureService } from "./document-structure.service";
 import { NoteSummarizationService } from "./note-summarization.service";
 import { OpenAIModelService } from "./openai-model.service";
-import { TemplateManager } from "./template-manager";
+import { EditorTranscriptionReplacementService } from "./replacement/editor-transcription-replacement.service";
+import { EditorVocabularyReplacementService } from "./replacement/editor-vocabulary-replacement.service";
 import { TranscriptFileService } from "./replacement/transcript-file.service";
-import { DoubleMetaphoneAlgorithm } from "../vocabulary/doubleMetaphone";
-import { DocumentTranslationService } from "./translation/document-translation.service";
-import { KnowledgeDiffusionService } from "./diffusion/knowledge-diffusion.service";
+import { TranscriptionReplacementService } from "./replacement/transcription-replacement.service";
+import { YamlReplacementService } from "./replacement/yaml-replacement.service";
+import { YamlVocabularyService } from "./replacement/yaml-vocabulary.service";
 import { VaultMapperService } from "./vault-mapper.service";
 
 export class ServiceContainer {
@@ -34,7 +31,6 @@ export class ServiceContainer {
     public readonly yamlVocabularyService: YamlVocabularyService;
     public readonly editorTranscriptionReplacementService: EditorTranscriptionReplacementService;
     public readonly editorVocabularyReplacementService: EditorVocabularyReplacementService;
-    public readonly documentTranslationService: DocumentTranslationService;
     public readonly knowledgeDiffusionService: KnowledgeDiffusionService;
     private readonly textCorrector: TextCorrector;
 
@@ -72,7 +68,6 @@ export class ServiceContainer {
         this.vaultMapperService = new VaultMapperService(this.app.vault);
         this.filePathService = new FilePathService();
         this.transcriptFileService = new TranscriptFileService();
-        this.documentTranslationService = new DocumentTranslationService(this.openAIModelService);
         this.knowledgeDiffusionService = new KnowledgeDiffusionService(
             this.contentFusionService,
             this.filePathService

@@ -1,4 +1,4 @@
-import { App, MarkdownView, Notice, TFile } from "obsidian";
+import { App, MarkdownView, Notice, TFile, Modal, ButtonComponent } from "obsidian";
 import { ReplacementSpecs } from "../../models/interfaces";
 import { ReplacementReport } from "../../models/interfaces";
 import { DocumentStructureService } from "../document-structure.service";
@@ -75,7 +75,7 @@ export class EditorTranscriptionReplacementService {
     /**
      * Collect replacement specs from the active file
      */
-    private async collectActiveFileSpecsString(markdownView: MarkdownView, headerContainingReplacements: string): Promise<{content: string, filePath: string}> {
+    private async collectActiveFileSpecsString(markdownView: MarkdownView, headerContainingReplacements: string): Promise<{content: string, filePath: string} | null> {
         const file = markdownView.file;
         if (!file)
             throw new Error('No file is currently open');
@@ -87,8 +87,21 @@ export class EditorTranscriptionReplacementService {
             rootNode,
             headerContainingReplacements
         );
-        if (!replacementsHeader)
-            throw new Error(`Replacements header '${headerContainingReplacements}' not found in file ${file.path}`);
+        if (!replacementsHeader) {
+            const shouldContinue = await new Promise<boolean>(resolve => {
+                const modal = new ConfirmationModal(
+                    this.app,
+                    `Aucune section de remplacement des speakers n'a été trouvée dans le fichier ${file.path}. Voulez-vous continuer quand même ?`,
+                    resolve
+                );
+                modal.open();
+            });
+
+            if (!shouldContinue) {
+                throw new Error(`Opération annulée par l'utilisateur - Aucune section de remplacement trouvée dans ${file.path}`);
+            }
+            return null;
+        }
         return  {content: replacementsHeader?.content, filePath: file.path};
     }
 
@@ -110,15 +123,20 @@ export class EditorTranscriptionReplacementService {
 
         // Collect all replacement specs
         const activeFileSpecsStr = await this.collectActiveFileSpecsString(markdownView, headerContainingReplacements);
-        const activeFileSpecs : ReplacementSpecs[] = this.yamlStringsToReplacementSpecs([activeFileSpecsStr]);
+        let allSpecs : ReplacementSpecs[] = [];
+        
+        if (activeFileSpecsStr !== null) {
+            const activeFileSpecs = this.yamlStringsToReplacementSpecs([activeFileSpecsStr]);
+            allSpecs = allSpecs.concat(activeFileSpecs);
+        }
         
         const taggedFilesSpecsStr = await this.collectTaggedReplacementSpecsStrings(replacementSpecsTag);
         const taggedFilesSpecs = this.yamlStringsToReplacementSpecs(taggedFilesSpecsStr);
+        allSpecs = allSpecs.concat(taggedFilesSpecs);
 
-        const allReplacementSpecs = [...activeFileSpecs, ...taggedFilesSpecs];
-        console.log('Found replacement specs:', allReplacementSpecs);
+        console.log('Found replacement specs:', allSpecs);
 
-        if (allReplacementSpecs.length === 0) {
+        if (allSpecs.length === 0) {
             new Notice('No replacement specifications found');
             return [];
         }
@@ -137,7 +155,7 @@ export class EditorTranscriptionReplacementService {
         // Apply all replacements and get report
         const { content: newContent, reports } = this.transcriptionReplacementService.applyReplacements(
             transcriptHeader.content,
-            allReplacementSpecs
+            allSpecs
         );
         
         // Update the content
@@ -177,5 +195,42 @@ export class EditorTranscriptionReplacementService {
             throw error;
         }
         
+    }
+}
+
+class ConfirmationModal extends Modal {
+    private resolvePromise: (value: boolean) => void;
+
+    constructor(app: App, private message: string, resolve: (value: boolean) => void) {
+        super(app);
+        this.resolvePromise = resolve;
+    }
+
+    onOpen() {
+        const {contentEl} = this;
+        
+        contentEl.createEl("p", { text: this.message });
+        
+        const buttonContainer = contentEl.createDiv("modal-button-container");
+        
+        new ButtonComponent(buttonContainer)
+            .setButtonText("Continuer")
+            .setCta()
+            .onClick(() => {
+                this.resolvePromise(true);
+                this.close();
+            });
+
+        new ButtonComponent(buttonContainer)
+            .setButtonText("Annuler")
+            .onClick(() => {
+                this.resolvePromise(false);
+                this.close();
+            });
+    }
+
+    onClose() {
+        const {contentEl} = this;
+        contentEl.empty();
     }
 }
