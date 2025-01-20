@@ -10,17 +10,22 @@ import { join } from 'path';
 import { TranscriptFileService } from './services/replacement/transcript-file.service';
 import { TranscriptionReplacementService } from './services/replacement/transcription-replacement.service';
 import { ReplacementSpecsParsingService } from './services/replacement/replacement-specs-parsing.service';
+import { EditorVocabularyReplacementService } from './services/replacement/editor-vocabulary-replacement.service';
+import { VocabularySpecsParsingService } from './services/replacement/vocabulary-specs-parsing.service';
+import { TextCorrector } from './vocabulary/textCorrector';
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
     private serviceContainer: ServiceContainer;
+    private editorVocabularyReplacementService: EditorVocabularyReplacementService;
     private static readonly REPLACEMENTS_HEADER = 'Replacements';
 
     async onload() {
         await this.loadSettings();
 
         // Initialize service container
-        this.serviceContainer = ServiceContainer.initialize(this.app);
+        this.serviceContainer = ServiceContainer.getInstance(this.app);
+        await this.serviceContainer.initializeWithSettings(this.settings);
 
         // Wait for app to be fully loaded before initializing templates
         this.app.workspace.onLayoutReady(async () => {
@@ -207,6 +212,19 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+
+        // Add vocabulary replacement command
+        this.addCommand({
+            id: 'replace-text-using-vocabulary',
+            name: 'Replace text using vocabulary',
+            editorCallback: (editor: Editor) => {
+                const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (view) {
+                    this.replaceWithVocabulary(view);
+                }
+            }
+        });
+
         // Add the settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
     }
@@ -321,11 +339,11 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
         const content = await this.app.vault.read(file);
         const metadata = this.app.metadataCache.getFileCache(file);
-        const rootNode = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
+        const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
 
         // Find transcript header
         const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            rootNode,
+            doc,
             this.settings.headerContainingTranscript
         );
 
@@ -340,20 +358,18 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
         // Create initial replacement specs from speakers
         const specs = this.serviceContainer.transcriptionReplacementService.createFromSpeakers(speakers);
-
-        // Convert to YAML and wrap in code block
-        const yamlContent = this.serviceContainer.yamlBlockService.toYaml(specs);
-        const codeBlock = this.serviceContainer.yamlBlockService.toYamlBlock(yamlContent);
+        const yamlContent = this.serviceContainer.yamlReplacementService.stringify(specs);
+        const codeBlock = this.serviceContainer.yamlReplacementService.toBlock(yamlContent);
 
         // Add new header node
         const newHeader = new HeaderNode();
         newHeader.level = 2;
         newHeader.heading = KnowledgeManagerPlugin.REPLACEMENTS_HEADER;
         newHeader.content = codeBlock;
-        rootNode.children.push(newHeader);
+        doc.children.unshift(newHeader);
 
         // Convert back to markdown and update the file
-        const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(rootNode);
+        const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
         await this.app.vault.modify(file, newContent);
         
         new Notice('Added replacements section');
@@ -375,5 +391,14 @@ export default class KnowledgeManagerPlugin extends Plugin {
         } catch (error) {
             new Notice('Failed to translate document: ' + error.message);
         }
+    }
+
+    private async replaceWithVocabulary(markdownView: MarkdownView) {
+        await this.serviceContainer.editorVocabularyReplacementService.replaceWithVocabulary(
+            markdownView,
+            this.settings.vocabularySpecsTag,
+            this.settings.headerContainingTranscript,
+            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
+        );
     }
 }

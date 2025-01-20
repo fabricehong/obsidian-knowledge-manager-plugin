@@ -1,27 +1,27 @@
 import { App, MarkdownView, Notice, TFile } from "obsidian";
-import { ReplacementSpecs } from "../../models/schemas";
+import { ReplacementSpecs } from "../../models/interfaces";
 import { ReplacementReport } from "../../models/interfaces";
 import { DocumentStructureService } from "../document-structure.service";
 import { TranscriptionReplacementService } from "./transcription-replacement.service";
-import { ReplacementSpecsParsingService } from "./replacement-specs-parsing.service";
+import { YamlReplacementService } from "./yaml-replacement.service";
 import { ReplacementReportModal } from '../../ui/replacement-report.modal';
 import { YamlValidationError } from '../../models/errors';
 
 export class EditorTranscriptionReplacementService {
     private documentStructureService: DocumentStructureService;
-    private yamlBlockService: ReplacementSpecsParsingService;
+    private yamlReplacementService: YamlReplacementService;
     private transcriptionReplacementService: TranscriptionReplacementService;
     private app: App;
 
     constructor(
         app: App,
         documentStructureService: DocumentStructureService,
-        yamlBlockService: ReplacementSpecsParsingService,
+        yamlReplacementService: YamlReplacementService,
         transcriptionReplacementService: TranscriptionReplacementService
     ) {
         this.app = app;
         this.documentStructureService = documentStructureService;
-        this.yamlBlockService = yamlBlockService;
+        this.yamlReplacementService = yamlReplacementService;
         this.transcriptionReplacementService = transcriptionReplacementService;
     }
 
@@ -158,8 +158,8 @@ export class EditorTranscriptionReplacementService {
         try {
             return yamlStrings.map(({content, filePath}) => {
                 try {
-                    const yamlContent = this.yamlBlockService.fromYamlBlock(content);
-                    return this.yamlBlockService.fromYaml(yamlContent, filePath);
+                    const yamlContent = this.yamlReplacementService.fromBlock(content);
+                    return this.yamlReplacementService.parse(yamlContent, filePath);
                 } catch (error) {
                     let errorContent;
                     if (error instanceof YamlValidationError) {

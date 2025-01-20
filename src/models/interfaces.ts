@@ -4,6 +4,7 @@ export interface PluginSettings {
     templateDirectory: string;
     headerContainingTranscript: string;
     replacementSpecsTag: string;
+    vocabularySpecsTag: string;  // New setting for vocabulary files
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -12,6 +13,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     templateDirectory: 'knowledge-manager-templates',
     headerContainingTranscript: 'Original',
     replacementSpecsTag: 'replacement-specs',
+    vocabularySpecsTag: 'vocabulary',  // Default value for vocabulary files tag
 }
 
 export interface FileNode {
@@ -81,4 +83,13 @@ export interface ReplacementReport {
 export interface ReplacementMatch {
     target: string;
     toSearch: string;  // The actual string that matched
+}
+
+export interface ReplacementSummary {
+    replacements: {
+        original: string;
+        corrected: string;
+        occurrences: number;
+    }[];
+    totalReplacements: number;
 }

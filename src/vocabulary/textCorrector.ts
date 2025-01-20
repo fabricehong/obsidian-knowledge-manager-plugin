@@ -3,9 +3,9 @@ import { DoubleMetaphoneAlgorithm } from './doubleMetaphone';
 import { ratio } from './utils';
 
 export class TextCorrector {
-    private vocabulary: string[];
+    private vocabulary: string[] = [];
     private phoneticAlgorithm: PhoneticAlgorithm;
-    private threshold: number;
+    private threshold: number = 0.7;
     private stringWeight: number;
     private lengthWeight: number;
     private debug: boolean;
@@ -13,7 +13,6 @@ export class TextCorrector {
     private vocabularyPhonetic: Map<string, string>;
 
     constructor(
-        vocabulary: string[],
         phoneticAlgorithm: PhoneticAlgorithm | null = null,
         threshold: number = 0.7,
         stringWeight: number = 0.6,
@@ -27,7 +26,6 @@ export class TextCorrector {
             throw new Error("lengthWeight must be between 0 and 1");
         }
 
-        this.vocabulary = vocabulary;
         this.phoneticAlgorithm = phoneticAlgorithm || new DoubleMetaphoneAlgorithm();
         this.threshold = threshold;
         this.stringWeight = stringWeight;
@@ -36,8 +34,13 @@ export class TextCorrector {
         this.debug = debug;
 
         // Pre-compute phonetic keys for vocabulary
+        this.vocabularyPhonetic = new Map();
+    }
+
+    setVocabulary(terms: string[]) {
+        this.vocabulary = terms;
         this.vocabularyPhonetic = new Map(
-            vocabulary.map(word => [word, this.phoneticAlgorithm.encode(this.toSpokenForm(word))])
+            terms.map(word => [word, this.phoneticAlgorithm.encode(this.toSpokenForm(word))])
         );
     }
 
@@ -66,6 +69,11 @@ export class TextCorrector {
         for (const [start, end, ngram] of ngrams) {
             // Skip if positions in this n-gram have already been processed
             if ([...Array(end - start)].some((_, i) => processedPositions.has(start + i))) {
+                const processedIndices = [...Array(end - start)]
+                    .map((_, i) => start + i)
+                    .filter(i => processedPositions.has(i))
+                    .map(i => `'${words[i]}'(position ${i})`);
+                this.debugPrint(`Skipping n-gram '${ngram}': Containing already processed words: ${processedIndices.join(', ')}`);
                 continue;
             }
 
@@ -81,6 +89,7 @@ export class TextCorrector {
                     original: ngram,
                     corrected: bestMatch,
                     position: [start, end],
+                    similarityScore: similarity,
                     ...matchDetails
                 });
             }
@@ -94,15 +103,16 @@ export class TextCorrector {
         };
     }
 
-    private findBestMatch(text: string): [string | null, number, any] {
+    private findBestMatch(text: string): [string | null, number, { matchType: 'exact' | 'phonetic', stringSimilarity: number, phoneticSimilarity: number, lengthPenalty: number }] {
         if (!text || text.length < 2) {
-            return [null, 0, null];
+            return [null, 0, { matchType: 'exact', stringSimilarity: 0, phoneticSimilarity: 0, lengthPenalty: 0 }];
         }
 
         const textKey = this.phoneticAlgorithm.encode(this.toSpokenForm(text)) || '';
         let bestMatch: string | null = null;
         let bestScore = -Infinity;
-        let matchDetails: any = null;
+        let matchDetails: { matchType: 'exact' | 'phonetic', stringSimilarity: number, phoneticSimilarity: number, lengthPenalty: number } = { matchType: 'exact', stringSimilarity: 0, phoneticSimilarity: 0, lengthPenalty: 0 };
+        let bestDebugInfo: string[] = [];
 
         this.debugPrint(`\nTrying to match text: '${text}'`);
         this.debugPrint(`Text phonetic key: ${textKey}`);
@@ -111,13 +121,7 @@ export class TextCorrector {
         const exactMatch = this.vocabulary.find(word => word.toLowerCase() === text.toLowerCase());
         if (exactMatch) {
             this.debugPrint('Found exact match (case-insensitive)');
-            return [exactMatch, 1.0, {
-                matchType: 'exact',
-                similarityScore: 1.0,
-                stringSimilarity: 1.0,
-                phoneticSimilarity: 1.0,
-                lengthPenalty: 1.0
-            }];
+            return [exactMatch, 1.0, { matchType: 'exact', stringSimilarity: 1.0, phoneticSimilarity: 1.0, lengthPenalty: 1.0 }];
         }
 
         for (const ref of this.vocabulary) {
@@ -145,28 +149,37 @@ export class TextCorrector {
             // Apply length penalty
             const combinedScore = combinedScoreNoPenalty * lengthPenalty;
 
-            this.debugPrint(`\nComparing with '${ref}':`);
-            this.debugPrint(`  - String similarity: ${stringSimilarity.toFixed(3)} (strings: ${text} vs ${ref})`);
-            this.debugPrint(`  - Phonetic similarity: ${phoneticSimilarity.toFixed(3)} (keys: ${textKey} vs ${refKey})`);
-            this.debugPrint(`  - Combined score without penalty: ${combinedScoreNoPenalty.toFixed(3)}`);
-            this.debugPrint(`  - Length penalty: ${lengthPenalty.toFixed(3)}`);
-            this.debugPrint(`  - Final score: ${combinedScore.toFixed(3)} (threshold: ${this.threshold})`);
+            // Store debug info
+            const currentDebugInfo = [
+                `\nComparing with '${ref}':`,
+                `  - String similarity: ${stringSimilarity.toFixed(3)} (strings: ${text} vs ${ref})`,
+                `  - Phonetic similarity: ${phoneticSimilarity.toFixed(3)} (keys: ${textKey} vs ${refKey})`,
+                `  - Combined score without penalty: ${combinedScoreNoPenalty.toFixed(3)}`,
+                `  - Length penalty: ${lengthPenalty.toFixed(3)}`,
+                `  - Final score: ${combinedScore.toFixed(3)} (threshold: ${this.threshold})`
+            ];
 
             if (combinedScore >= this.threshold && combinedScore > bestScore) {
                 bestMatch = ref;
                 bestScore = combinedScore;
                 matchDetails = {
                     matchType: 'phonetic',
-                    similarityScore: combinedScore,
                     stringSimilarity,
                     phoneticSimilarity,
                     lengthPenalty
                 };
-                this.debugPrint(`  -> New best match! Score: ${bestScore.toFixed(3)}`);
+                bestDebugInfo = [...currentDebugInfo, `  -> New best match! Score: ${bestScore.toFixed(3)}`];
             }
         }
 
-        return bestMatch ? [bestMatch, bestScore, matchDetails] : [null, 0, null];
+        // Print debug info at the end
+        if (bestMatch) {
+            bestDebugInfo.forEach(line => this.debugPrint(line));
+        } else {
+            this.debugPrint('No match found');
+        }
+
+        return bestMatch ? [bestMatch, bestScore, matchDetails] : [null, 0, { matchType: 'exact', stringSimilarity: 0, phoneticSimilarity: 0, lengthPenalty: 0 }];
     }
 
     private toSpokenForm(text: string): string {

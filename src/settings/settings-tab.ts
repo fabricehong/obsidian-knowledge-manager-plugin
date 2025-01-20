@@ -102,5 +102,16 @@ export class SettingsTab extends PluginSettingTab {
                     this.plugin.settings.replacementSpecsTag = value;
                     await this.plugin.saveSettings();
                 }));
+
+        new Setting(containerEl)
+            .setName('Vocabulary specs tag')
+            .setDesc('Tag used to identify files containing vocabulary lists')
+            .addText(text => text
+                .setPlaceholder('vocabulary')
+                .setValue(this.plugin.settings.vocabularySpecsTag)
+                .onChange(async (value) => {
+                    this.plugin.settings.vocabularySpecsTag = value;
+                    await this.plugin.saveSettings();
+                }));
     }
 }
