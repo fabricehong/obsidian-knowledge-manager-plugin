@@ -93,3 +93,14 @@ export interface ReplacementSummary {
     }[];
     totalReplacements: number;
 }
+
+export interface ReplacementCount {
+    from: string;
+    to: string;
+    count: number;
+}
+
+export interface ReplacementStatistics {
+    category: string;
+    replacements: ReplacementCount[];
+}

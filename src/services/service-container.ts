@@ -49,9 +49,9 @@ export class ServiceContainer {
         );
         this.editorTranscriptionReplacementService = new EditorTranscriptionReplacementService(
             this.app,
+            this.transcriptionReplacementService,
             this.documentStructureService,
             this.yamlReplacementService,
-            this.transcriptionReplacementService
         );
         this.editorVocabularyReplacementService = new EditorVocabularyReplacementService(
             this.app,

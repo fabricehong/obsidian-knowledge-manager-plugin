@@ -15,8 +15,8 @@ export class TranscriptionReplacementService {
         return {
             category: 'Speakers',
             replacements: speakers.map(speaker => ({
-                target: `${speaker}${SPEAKER_DELIMITER}`,
-                toSearch: [`${speaker}${SPEAKER_DELIMITER}`]
+                target: speaker,
+                toSearch: [speaker]
             }))
         };
     }
@@ -48,7 +48,7 @@ export class TranscriptionReplacementService {
      * @param specs Array of replacement specifications, each containing search terms and their target replacement
      * @returns The text with all replacements applied according to the rules above
      */
-    applyReplacements(content: string, specs: ReplacementSpecs[]): { content: string, reports: ReplacementReport[] } {
+    applyReplacements(content: string, specs: ReplacementSpecs[]): { result: string, reports: ReplacementReport[] } {
         let result = content;
         const reports: ReplacementReport[] = [];
         
@@ -84,10 +84,13 @@ export class TranscriptionReplacementService {
                 // Find and collect all matches before replacing
                 let match;
                 while ((match = regex.exec(result)) !== null) {
-                    matches.push({
-                        target: replacement.target,
-                        toSearch: match[1]  // The actual matched string
-                    });
+                    // Only add to matches if the search text is different from the target
+                    if (match[1] !== replacement.target) {
+                        matches.push({
+                            target: replacement.target,
+                            toSearch: match[1]  // The actual matched string
+                        });
+                    }
                 }
                 
                 // Replace all matches with the target
@@ -103,6 +106,6 @@ export class TranscriptionReplacementService {
             }
         }
 
-        return { content: result, reports };
+        return { result: result, reports };
     }
 }

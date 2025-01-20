@@ -178,7 +178,7 @@ export class EditorVocabularyReplacementService {
 
             // Find transcription
             const file = markdownView.file;
-            if (!file) return [];
+            if (!file) return;
             const content = await this.app.vault.read(file);
             const metadata = this.app.metadataCache.getFileCache(file);
             const rootNode = this.documentStructureService.buildHeaderTree(metadata!, content);
@@ -189,11 +189,11 @@ export class EditorVocabularyReplacementService {
 
             if (!transcriptHeader) {
                 new Notice('No transcript header found');
-                return [];
+                return;
             }
 
             // simple replacements
-            const { reports: replacementReport, content: contentAfterReplacements } = this.transcriptionReplacementService.applyReplacements(transcriptHeader.content, activeFileSpecs);
+            const { reports: replacementReport, result: contentAfterReplacements } = this.transcriptionReplacementService.applyReplacements(transcriptHeader.content, activeFileSpecs);
 
             if (replacementReport.length > 0) {
                 new ReplacementReportModal(this.app, replacementReport).open();

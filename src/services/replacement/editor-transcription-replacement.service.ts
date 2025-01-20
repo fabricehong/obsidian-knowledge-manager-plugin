@@ -1,28 +1,28 @@
-import { App, MarkdownView, Notice, TFile, Modal, ButtonComponent } from "obsidian";
-import { ReplacementSpecs } from "../../models/interfaces";
-import { ReplacementReport } from "../../models/interfaces";
+import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
+import { ReplacementSpec, ReplacementReport, ReplacementStatistics, ReplacementCount, ReplacementSpecs } from "../../models/interfaces";
 import { DocumentStructureService } from "../document-structure.service";
 import { TranscriptionReplacementService } from "./transcription-replacement.service";
 import { YamlReplacementService } from "./yaml-replacement.service";
-import { ReplacementReportModal } from '../../ui/replacement-report.modal';
 import { YamlValidationError } from '../../models/errors';
+import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal } from "../../ui/replacement-statistics.modal";
+import { convertToReplacementStatistics } from "./replacement-statistics.service";
 
 export class EditorTranscriptionReplacementService {
+    private app: App;
+    private transcriptionReplacementService: TranscriptionReplacementService;
     private documentStructureService: DocumentStructureService;
     private yamlReplacementService: YamlReplacementService;
-    private transcriptionReplacementService: TranscriptionReplacementService;
-    private app: App;
 
     constructor(
         app: App,
+        transcriptionReplacementService: TranscriptionReplacementService,
         documentStructureService: DocumentStructureService,
-        yamlReplacementService: YamlReplacementService,
-        transcriptionReplacementService: TranscriptionReplacementService
+        yamlReplacementService: YamlReplacementService
     ) {
         this.app = app;
+        this.transcriptionReplacementService = transcriptionReplacementService;
         this.documentStructureService = documentStructureService;
         this.yamlReplacementService = yamlReplacementService;
-        this.transcriptionReplacementService = transcriptionReplacementService;
     }
 
     /**
@@ -89,7 +89,7 @@ export class EditorTranscriptionReplacementService {
         );
         if (!replacementsHeader) {
             const shouldContinue = await new Promise<boolean>(resolve => {
-                const modal = new ConfirmationModal(
+                const modal = new ReplacementConfirmationModal(
                     this.app,
                     `Aucune section de remplacement des speakers n'a été trouvée dans le fichier ${file.path}. Voulez-vous continuer quand même ?`,
                     resolve
@@ -153,7 +153,7 @@ export class EditorTranscriptionReplacementService {
         }
 
         // Apply all replacements and get report
-        const { content: newContent, reports } = this.transcriptionReplacementService.applyReplacements(
+        const { result: newContent, reports } = this.transcriptionReplacementService.applyReplacements(
             transcriptHeader.content,
             allSpecs
         );
@@ -165,10 +165,12 @@ export class EditorTranscriptionReplacementService {
         
         // Show the report modal
         if (reports.length > 0) {
-            new ReplacementReportModal(this.app, reports).open();
+            const statistics = convertToReplacementStatistics(reports);
+            new ReplacementStatisticsModal(this.app, statistics).open();
+        } else {
+            new Notice("Aucun remplacement n'a été effectué");
         }
         
-        new Notice('Transcription replaced');
         return reports;
     }
 
@@ -195,42 +197,5 @@ export class EditorTranscriptionReplacementService {
             throw error;
         }
         
-    }
-}
-
-class ConfirmationModal extends Modal {
-    private resolvePromise: (value: boolean) => void;
-
-    constructor(app: App, private message: string, resolve: (value: boolean) => void) {
-        super(app);
-        this.resolvePromise = resolve;
-    }
-
-    onOpen() {
-        const {contentEl} = this;
-        
-        contentEl.createEl("p", { text: this.message });
-        
-        const buttonContainer = contentEl.createDiv("modal-button-container");
-        
-        new ButtonComponent(buttonContainer)
-            .setButtonText("Continuer")
-            .setCta()
-            .onClick(() => {
-                this.resolvePromise(true);
-                this.close();
-            });
-
-        new ButtonComponent(buttonContainer)
-            .setButtonText("Annuler")
-            .onClick(() => {
-                this.resolvePromise(false);
-                this.close();
-            });
-    }
-
-    onClose() {
-        const {contentEl} = this;
-        contentEl.empty();
     }
 }

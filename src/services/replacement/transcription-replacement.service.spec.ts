@@ -44,18 +44,18 @@ describe('TranscriptionReplacementService', () => {
                 replacements: [
                     {
                         target: 'John Smith',
-                        toSearch: ['John', 'John Smith']
+                        toSearch: ['John']
                     },
                     {
                         target: 'Jane Doe',
-                        toSearch: ['Jane', 'Jane Doe']
+                        toSearch: ['Jane']
                     }
                 ]
             };
 
             const expected = 'John Smith: Hello\nJohn Smith: Hi\nJane Doe: Hey';
             const result = service.applyReplacements(content, [specs]);
-            expect(result.content).toBe(expected);
+            expect(result.result).toBe(expected);
             expect(result.reports).toHaveLength(1);
             expect(result.reports[0].category).toBe('Speakers');
             expect(result.reports[0].replacements).toHaveLength(3);
@@ -69,7 +69,7 @@ describe('TranscriptionReplacementService', () => {
             };
 
             const result = service.applyReplacements(content, [specs]);
-            expect(result.content).toBe(content);
+            expect(result.result).toBe(content);
             expect(result.reports).toHaveLength(0);
         });
 
@@ -87,7 +87,7 @@ describe('TranscriptionReplacementService', () => {
 
             const expected = 'John Smith: Hi John Smith, this is John Smith speaking';
             const result = service.applyReplacements(content, [specs]);
-            expect(result.content).toBe(expected);
+            expect(result.result).toBe(expected);
             expect(result.reports).toHaveLength(1);
             expect(result.reports[0].replacements).toHaveLength(3);
         });
@@ -115,7 +115,7 @@ describe('TranscriptionReplacementService', () => {
 
             const expected = 'John Smith: Hello Robert Smith, this is John Smith speaking to Robert Smith';
             const result = service.applyReplacements(content, [speakersSpecs, namesSpecs]);
-            expect(result.content).toBe(expected);
+            expect(result.result).toBe(expected);
             expect(result.reports).toHaveLength(2);
             expect(result.reports[0].category).toBe('Speakers');
             expect(result.reports[1].category).toBe('Names');
