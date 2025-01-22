@@ -4,12 +4,25 @@ import { AICompletionService } from "../services/interfaces/ai-completion.interf
 import { zodSchemaToJsonExample } from "../llm/utils/zod-schema.utils";
 
 export class GlossarySearchService {
+    private readonly INITIAL_PROMPT_TEMPLATE = `Tu es un assistant chargé de construire un glossaire à partir d'une transcription de meeting d'entreprise.
+Pour chaque terme interne à l'entreprise que tu trouves dans ce meeeting, détermine leur
+signification à partir de la transcription.
+Si la transcription ne te permets pas de déterminer leur signification du terme,
+alors mets simplement "-" comme définition.
+
+Si c'est ta première itération de construction de glossaire, is_new sera toujours true.
+
+Voici la transcription:
+"""
+{input}
+"""`;
+
+    private readonly ITERATION_PROMPT_TEMPLATE = `fait un double check. liste uniquement les oublis ou les modifications.`;
+
     private debug: boolean = false;
 
     constructor(
         private readonly aiService: AICompletionService,
-        private readonly initialPromptTemplate: string,
-        private readonly iterationPromptTemplate: string,
         debug: boolean = false
     ) {
         this.debug = debug;
@@ -36,7 +49,7 @@ export class GlossarySearchService {
             let messages = [
                 {
                     role: 'system' as const,
-                    content: `${this.initialPromptTemplate}
+                    content: `${this.INITIAL_PROMPT_TEMPLATE.replace("{input}", content)}
                     Réponds en JSON avec le format suivant:
                     ${zodSchemaToJsonExample(glossarySchema)}`
                 },
@@ -67,7 +80,7 @@ export class GlossarySearchService {
                 // Ajouter le message système pour l'itération
                 messages.push({
                     role: 'system' as const,
-                    content: `${this.iterationPromptTemplate}
+                    content: `${this.ITERATION_PROMPT_TEMPLATE}
                     Glossaire précédent:
                     ${JSON.stringify(finalGlossary, null, 2)}
                     

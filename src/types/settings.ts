@@ -16,9 +16,11 @@ export interface PluginSettings {
     translationPromptTemplate: string;
     replacementSpecsTag: string;
     vocabularySpecsTag: string;
+    maxGlossaryIterations: number;
+    /* Example of template file settings
     glossaryInitialPromptTemplate: string;
     glossaryIterationPromptTemplate: string;
-    maxGlossaryIterations: number;
+    */
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -28,7 +30,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     translationPromptTemplate: '',
     replacementSpecsTag: 'ReplacementSpecs',
     vocabularySpecsTag: 'vocabulary',
+    maxGlossaryIterations: 5
+    /* Example of template file default values
     glossaryInitialPromptTemplate: '',
     glossaryIterationPromptTemplate: '',
-    maxGlossaryIterations: 5
+    */
 };

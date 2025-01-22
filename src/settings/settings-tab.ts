@@ -115,6 +115,7 @@ export class SettingsTab extends PluginSettingTab {
                 }));
 
         // Glossary Settings
+        /* Example of how to implement template file selection in settings
         new Setting(containerEl)
             .setName('Glossary Initial Prompt Template')
             .setDesc('Template file to use for initial glossary prompts')
@@ -164,6 +165,7 @@ export class SettingsTab extends PluginSettingTab {
                         }
                     ).open();
                 }));
+        */
 
         new Setting(containerEl)
             .setName('Max Glossary Iterations')

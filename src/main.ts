@@ -1,50 +1,21 @@
 import { App, Editor, MarkdownView, Notice, Plugin, TFolder, TFile } from 'obsidian';
-import { PluginSettings, DEFAULT_SETTINGS, RootNode, ReplacementSpecs } from './types/settings';
+import { PluginSettings, DEFAULT_SETTINGS, RootNode } from './types/settings';
 import { HeaderNode } from './models/header-node';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { ServiceContainer } from './services/service-container';
-import { GlossarySearchService } from './glossary/glossary-search.service';
-import { TemplateManager } from './services/template-manager';
-import { getTemplates } from './templates';
-import { readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
-import { TranscriptFileService } from './transcription/transcript-file.service';
-import { TranscriptionReplacementService } from './services/replacement/transcription-replacement.service';
-import { ReplacementSpecsParsingService } from './services/replacement/replacement-specs-parsing.service';
-import { EditorVocabularyReplacementService } from './vocabulary/editor-vocabulary-replacement.service';
-import { VocabularySpecsParsingService } from './vocabulary/vocabulary-specs-parsing.service';
-import { TextCorrector } from './vocabulary/textCorrector';
+import { LoadingModal } from './ui/loading.modal';
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
     private serviceContainer: ServiceContainer;
-    private editorVocabularyReplacementService: EditorVocabularyReplacementService;
     private static readonly REPLACEMENTS_HEADER = 'Replacements';
 
     async onload() {
         await this.loadSettings();
+        this.serviceContainer = new ServiceContainer(this.app, this.settings);
 
-        // Initialize service container
-        this.serviceContainer = ServiceContainer.getInstance(this.app);
-        await this.serviceContainer.initializeWithSettings(this.settings);
-
-        // Wait for app to be fully loaded before initializing templates
-        this.app.workspace.onLayoutReady(async () => {
-            const templateManager = new TemplateManager(this.app);
-            const success = await templateManager.initialize(this.settings.templateDirectory);
-            
-            // Update translation prompt template path if needed
-            if (success && !this.settings.translationPromptTemplate) {
-                const translationTemplate = `${this.settings.templateDirectory}/translation-prompt.md`;
-                if (this.app.vault.getAbstractFileByPath(translationTemplate)) {
-                    this.settings.translationPromptTemplate = translationTemplate;
-                    await this.saveSettings();
-                }
-            }
-        });
-
-        // Add the diffuse command
+        // Register commands
         this.addCommand({
             id: 'diffuse-note',
             name: 'Diffuse current note',
@@ -226,7 +197,23 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
-        // Add the settings tab
+        // Add the add glossary replacements section command
+        this.addCommand({
+            id: 'add-glossary-replacements-section',
+            name: 'Add section: glossary replacements',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.addGlossaryReplacementsSection(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
     }
 
@@ -237,7 +224,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
     async saveSettings() {
         await this.saveData(this.settings);
-        await this.serviceContainer.initializeWithSettings(this.settings);
+        // Recréer le service container avec les nouveaux settings
+        this.serviceContainer = new ServiceContainer(this.app, this.settings);
     }
 
     private async summarizeNote(markdownView: MarkdownView) {
@@ -334,6 +322,55 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
     }
 
+    private getTranscriptContent(doc: RootNode): string | null {
+        const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
+            doc,
+            this.settings.headerContainingTranscript
+        );
+
+        if (!transcriptHeader) {
+            new Notice(`Header '${this.settings.headerContainingTranscript}' not found`);
+            return null;
+        }
+
+        return transcriptHeader.content;
+    }
+
+    private checkReplacementHeaderInDocument(doc: RootNode): boolean {
+        const existingReplacements = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
+            doc,
+            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
+        );
+        if (existingReplacements) {
+            new Notice('Replacements section already exists');
+            return false;
+        }
+        return true;
+    }
+
+    private modifyDocumentWithReplacementHeader(doc: RootNode, yamlContent: string): void {
+        const codeBlock = this.serviceContainer.yamlReplacementService.toBlock(yamlContent);
+        const newHeader = Object.assign(new HeaderNode(), {
+            level: 1,
+            heading: KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
+            content: codeBlock,
+        });
+        doc.children.unshift(newHeader);
+    }
+
+    private addGlossarySection(doc: RootNode, terms: { terme: string, definition: string }[]) {
+        const header = new HeaderNode();
+        header.level = 1;
+        header.heading = "Glossaire";
+        header.content = terms
+            .filter(({definition}) => definition.trim() !== '-')  
+            .map(({terme, definition}) => `- **${terme}** : ${definition.trim()}`)
+            .join('\n');
+        
+        doc.children.unshift(header);
+        return true;
+    }
+
     private async addReplacementsSection(markdownView: MarkdownView) {
         const file = markdownView.file;
         if (!file) return;
@@ -342,49 +379,77 @@ export default class KnowledgeManagerPlugin extends Plugin {
         const metadata = this.app.metadataCache.getFileCache(file);
         const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
 
-        // Check if replacements section already exists
-        const existingReplacements = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            doc,
-            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
-        );
-        if (existingReplacements) {
-            new Notice('Replacements section already exists');
-            return;
-        }
+        if (!this.checkReplacementHeaderInDocument(doc)) return;
 
-        // Find transcript header
-        const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            doc,
-            this.settings.headerContainingTranscript
-        );
+        // Obtenir le contenu de la transcription
+        const transcriptContent = this.getTranscriptContent(doc);
+        if (!transcriptContent) return;
 
-        if (!transcriptHeader) {
-            new Notice(`Header '${this.settings.headerContainingTranscript}' not found`);
-            return;
-        }
-
-        // Parse transcript and get unique speakers
-        const interventions = this.serviceContainer.transcriptFileService.parseTranscript(transcriptHeader.content);
+        // Créer les specs à partir des speakers
+        const interventions = this.serviceContainer.transcriptFileService.parseTranscript(transcriptContent);
         const speakers = this.serviceContainer.transcriptFileService.getUniqueSpeakers(interventions);
-
-        // Create initial replacement specs from speakers
         const specs = this.serviceContainer.transcriptionReplacementService.createFromSpeakers(speakers);
+        
+        // Convertir en YAML et ajouter au document
         const yamlContent = this.serviceContainer.yamlReplacementService.stringify(specs);
-        const codeBlock = this.serviceContainer.yamlReplacementService.toBlock(yamlContent);
+        this.modifyDocumentWithReplacementHeader(doc, yamlContent);
 
-        // Add new header node
-        const newHeader = Object.assign(new HeaderNode(), {
-            level: 1,
-            heading: KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
-            content: codeBlock,
-        });
-        doc.children.unshift(newHeader);
-
-        // Convert back to markdown and update the file
+        // Sauvegarder les modifications
         const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
         await this.app.vault.modify(file, newContent);
         
         new Notice('Added replacements section');
+    }
+
+    private async addGlossaryReplacementsSection(markdownView: MarkdownView) {
+        const file = markdownView.file;
+        if (!file) {
+            console.log("No file found in markdownView");
+            return;
+        }
+
+        const content = await this.app.vault.read(file);
+        const metadata = this.app.metadataCache.getFileCache(file);
+        const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
+
+        if (!this.checkReplacementHeaderInDocument(doc)) return;
+
+        // Obtenir le contenu de la transcription
+        const transcriptContent = this.getTranscriptContent(doc);
+        if (!transcriptContent) {
+            console.log(`No transcript content found in header '${this.settings.headerContainingTranscript}'`);
+            return;
+        }
+
+        // Créer les specs à partir du glossaire
+        const loadingModal = new LoadingModal(this.app);
+        loadingModal.open();
+
+        try {
+            const glossaryTerms = await this.serviceContainer.glossarySearchService.findGlossaryTerms(
+                transcriptContent,
+                this.settings.maxGlossaryIterations
+            );
+            const specs = this.serviceContainer.glossaryReplacementService.createFromGlossaryTerms(glossaryTerms.termes);
+            
+            // Convertir en YAML et ajouter au document
+            const yamlContent = this.serviceContainer.yamlReplacementService.stringify(specs);
+            this.modifyDocumentWithReplacementHeader(doc, yamlContent);
+
+            // Ajouter la section glossaire
+            if (!this.addGlossarySection(doc, glossaryTerms.termes)) {
+                console.log("Failed to add glossary section - could not find replacements header");
+                return;
+            }
+
+            // Sauvegarder les modifications
+            const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
+            await this.app.vault.modify(file, newContent);
+            
+            new Notice('Successfully added glossary replacements section');
+        } finally {
+            loadingModal.forceClose();
+        }
     }
 
     private async replaceTranscription(markdownView: MarkdownView) {
@@ -413,41 +478,12 @@ export default class KnowledgeManagerPlugin extends Plugin {
         const metadata = this.app.metadataCache.getFileCache(file);
         const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
 
-        // Find transcript header
-        const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            doc,
-            this.settings.headerContainingTranscript
-        );
-
-        if (!transcriptHeader) {
-            new Notice(`Header '${this.settings.headerContainingTranscript}' not found`);
-            return;
-        }
-
-        // Extract transcript content
-        const transcriptContent = transcriptHeader.content;
+        // Obtenir le contenu de la transcription
+        const transcriptContent = this.getTranscriptContent(doc);
+        if (!transcriptContent) return;
 
         try {
-            // Read the template files
-            const initialTemplateFile = this.app.vault.getAbstractFileByPath(this.settings.glossaryInitialPromptTemplate);
-            const iterationTemplateFile = this.app.vault.getAbstractFileByPath(this.settings.glossaryIterationPromptTemplate);
-
-            if (!(initialTemplateFile instanceof TFile) || !(iterationTemplateFile instanceof TFile)) {
-                new Notice('Template files not found. Please check your settings.');
-                return;
-            }
-
-            const initialTemplate = await this.app.vault.read(initialTemplateFile);
-            const iterationTemplate = await this.app.vault.read(iterationTemplateFile);
-
-            const glossaryService = new GlossarySearchService(
-                this.serviceContainer.aiCompletionService,
-                initialTemplate,
-                iterationTemplate,
-                true // debug mode désactivé par défaut
-            );
-
-            const glossary = await glossaryService.findGlossaryTerms(
+            const glossary = await this.serviceContainer.glossarySearchService.findGlossaryTerms(
                 transcriptContent,
                 this.settings.maxGlossaryIterations
             );
@@ -455,7 +491,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
             console.log('Glossary:', glossary);
         } catch (error) {
             console.error("Error in findGlossaryTerms:", error);
-            throw error;
+            new Notice('Error finding glossary terms. Check the console for details.');
         }
     }
 }
