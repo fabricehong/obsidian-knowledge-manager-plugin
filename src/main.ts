@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView, Notice, Plugin, TFolder, TFile } from 'obsidian';
-import { PluginSettings, DEFAULT_SETTINGS, RootNode } from './types/settings';
+import { PluginSettings, DEFAULT_SETTINGS, RootNode } from './settings/settings';
 import { HeaderNode } from './models/header-node';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
@@ -9,7 +9,6 @@ import { LoadingModal } from './ui/loading.modal';
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
     private serviceContainer: ServiceContainer;
-    private static readonly REPLACEMENTS_HEADER = 'Replacements';
 
     async onload() {
         await this.loadSettings();
@@ -339,7 +338,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
     private checkReplacementHeaderInDocument(doc: RootNode): boolean {
         const existingReplacements = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
             doc,
-            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
+            this.settings.replacementsHeader
         );
         if (existingReplacements) {
             new Notice('Replacements section already exists');
@@ -352,7 +351,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         const codeBlock = this.serviceContainer.yamlReplacementService.toBlock(yamlContent);
         const newHeader = Object.assign(new HeaderNode(), {
             level: 1,
-            heading: KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
+            heading: this.settings.replacementsHeader,
             content: codeBlock,
         });
         doc.children.unshift(newHeader);
@@ -457,7 +456,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
             markdownView,
             this.settings.replacementSpecsTag,
             this.settings.headerContainingTranscript,
-            KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
+            this.settings.replacementsHeader,
         );
     }
 
@@ -466,7 +465,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
             markdownView,
             this.settings.vocabularySpecsTag,
             this.settings.headerContainingTranscript,
-            KnowledgeManagerPlugin.REPLACEMENTS_HEADER
+            this.settings.replacementsHeader
         );
     }
 

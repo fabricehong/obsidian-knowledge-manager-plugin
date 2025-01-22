@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, TFolder } from 'obsidian';
 import KnowledgeManagerPlugin from '../main';
-import { PluginSettings } from '../types/settings';
+import { PluginSettings } from './settings';
 import { FileSuggestModal } from '../ui/file-suggest-modal';
 import { FolderSuggestModal } from '../ui/folder-suggest-modal';
 import { TemplateManager } from '../services/template-manager';
@@ -39,6 +39,17 @@ export class SettingsTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.headerContainingTranscript)
                 .onChange(async (value) => {
                     this.plugin.settings.headerContainingTranscript = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Replacements Header')
+            .setDesc('The header name used for replacements section')
+            .addText(text => text
+                .setPlaceholder('Replacements')
+                .setValue(this.plugin.settings.replacementsHeader)
+                .onChange(async (value) => {
+                    this.plugin.settings.replacementsHeader = value;
                     await this.plugin.saveSettings();
                 }));
 
@@ -96,7 +107,7 @@ export class SettingsTab extends PluginSettingTab {
             .setName('Replacement Specs Tag')
             .setDesc('The tag used to identify replacement specifications in your notes')
             .addText(text => text
-                .setPlaceholder('ReplacementSpecs')
+                .setPlaceholder('a header name')
                 .setValue(this.plugin.settings.replacementSpecsTag)
                 .onChange(async (value) => {
                     this.plugin.settings.replacementSpecsTag = value;

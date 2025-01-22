@@ -19,7 +19,7 @@ import { TextCorrector } from '../vocabulary/textCorrector';
 import { DoubleMetaphoneAlgorithm } from '../vocabulary/doubleMetaphone';
 import { AICompletionService } from './interfaces/ai-completion.interface';
 import { GlossarySearchService } from "../glossary/glossary-search.service";
-import { PluginSettings } from '../types/settings';
+import { PluginSettings } from '../settings/settings';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
