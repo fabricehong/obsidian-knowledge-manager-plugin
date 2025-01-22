@@ -12,8 +12,8 @@ import { join } from 'path';
 import { TranscriptFileService } from './services/replacement/transcript-file.service';
 import { TranscriptionReplacementService } from './services/replacement/transcription-replacement.service';
 import { ReplacementSpecsParsingService } from './services/replacement/replacement-specs-parsing.service';
-import { EditorVocabularyReplacementService } from './services/replacement/editor-vocabulary-replacement.service';
-import { VocabularySpecsParsingService } from './services/replacement/vocabulary-specs-parsing.service';
+import { EditorVocabularyReplacementService } from './vocabulary/editor-vocabulary-replacement.service';
+import { VocabularySpecsParsingService } from './vocabulary/vocabulary-specs-parsing.service';
 import { TextCorrector } from './vocabulary/textCorrector';
 
 export default class KnowledgeManagerPlugin extends Plugin {

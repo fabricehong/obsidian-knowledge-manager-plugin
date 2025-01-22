@@ -1,14 +1,14 @@
 import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
-import { DocumentStructureService } from "../document-structure.service";
+import { DocumentStructureService } from "../services/document-structure.service";
 import { YamlVocabularyService } from "./yaml-vocabulary.service";
-import { TranscriptionReplacementService } from "./transcription-replacement.service";
-import { ReplacementSpecs, ReplacementSummary } from "../../models/interfaces";
-import { YamlReplacementService } from "./yaml-replacement.service";
-import { TextCorrector } from "../../vocabulary/textCorrector";
-import { VocabularySpecs } from "../../models/schemas";
-import { YamlValidationError } from "../../models/errors";
-import { ReplacementReportModal } from "../../ui/replacement-report.modal";
-import { VocabularyReplacementSummaryModal } from "../../ui/vocabulary-replacement-summary.modal";
+import { TranscriptionReplacementService } from "../services/replacement/transcription-replacement.service";
+import { ReplacementSpecs, ReplacementSummary } from "../models/interfaces";
+import { YamlReplacementService } from "../services/replacement/yaml-replacement.service";
+import { TextCorrector } from "./textCorrector";
+import { VocabularySpecs } from "../models/schemas";
+import { YamlValidationError } from "../models/errors";
+import { ReplacementReportModal } from "../ui/replacement-report.modal";
+import { VocabularyReplacementSummaryModal } from "../ui/vocabulary-replacement-summary.modal";
 
 export class EditorVocabularyReplacementService {
     private documentStructureService: DocumentStructureService;

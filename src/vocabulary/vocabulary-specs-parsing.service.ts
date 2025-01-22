@@ -1,6 +1,6 @@
 import { App } from "obsidian";
-import { VocabularySpecs, VocabularySpecSchema } from "../../models/schemas";
-import { YamlValidationError } from "../../models/errors";
+import { VocabularySpecs, VocabularySpecSchema } from "../models/schemas";
+import { YamlValidationError } from "../models/errors";
 import { z } from "zod";
 import { load } from "js-yaml";
 
