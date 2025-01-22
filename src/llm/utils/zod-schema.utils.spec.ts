@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { getSchemaDescription, zodSchemaToJsonExample } from '../utils/zod-schema.utils';
+import { getSchemaDescription, zodSchemaToJsonExample } from './zod-schema.utils';
 
 describe('Zod Schema Utils', () => {
     describe('zodSchemaToJsonExample', () => {

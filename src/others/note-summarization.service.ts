@@ -1,7 +1,7 @@
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
-import { OpenAIModelService } from "./openai-model.service";
+import { OpenAIModelService } from "../llm/openai-model.service";
 
 export class NoteSummarizationService {
     private chain: RunnableSequence | undefined;

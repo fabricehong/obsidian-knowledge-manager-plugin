@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
-import { DocumentStructureService } from "../services/document-structure.service";
+import { DocumentStructureService } from "../document/document-structure.service";
 import { YamlVocabularyService } from "./yaml-vocabulary.service";
 import { TranscriptionReplacementService } from "../services/replacement/transcription-replacement.service";
 import { ReplacementSpecs, ReplacementSummary } from "../models/interfaces";

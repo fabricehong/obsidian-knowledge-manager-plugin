@@ -1,7 +1,7 @@
 import { PromptTemplate } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { OpenAIModelService } from "./openai-model.service";
+import { OpenAIModelService } from "../../llm/openai-model.service";
 
 export interface FusionPart {
     breadcrumbs: string[];

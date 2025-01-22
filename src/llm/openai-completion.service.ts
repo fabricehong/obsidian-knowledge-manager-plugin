@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { Notice } from "obsidian";
-import { AICompletionService } from "./interfaces/ai-completion.interface";
+import { AICompletionService } from "../services/interfaces/ai-completion.interface";
 
 export class OpenAICompletionService implements AICompletionService {
     private client: OpenAI | undefined;

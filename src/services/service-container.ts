@@ -1,21 +1,21 @@
 import { App } from "obsidian";
 import { DoubleMetaphoneAlgorithm } from "../vocabulary/doubleMetaphone";
 import { TextCorrector } from "../vocabulary/textCorrector";
-import { ContentFusionService } from "./content-fusion.service";
+import { ContentFusionService } from "./diffusion/content-fusion.service";
 import { DocumentCleaningService } from "./diffusion/document-cleaning.service";
 import { FilePathService } from "./diffusion/file-path.service";
 import { KnowledgeDiffusionService } from "./diffusion/knowledge-diffusion.service";
-import { DocumentStructureService } from "./document-structure.service";
-import { NoteSummarizationService } from "./note-summarization.service";
-import { OpenAIModelService } from "./openai-model.service";
+import { DocumentStructureService } from "../document/document-structure.service";
+import { NoteSummarizationService } from "../others/note-summarization.service";
+import { OpenAIModelService } from "../llm/openai-model.service";
 import { EditorTranscriptionReplacementService } from "./replacement/editor-transcription-replacement.service";
 import { EditorVocabularyReplacementService } from "../vocabulary/editor-vocabulary-replacement.service";
-import { TranscriptFileService } from "./replacement/transcript-file.service";
+import { TranscriptFileService } from "../transcription/transcript-file.service";
 import { TranscriptionReplacementService } from "./replacement/transcription-replacement.service";
 import { YamlReplacementService } from "./replacement/yaml-replacement.service";
 import { YamlVocabularyService } from "../vocabulary/yaml-vocabulary.service";
 import { VaultMapperService } from "./vault-mapper.service";
-import { OpenAICompletionService } from "./openai-completion.service";
+import { OpenAICompletionService } from "../llm/openai-completion.service";
 import { AICompletionService } from "./interfaces/ai-completion.interface";
 
 export class ServiceContainer {

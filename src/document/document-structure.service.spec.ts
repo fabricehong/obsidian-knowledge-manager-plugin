@@ -1,6 +1,6 @@
-import { DocumentStructureService } from './document-structure.service';
 import { CachedMetadata, HeadingCache } from 'obsidian';
-import { HeaderNode, RootNode } from '../models/interfaces';
+import { RootNode } from '../models/interfaces';
+import { DocumentStructureService } from './document-structure.service';
 
 describe('DocumentStructureService', () => {
     let service: DocumentStructureService;

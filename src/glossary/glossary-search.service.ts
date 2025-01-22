@@ -1,7 +1,7 @@
 import { Glossary, Term } from "../types/glossary";
 import { z } from "zod";
-import { AICompletionService } from "./interfaces/ai-completion.interface";
-import { zodSchemaToJsonExample } from "../utils/zod-schema.utils";
+import { AICompletionService } from "../services/interfaces/ai-completion.interface";
+import { zodSchemaToJsonExample } from "../llm/utils/zod-schema.utils";
 
 export class GlossarySearchService {
     private debug: boolean = false;

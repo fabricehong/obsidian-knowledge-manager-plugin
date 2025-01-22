@@ -1,4 +1,4 @@
-import { HeaderNode, RootNode } from "../models/interfaces";
+import { RootNode } from "../models/interfaces";
 import { ValidationService } from "./validation.service";
 
 describe('ValidationService', () => {
