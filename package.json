@@ -30,10 +30,10 @@
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
-		"@langchain/core": "^0.3.26",
+		"@langchain/core": "^0.3.32",
 		"double-metaphone": "^2.0.1",
 		"fastest-levenshtein": "^1.0.16",
-		"langchain": "^0.3.7",
+		"langchain": "^0.3.12",
 		"talisman": "^1.1.4",
 		"zod": "^3.24.1"
 	}

@@ -6,6 +6,11 @@ export class OpenAIModelService {
     private apiKey: string | undefined;
 
     initialize(apiKey: string | undefined) {
+        if (apiKey === this.apiKey) {
+            return;
+        }
+
+        console.log(" Initialisation du modèle OpenAI...");
         this.apiKey = apiKey;
         
         if (!this.apiKey) {
@@ -16,8 +21,23 @@ export class OpenAIModelService {
         this.model = new ChatOpenAI({
             openAIApiKey: this.apiKey,
             temperature: 0,
-            modelName: "gpt-4o-mini",
+            modelName: "gpt-4o",
+            timeout: 60000, // 60 secondes de timeout
+            callbacks: [
+                {
+                    handleLLMStart: async (llm: any, prompts: string[]) => {
+                        console.log(" OpenAI - Début de l'appel avec prompt:", prompts);
+                    },
+                    handleLLMEnd: async (output: any) => {
+                        console.log(" OpenAI - Fin de l'appel, réponse:", output);
+                    },
+                    handleLLMError: async (err: Error) => {
+                        console.error(" OpenAI - Erreur lors de l'appel:", err);
+                    }
+                }
+            ]
         });
+        console.log(" Modèle OpenAI initialisé avec timeout de 60s");
     }
 
     getModel(): ChatOpenAI {
@@ -27,6 +47,7 @@ export class OpenAIModelService {
         }
 
         if (!this.model) {
+            console.error(" Le modèle OpenAI n'est pas initialisé");
             new Notice('OpenAI model not properly initialized. Please check your API key in the settings.');
             throw new Error('OpenAI model not properly initialized');
         }

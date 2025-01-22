@@ -15,10 +15,13 @@ import { TranscriptionReplacementService } from "./replacement/transcription-rep
 import { YamlReplacementService } from "./replacement/yaml-replacement.service";
 import { YamlVocabularyService } from "./replacement/yaml-vocabulary.service";
 import { VaultMapperService } from "./vault-mapper.service";
+import { OpenAICompletionService } from "./openai-completion.service";
+import { AICompletionService } from "./interfaces/ai-completion.interface";
 
 export class ServiceContainer {
     private static instance: ServiceContainer;
     public readonly openAIModelService: OpenAIModelService;
+    public readonly aiCompletionService: AICompletionService;
     public readonly noteSummarizationService: NoteSummarizationService;
     public readonly contentFusionService: ContentFusionService;
     public readonly vaultMapperService: VaultMapperService;
@@ -63,6 +66,7 @@ export class ServiceContainer {
         );
         this.documentCleaningService = new DocumentCleaningService();
         this.openAIModelService = new OpenAIModelService();
+        this.aiCompletionService = new OpenAICompletionService(true);
         this.noteSummarizationService = new NoteSummarizationService(this.openAIModelService);
         this.contentFusionService = new ContentFusionService(this.openAIModelService);
         this.vaultMapperService = new VaultMapperService(this.app.vault);
@@ -83,6 +87,8 @@ export class ServiceContainer {
 
     // Add initialization methods that need to be called after plugin settings are loaded
     public async initializeWithSettings(settings: any): Promise<void> {
+        // Initialize OpenAI services with API key
         this.openAIModelService.initialize(settings.openAIApiKey);
+        this.aiCompletionService.initialize(settings.openAIApiKey);
     }
 }

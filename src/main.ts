@@ -1,8 +1,10 @@
 import { App, Editor, MarkdownView, Notice, Plugin, TFolder, TFile } from 'obsidian';
-import { PluginSettings, DEFAULT_SETTINGS, HeaderNode, RootNode, ReplacementSpecs } from './models/interfaces';
+import { PluginSettings, DEFAULT_SETTINGS, RootNode, ReplacementSpecs } from './types/settings';
+import { HeaderNode } from './models/header-node';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { ServiceContainer } from './services/service-container';
+import { GlossarySearchService } from './services/glossary-search.service';
 import { TemplateManager } from './services/template-manager';
 import { getTemplates } from './templates';
 import { readFileSync, readdirSync } from 'fs';
@@ -208,6 +210,22 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        // Add the find glossary words command
+        this.addCommand({
+            id: 'find-glossary-words',
+            name: 'Find New Glossary Words with AI',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.findGlossaryWords(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
         // Add the settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
     }
@@ -355,10 +373,11 @@ export default class KnowledgeManagerPlugin extends Plugin {
         const codeBlock = this.serviceContainer.yamlReplacementService.toBlock(yamlContent);
 
         // Add new header node
-        const newHeader = new HeaderNode();
-        newHeader.level = 1;
-        newHeader.heading = KnowledgeManagerPlugin.REPLACEMENTS_HEADER;
-        newHeader.content = codeBlock;
+        const newHeader = Object.assign(new HeaderNode(), {
+            level: 1,
+            heading: KnowledgeManagerPlugin.REPLACEMENTS_HEADER,
+            content: codeBlock,
+        });
         doc.children.unshift(newHeader);
 
         // Convert back to markdown and update the file
@@ -384,5 +403,59 @@ export default class KnowledgeManagerPlugin extends Plugin {
             this.settings.headerContainingTranscript,
             KnowledgeManagerPlugin.REPLACEMENTS_HEADER
         );
+    }
+
+    private async findGlossaryWords(markdownView: MarkdownView) {
+        const file = markdownView.file;
+        if (!file) return;
+
+        const content = await this.app.vault.read(file);
+        const metadata = this.app.metadataCache.getFileCache(file);
+        const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
+
+        // Find transcript header
+        const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
+            doc,
+            this.settings.headerContainingTranscript
+        );
+
+        if (!transcriptHeader) {
+            new Notice(`Header '${this.settings.headerContainingTranscript}' not found`);
+            return;
+        }
+
+        // Extract transcript content
+        const transcriptContent = transcriptHeader.content;
+
+        try {
+            // Read the template files
+            const initialTemplateFile = this.app.vault.getAbstractFileByPath(this.settings.glossaryInitialPromptTemplate);
+            const iterationTemplateFile = this.app.vault.getAbstractFileByPath(this.settings.glossaryIterationPromptTemplate);
+
+            if (!(initialTemplateFile instanceof TFile) || !(iterationTemplateFile instanceof TFile)) {
+                new Notice('Template files not found. Please check your settings.');
+                return;
+            }
+
+            const initialTemplate = await this.app.vault.read(initialTemplateFile);
+            const iterationTemplate = await this.app.vault.read(iterationTemplateFile);
+
+            const glossaryService = new GlossarySearchService(
+                this.serviceContainer.aiCompletionService,
+                initialTemplate,
+                iterationTemplate,
+                true // debug mode désactivé par défaut
+            );
+
+            const glossary = await glossaryService.findGlossaryTerms(
+                transcriptContent,
+                this.settings.maxGlossaryIterations
+            );
+
+            console.log('Glossary:', glossary);
+        } catch (error) {
+            console.error("Error in findGlossaryTerms:", error);
+            throw error;
+        }
     }
 }

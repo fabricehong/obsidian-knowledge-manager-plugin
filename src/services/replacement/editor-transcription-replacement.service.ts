@@ -4,7 +4,7 @@ import { DocumentStructureService } from "../document-structure.service";
 import { TranscriptionReplacementService } from "./transcription-replacement.service";
 import { YamlReplacementService } from "./yaml-replacement.service";
 import { YamlValidationError } from '../../models/errors';
-import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal } from "../../ui/replacement-statistics.modal";
+import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal, ConfirmationModal } from "../../ui/replacement-statistics.modal";
 import { convertToReplacementStatistics } from "./replacement-statistics.service";
 
 export class EditorTranscriptionReplacementService {
@@ -121,21 +121,41 @@ export class EditorTranscriptionReplacementService {
         const metadata = this.app.metadataCache.getFileCache(file);
         const rootNode = this.documentStructureService.buildHeaderTree(metadata!, content);
 
-        // Collect all replacement specs
-        const activeFileSpecsStr = await this.collectActiveFileSpecsString(markdownView, headerContainingReplacements);
+        // Collect all replacement specs from both sources
         let allSpecs : ReplacementSpecs[] = [];
         
+        // 1. Get specs from active file if they exist
+        const activeFileSpecsStr = await this.collectActiveFileSpecsString(markdownView, headerContainingReplacements);
         if (activeFileSpecsStr !== null) {
-            const activeFileSpecs = this.yamlStringsToReplacementSpecs([activeFileSpecsStr]);
-            allSpecs = allSpecs.concat(activeFileSpecs);
+            try {
+                const activeFileSpecs = this.yamlStringsToReplacementSpecs([activeFileSpecsStr]);
+                allSpecs = [...allSpecs, ...activeFileSpecs];
+            } catch (error) {
+                new Notice(`Error parsing replacement specs in active file: ${error.message}`);
+            }
         }
-        
-        const taggedFilesSpecsStr = await this.collectTaggedReplacementSpecsStrings(replacementSpecsTag);
-        const taggedFilesSpecs = this.yamlStringsToReplacementSpecs(taggedFilesSpecsStr);
-        allSpecs = allSpecs.concat(taggedFilesSpecs);
 
-        console.log('Found replacement specs:', allSpecs);
+        // 2. Get specs from tagged files
+        const taggedFiles = await this.findTaggedFiles(replacementSpecsTag);
+        if (taggedFiles.length > 0) {
+            try {
+                const yamlStrings = await Promise.all(
+                    taggedFiles.map(async (file) => {
+                        const content = await this.app.vault.read(file);
+                        return {
+                            content,
+                            filePath: file.path
+                        };
+                    })
+                );
+                const taggedFilesSpecs = this.yamlStringsToReplacementSpecs(yamlStrings);
+                allSpecs = [...allSpecs, ...taggedFilesSpecs];
+            } catch (error) {
+                new Notice(`Error parsing replacement specs in tagged files: ${error.message}`);
+            }
+        }
 
+        // Check if we have any specs to apply
         if (allSpecs.length === 0) {
             new Notice('No replacement specifications found');
             return [];
@@ -146,9 +166,8 @@ export class EditorTranscriptionReplacementService {
             rootNode,
             headerContainingTranscript
         );
-
         if (!transcriptHeader) {
-            new Notice('No transcript header found');
+            new Notice(`Could not find header "${headerContainingTranscript}"`);
             return [];
         }
 
@@ -157,21 +176,83 @@ export class EditorTranscriptionReplacementService {
             transcriptHeader.content,
             allSpecs
         );
-        
-        // Update the content
-        transcriptHeader.content = newContent;
-        const finalContent = this.documentStructureService.renderToMarkdown(rootNode);
-        await this.app.vault.modify(file, finalContent);
-        
-        // Show the report modal
-        if (reports.length > 0) {
-            const statistics = convertToReplacementStatistics(reports);
-            new ReplacementStatisticsModal(this.app, statistics).open();
-        } else {
+
+        if (reports.length === 0) {
             new Notice("Aucun remplacement n'a été effectué");
+            return [];
+        }
+
+        // Calculate statistics and show confirmation dialog
+        const statistics = convertToReplacementStatistics(reports);
+        const confirmationPromise = new Promise<boolean>((resolve) => {
+            const modal = new ConfirmationModal(
+                this.app,
+                'Confirm Replacements',
+                this.formatAllReplacementStatistics(statistics),
+                () => resolve(true),
+                () => resolve(false)
+            );
+            modal.open();
+        });
+
+        const confirmed = await confirmationPromise;
+        if (!confirmed) {
+            new Notice('Replacement operation cancelled');
+            return [];
+        }
+
+        // Update the editor content
+        const editor = markdownView.editor;
+        const fullContent = editor.getValue();
+        const newFullContent = fullContent.replace(transcriptHeader.content, newContent);
+        editor.setValue(newFullContent);
+
+        return reports;
+    }
+
+    private formatAllReplacementStatistics(statistics: ReplacementStatistics[]): string {
+        const lines: string[] = [];
+        let totalReplacements = 0;
+
+        // Calculate total replacements across all categories
+        for (const stat of statistics) {
+            for (const replacement of stat.replacements) {
+                totalReplacements += replacement.count;
+            }
         }
         
-        return reports;
+        // Add total at the beginning
+        lines.push(`Total replacements: ${totalReplacements}\n`);
+        
+        // Add details for each category
+        for (const stat of statistics) {
+            lines.push(`${stat.category}:`);
+            for (const replacement of stat.replacements) {
+                lines.push(`- ${replacement.from} → ${replacement.to} (${replacement.count} occurrences)`);
+            }
+            lines.push(''); // Empty line between categories
+        }
+
+        return lines.join('\n');
+    }
+
+    private formatReplacementStatistics(statistics: ReplacementStatistics): string {
+        const lines: string[] = [];
+        
+        // Category
+        lines.push(`${statistics.category}:`);
+        
+        // Replacements
+        let totalReplacements = 0;
+        for (const replacement of statistics.replacements) {
+            lines.push(`- ${replacement.from} → ${replacement.to} (${replacement.count} occurrences)`);
+            totalReplacements += replacement.count;
+        }
+        
+        // Add total at the beginning
+        lines.unshift(`Total replacements: ${totalReplacements}`);
+
+        return lines.join('\n');
     }
 
     private yamlStringsToReplacementSpecs(yamlStrings: {content: string, filePath: string}[]): ReplacementSpecs[] {

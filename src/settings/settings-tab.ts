@@ -1,7 +1,8 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
-import { FolderSuggestModal } from '../ui/folder-suggest.modal';
+import { App, PluginSettingTab, Setting, TFolder } from 'obsidian';
+import KnowledgeManagerPlugin from '../main';
+import { PluginSettings } from '../types/settings';
 import { FileSuggestModal } from '../ui/file-suggest-modal';
-import type KnowledgeManagerPlugin from '../main';
+import { FolderSuggestModal } from '../ui/folder-suggest-modal';
 import { TemplateManager } from '../services/template-manager';
 
 export class SettingsTab extends PluginSettingTab {
@@ -50,7 +51,6 @@ export class SettingsTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.translationPromptTemplate || '')
                     .setDisabled(true);
                 
-                // Ensure the input element itself is disabled
                 textComponent.inputEl.disabled = true;
             })
             .addButton(button => button
@@ -80,7 +80,7 @@ export class SettingsTab extends PluginSettingTab {
                 .onClick(() => {
                     new FolderSuggestModal(
                         this.app,
-                        async (folder) => {
+                        async (folder: TFolder) => {
                             const folderPath = folder.path;
                             this.plugin.settings.templateDirectory = folderPath;
                             await this.plugin.saveSettings();
@@ -112,6 +112,71 @@ export class SettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.vocabularySpecsTag = value;
                     await this.plugin.saveSettings();
+                }));
+
+        // Glossary Settings
+        new Setting(containerEl)
+            .setName('Glossary Initial Prompt Template')
+            .setDesc('Template file to use for initial glossary prompts')
+            .addText(text => {
+                const textComponent = text
+                    .setPlaceholder('Example: glossary-initial-prompt.md')
+                    .setValue(this.plugin.settings.glossaryInitialPromptTemplate || '')
+                    .setDisabled(true);
+                
+                textComponent.inputEl.disabled = true;
+            })
+            .addButton(button => button
+                .setButtonText('Browse')
+                .onClick(() => {
+                    new FileSuggestModal(
+                        this.app,
+                        this.plugin.settings.templateDirectory,
+                        async (filePath: string) => {
+                            this.plugin.settings.glossaryInitialPromptTemplate = filePath;
+                            await this.plugin.saveSettings();
+                            this.display();
+                        }
+                    ).open();
+                }));
+
+        new Setting(containerEl)
+            .setName('Glossary Iteration Prompt Template')
+            .setDesc('Template file to use for glossary iteration prompts')
+            .addText(text => {
+                const textComponent = text
+                    .setPlaceholder('Example: glossary-iteration-prompt.md')
+                    .setValue(this.plugin.settings.glossaryIterationPromptTemplate || '')
+                    .setDisabled(true);
+                
+                textComponent.inputEl.disabled = true;
+            })
+            .addButton(button => button
+                .setButtonText('Browse')
+                .onClick(() => {
+                    new FileSuggestModal(
+                        this.app,
+                        this.plugin.settings.templateDirectory,
+                        async (filePath: string) => {
+                            this.plugin.settings.glossaryIterationPromptTemplate = filePath;
+                            await this.plugin.saveSettings();
+                            this.display();
+                        }
+                    ).open();
+                }));
+
+        new Setting(containerEl)
+            .setName('Max Glossary Iterations')
+            .setDesc('Maximum number of iterations for glossary refinement')
+            .addText(text => text
+                .setPlaceholder('5')
+                .setValue(String(this.plugin.settings.maxGlossaryIterations))
+                .onChange(async (value) => {
+                    const numValue = parseInt(value);
+                    if (!isNaN(numValue) && numValue > 0) {
+                        this.plugin.settings.maxGlossaryIterations = numValue;
+                        await this.plugin.saveSettings();
+                    }
                 }));
     }
 }
