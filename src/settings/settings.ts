@@ -29,7 +29,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     headerContainingTranscript: 'Original',
     templateDirectory: 'knowledge-manager-templates',
     translationPromptTemplate: '',
-    replacementSpecsTag: 'Replacements',
+    replacementSpecsTag: 'replacement-specs',
     vocabularySpecsTag: 'vocabulary',
     maxGlossaryIterations: 5,
     replacementsHeader: 'Replacements'
