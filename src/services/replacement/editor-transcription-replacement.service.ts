@@ -29,22 +29,35 @@ export class EditorTranscriptionReplacementService {
      * Find all files tagged with the specified tag
      */
     private findTaggedFiles(replacementSpecsTag: string): TFile[] {
-        const targetTag = `#${replacementSpecsTag}`;
+        const targetTag = `#${replacementSpecsTag}`.replace(/^##/, '#'); // Évite les doubles #
+        
         return this.app.vault.getMarkdownFiles().filter(file => {
             const cache = this.app.metadataCache.getFileCache(file);
             if (!cache) return false;
 
-            // Check both frontmatter tags and inline tags
-            const hasFrontmatterTag = cache.frontmatter?.tags?.some((tag: string) => 
-                tag === replacementSpecsTag || tag === targetTag
-            );
+            // Check frontmatter tags
+            let hasFrontmatterTag = false;
+            if (cache.frontmatter?.tags) {
+                const frontmatterTags = cache.frontmatter.tags;
+                if (Array.isArray(frontmatterTags)) {
+                    // Si c'est un tableau, on utilise some
+                    hasFrontmatterTag = frontmatterTags.some(tag => 
+                        (tag === replacementSpecsTag || tag === targetTag)
+                    );
+                } else if (typeof frontmatterTags === 'string') {
+                    // Si c'est une chaîne, on split sur la virgule et on trim
+                    const tagArray = frontmatterTags.split(',').map(t => t.trim());
+                    hasFrontmatterTag = tagArray.some(tag => 
+                        (tag === replacementSpecsTag || tag === targetTag)
+                    );
+                }
+            }
             
+            // Check inline tags
             const hasInlineTag = cache.tags?.some(tag => tag.tag === targetTag);
 
             if (hasFrontmatterTag || hasInlineTag) {
                 console.log('Found tag in file:', file.path);
-                console.log('Frontmatter tags:', cache.frontmatter?.tags);
-                console.log('Inline tags:', cache.tags);
             }
 
             return hasFrontmatterTag || hasInlineTag;
