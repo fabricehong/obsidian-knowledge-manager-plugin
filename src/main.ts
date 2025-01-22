@@ -5,6 +5,7 @@ import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { ServiceContainer } from './services/service-container';
 import { LoadingModal } from './ui/loading.modal';
+import { MindmapInputModal } from './ui/mindmap-input.modal';
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
@@ -189,6 +190,38 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 if (markdownView) {
                     if (!checking) {
                         this.findGlossaryWords(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the create documentation command
+        this.addCommand({
+            id: 'create-documentation',
+            name: 'Create Documentation from Mindmap',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.createDocumentation(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the list conversation topics command
+        this.addCommand({
+            id: 'list-conversation-topics',
+            name: 'Lister sujet de conversation',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.listConversationTopics(markdownView);
                     }
                     return true;
                 }
@@ -491,6 +524,120 @@ export default class KnowledgeManagerPlugin extends Plugin {
         } catch (error) {
             console.error("Error in findGlossaryTerms:", error);
             new Notice('Error finding glossary terms. Check the console for details.');
+        }
+    }
+
+    private async createDocumentation(markdownView: MarkdownView) {
+        try {
+            const file = markdownView.file;
+            if (!file) {
+                new Notice('No file is currently open');
+                return;
+            }
+
+            const content = await this.app.vault.read(file);
+            const metadata = this.app.metadataCache.getFileCache(file);
+            const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
+
+            // Get transcript content
+            const transcriptContent = this.getTranscriptContent(doc);
+            if (!transcriptContent) {
+                return;
+            }
+
+            // Show loading modal
+            const loadingModal = new LoadingModal(this.app);
+            loadingModal.open();
+
+            try {
+                // Get mindmap from user
+                await new Promise<void>((resolve) => {
+                    new MindmapInputModal(this.app, async (mindmap: string) => {
+                        try {
+                            // Generate documentation
+                            const documentation = await this.serviceContainer.documentationService.createDocumentation(
+                                transcriptContent,
+                                mindmap
+                            );
+
+                            // Add documentation as a new section
+                            const header = new HeaderNode();
+                            header.level = 1;
+                            header.heading = "Résumé";
+                            header.content = documentation;
+                            doc.children.unshift(header);
+
+                            // Save changes
+                            const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
+                            await this.app.vault.modify(file, newContent);
+
+                            new Notice('Documentation has been created successfully!');
+                        } catch (error) {
+                            console.error('Error creating documentation:', error);
+                            new Notice('Error creating documentation. Check the console for details.');
+                        } finally {
+                            loadingModal.forceClose();
+                            resolve();
+                        }
+                    }).open();
+                });
+            } catch (error) {
+                loadingModal.forceClose();
+                throw error;
+            }
+        } catch (error) {
+            console.error('Error in createDocumentation:', error);
+            new Notice('Error in createDocumentation. Check the console for details.');
+        }
+    }
+
+    private async listConversationTopics(markdownView: MarkdownView) {
+        try {
+            const file = markdownView.file;
+            if (!file) {
+                new Notice('No file is currently open');
+                return;
+            }
+
+            const content = await this.app.vault.read(file);
+            const metadata = this.app.metadataCache.getFileCache(file);
+            const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
+
+            // Get transcript content
+            const transcriptContent = this.getTranscriptContent(doc);
+            if (!transcriptContent) {
+                return;
+            }
+
+            // Show loading modal
+            const loadingModal = new LoadingModal(this.app);
+            loadingModal.open();
+
+            try {
+                // Generate topics list
+                const topics = await this.serviceContainer.conversationTopicsService.listTopics(transcriptContent);
+
+                // Add topics as a new section
+                const header = new HeaderNode();
+                header.level = 1;
+                header.heading = "Sujets";
+                header.content = topics;
+                doc.children.unshift(header);
+
+                // Save changes
+                const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
+                await this.app.vault.modify(file, newContent);
+
+                new Notice('Topics list has been created successfully!');
+            } catch (error) {
+                console.error('Error listing topics:', error);
+                new Notice('Error listing topics. Check the console for details.');
+            } finally {
+                loadingModal.forceClose();
+            }
+        } catch (error) {
+            console.error('Error in listConversationTopics:', error);
+            new Notice('Error in listConversationTopics. Check the console for details.');
         }
     }
 }

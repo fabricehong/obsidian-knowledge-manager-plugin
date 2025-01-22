@@ -20,6 +20,8 @@ import { DoubleMetaphoneAlgorithm } from '../vocabulary/doubleMetaphone';
 import { AICompletionService } from './interfaces/ai-completion.interface';
 import { GlossarySearchService } from "../glossary/glossary-search.service";
 import { PluginSettings } from '../settings/settings';
+import { DocumentationService } from './documentation/documentation.service';
+import { ConversationTopicsService } from './conversation/conversation-topics.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -39,6 +41,8 @@ export class ServiceContainer {
     public readonly glossarySearchService: GlossarySearchService;
     public readonly knowledgeDiffusionService: KnowledgeDiffusionService;
     public readonly transcriptionReplacementService: TranscriptionReplacementService;
+    public readonly documentationService: DocumentationService;
+    public readonly conversationTopicsService: ConversationTopicsService;
     private readonly textCorrector: TextCorrector;
 
     constructor(private app: App, settings: PluginSettings) {
@@ -94,20 +98,8 @@ export class ServiceContainer {
             this.filePathService
         );
 
-        /* Example of how to read template files from the vault
-        // Service qui nécessite la lecture de templates
-        const initialTemplateFile = this.app.vault.getAbstractFileByPath(settings.glossaryInitialPromptTemplate);
-        const iterationTemplateFile = this.app.vault.getAbstractFileByPath(settings.glossaryIterationPromptTemplate);
-
-        let initialTemplate = "";
-        let iterationTemplate = "";
-
-        if (initialTemplateFile instanceof TFile && iterationTemplateFile instanceof TFile) {
-            // Note: read est synchrone ici, c'est ok car c'est juste à l'initialisation
-            initialTemplate = this.app.vault.read(initialTemplateFile as TFile) as unknown as string;
-            iterationTemplate = this.app.vault.read(iterationTemplateFile as TFile) as unknown as string;
-        }
-        */
+        this.documentationService = new DocumentationService(this.aiCompletionService);
+        this.conversationTopicsService = new ConversationTopicsService(this.aiCompletionService);
 
         this.glossarySearchService = new GlossarySearchService(
             this.aiCompletionService,
