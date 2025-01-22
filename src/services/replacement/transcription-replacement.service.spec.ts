@@ -121,4 +121,74 @@ describe('TranscriptionReplacementService', () => {
             expect(result.reports[1].category).toBe('Names');
         });
     });
+
+    // Test the private createSearchPattern method through a public method
+    describe('pattern creation (via applyReplacements)', () => {
+        it('should handle normal terms by taking only the part before special characters', () => {
+            const content = 'nova-14 is here';
+            const specs: ReplacementSpecs = {
+                category: 'Test',
+                replacements: [
+                    {
+                        target: 'NOVA',
+                        toSearch: ['nova-14']
+                    }
+                ]
+            };
+
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe('NOVA is here');
+        });
+
+        it('should handle regex patterns enclosed in slashes', () => {
+            const content = 'nova14 and nova-14 and nova_14';
+            const specs: ReplacementSpecs = {
+                category: 'Test',
+                replacements: [
+                    {
+                        target: 'NOVA',
+                        toSearch: ['/nova.?14/']
+                    }
+                ]
+            };
+
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe('NOVA and NOVA and NOVA');
+            expect(result.reports[0].replacements).toHaveLength(3);
+        });
+
+        it('should handle mixed normal terms and regex patterns', () => {
+            const content = 'nova14 and nova-14 and simple-term';
+            const specs: ReplacementSpecs = {
+                category: 'Test',
+                replacements: [
+                    {
+                        target: 'NOVA',
+                        toSearch: ['/nova.?14/', 'simple-term']
+                    }
+                ]
+            };
+
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe('NOVA and NOVA and NOVA');
+            expect(result.reports[0].replacements).toHaveLength(3);
+        });
+
+        it('should respect word boundaries', () => {
+            const content = 'supernova14 nova14 subnova14';
+            const specs: ReplacementSpecs = {
+                category: 'Test',
+                replacements: [
+                    {
+                        target: 'NOVA',
+                        toSearch: ['/nova.?14/']
+                    }
+                ]
+            };
+
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe('supernova14 NOVA subnova14');
+            expect(result.reports[0].replacements).toHaveLength(1);
+        });
+    });
 });

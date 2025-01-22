@@ -70,16 +70,16 @@ export class TranscriptionReplacementService {
             for (const replacement of sortedReplacements) {
                 if (!replacement.target) continue;
                 
-                const escapedTerms = replacement.toSearch
+                const searchPatterns = replacement.toSearch
                     .filter(term => typeof term === 'string' && term.length > 0)
-                    .map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+                    .map(term => this.createSearchPattern(term))
                     .sort((a, b) => b.length - a.length);  // Sort by length descending
                 
-                if (escapedTerms.length === 0) continue;
+                if (searchPatterns.length === 0) continue;
                 
-                // Join all terms with | for alternation
-                const pattern = escapedTerms.join('|');
-                const regex = new RegExp(`\\b(${pattern})\\b`, 'g');
+                // Join all patterns with | for alternation
+                const pattern = searchPatterns.join('|');
+                const regex = new RegExp(`(${pattern})`, 'g');
                 
                 // Find and collect all matches before replacing
                 let match;
@@ -107,5 +107,29 @@ export class TranscriptionReplacementService {
         }
 
         return { result: result, reports };
+    }
+
+    /**
+     * Creates a search pattern from a term
+     * If the term is surrounded by /, it's treated as a regex pattern
+     * Otherwise, it's treated as a literal string and only the part before special characters is used
+     * 
+     * @example
+     * createSearchPattern("nova-14") -> "\bnova-14\b"
+     * createSearchPattern("/nova.?14/") -> "\bnova.?14\b"
+     * 
+     * @param term The search term to convert into a pattern
+     * @returns The regex pattern with word boundaries
+     */
+    private createSearchPattern(term: string): string {
+        // Check if the term is a regex pattern (surrounded by /)
+        if (term.startsWith('/') && term.endsWith('/')) {
+            // Extract the pattern between the slashes and add word boundaries
+            const pattern = term.slice(1, -1);
+            return `\\b${pattern}\\b`;
+        }
+
+        // For normal terms, just add word boundaries
+        return `\\b${term}\\b`;
     }
 }
