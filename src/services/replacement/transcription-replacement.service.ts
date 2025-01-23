@@ -79,7 +79,7 @@ export class TranscriptionReplacementService {
                 
                 // Join all patterns with | for alternation
                 const pattern = searchPatterns.join('|');
-                const regex = new RegExp(`(${pattern})`, 'g');
+                const regex = new RegExp(`(${pattern})`, 'gi');
                 
                 // Find and collect all matches before replacing
                 let match;

@@ -22,7 +22,7 @@ export class OpenAIModelService {
             openAIApiKey: this.apiKey,
             temperature: 0,
             modelName: "gpt-4o",
-            timeout: 60000, // 60 secondes de timeout
+            timeout: 120000, // 60 secondes de timeout
             callbacks: [
                 {
                     handleLLMStart: async (llm: any, prompts: string[]) => {

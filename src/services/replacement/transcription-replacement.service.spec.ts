@@ -141,20 +141,24 @@ describe('TranscriptionReplacementService', () => {
         });
 
         it('should handle regex patterns enclosed in slashes', () => {
-            const content = 'nova14 and nova-14 and nova_14';
+            const content = 'nova14 and nova-14 and nova_14 and AFAS as well';
             const specs: ReplacementSpecs = {
                 category: 'Test',
                 replacements: [
                     {
                         target: 'NOVA',
                         toSearch: ['/nova.?14/']
+                    },
+                    {
+                        target: 'Hafas',
+                        toSearch: ['/afas+/']
                     }
                 ]
             };
 
             const result = service.applyReplacements(content, [specs]);
-            expect(result.result).toBe('NOVA and NOVA and NOVA');
-            expect(result.reports[0].replacements).toHaveLength(3);
+            expect(result.result).toBe('NOVA and NOVA and NOVA and Hafas as well');
+            expect(result.reports[0].replacements).toHaveLength(4);
         });
 
         it('should handle mixed normal terms and regex patterns', () => {
