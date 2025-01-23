@@ -1,7 +1,7 @@
-import { App, Modal } from 'obsidian';
+import { App, Modal, ButtonComponent } from 'obsidian';
 
 export class LoadingModal extends Modal {
-    constructor(app: App) {
+    constructor(app: App, private onCancel: () => void) {
         super(app);
         this.titleEl.setText('Processing Glossary Terms');
         
@@ -11,7 +11,7 @@ export class LoadingModal extends Modal {
             closeButton.remove();
         }
         
-        // Ajouter le spinner
+        // Ajouter le spinner et le texte
         const contentEl = this.contentEl.createEl('div', { cls: 'loading-container' });
         contentEl.createEl('div', { cls: 'loading-spinner' });
         contentEl.createEl('div', { 
@@ -19,7 +19,16 @@ export class LoadingModal extends Modal {
             cls: 'loading-text'
         });
 
-        // Empêcher complètement la fermeture de la modale
+        // Ajouter le bouton d'annulation
+        const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
+        new ButtonComponent(buttonContainer)
+            .setButtonText('Cancel')
+            .onClick(() => {
+                this.onCancel();
+                this.forceClose();
+            });
+
+        // Empêcher la fermeture de la modale par clic
         this.modalEl.onclick = (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();

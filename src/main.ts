@@ -454,7 +454,10 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
 
         // Créer les specs à partir du glossaire
-        const loadingModal = new LoadingModal(this.app);
+        let isCancelled = false;
+        const loadingModal = new LoadingModal(this.app, () => {
+            isCancelled = true;
+        });
         loadingModal.open();
 
         try {
@@ -462,6 +465,12 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 transcriptContent,
                 this.settings.maxGlossaryIterations
             );
+            
+            if (isCancelled) {
+                new Notice('Operation cancelled');
+                return;
+            }
+
             const specs = this.serviceContainer.glossaryReplacementService.createFromGlossaryTerms(glossaryTerms.termes);
             
             // Convertir en YAML et ajouter au document
@@ -546,7 +555,10 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
 
             // Show loading modal
-            const loadingModal = new LoadingModal(this.app);
+            let isCancelled = false;
+            const loadingModal = new LoadingModal(this.app, () => {
+                isCancelled = true;
+            });
             loadingModal.open();
 
             try {
@@ -554,6 +566,11 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 await new Promise<void>((resolve) => {
                     new MindmapInputModal(this.app, async (mindmap: string) => {
                         try {
+                            if (isCancelled) {
+                                resolve();
+                                return;
+                            }
+
                             // Generate documentation
                             const documentation = await this.serviceContainer.documentationService.createDocumentation(
                                 transcriptContent,
@@ -610,12 +627,20 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
 
             // Show loading modal
-            const loadingModal = new LoadingModal(this.app);
+            let isCancelled = false;
+            const loadingModal = new LoadingModal(this.app, () => {
+                isCancelled = true;
+            });
             loadingModal.open();
 
             try {
                 // Generate topics list
                 const topics = await this.serviceContainer.conversationTopicsService.listTopics(transcriptContent);
+
+                if (isCancelled) {
+                    new Notice('Operation cancelled');
+                    return;
+                }
 
                 // Add topics as a new section
                 const header = new HeaderNode();
