@@ -149,23 +149,12 @@ export class EditorTranscriptionReplacementService {
         }
 
         // 2. Get specs from tagged files
-        const taggedFiles = await this.findTaggedFiles(replacementSpecsTag);
-        if (taggedFiles.length > 0) {
-            try {
-                const yamlStrings = await Promise.all(
-                    taggedFiles.map(async (file) => {
-                        const content = await this.app.vault.read(file);
-                        return {
-                            content,
-                            filePath: file.path
-                        };
-                    })
-                );
-                const taggedFilesSpecs = this.yamlStringsToReplacementSpecs(yamlStrings);
-                allSpecs = [...allSpecs, ...taggedFilesSpecs];
-            } catch (error) {
-                new Notice(`Error parsing replacement specs in tagged files: ${error.message}`);
-            }
+        try {
+            const taggedFilesData = await this.collectTaggedReplacementSpecsStrings(replacementSpecsTag);
+            const taggedFilesSpecs = this.yamlStringsToReplacementSpecs(taggedFilesData);
+            allSpecs = [...allSpecs, ...taggedFilesSpecs];
+        } catch (error) {
+            new Notice(`Error parsing replacement specs in tagged files: ${error.message}`);
         }
 
         // Check if we have any specs to apply
