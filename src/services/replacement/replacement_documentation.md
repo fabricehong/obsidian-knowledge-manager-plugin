@@ -7,11 +7,9 @@ Le répertoire `replacement` est responsable de la gestion des remplacements de 
 - Fournir une infrastructure robuste pour le remplacement de texte dans l'éditeur
 - Gérer les règles de transcription et leur application
 - Maintenir des statistiques sur les remplacements effectués
-- Gérer les métadonnées YAML des documents
 
 ### Points d'entrée principaux
 - Commandes d'édition via `EditorTranscriptionReplacementService`
-- Manipulation de YAML via `YamlService`
 - Gestion du glossaire via `GlossaryReplacementService`
 
 ## Services et leurs responsabilités
@@ -37,14 +35,6 @@ Responsabilités :
 - Implémenter la logique de base des remplacements
 - Gérer les règles de transcription
 - Fournir des méthodes de transformation de texte
-
-### [YamlService](yaml.service.ts)
-Service pour la gestion des métadonnées YAML.
-
-Responsabilités :
-- Parser et valider les spécifications YAML
-- Gérer les schémas de validation
-- Fournir une interface type-safe pour les spécifications
 
 ### [GlossaryReplacementService](glossary-replacement.service.ts)
 Service pour la gestion des remplacements basés sur le glossaire.
@@ -72,9 +62,3 @@ Responsabilités :
    - Transforme le texte selon les spécifications
 4. Résultat : Texte modifié dans l'éditeur
 
-### Flux de gestion YAML
-1. Déclencheur : Lecture/écriture de spécifications
-2. `YamlService` :
-   - Parse le contenu YAML
-   - Valide contre le schéma approprié
-3. Résultat : Spécifications validées disponibles pour les services
