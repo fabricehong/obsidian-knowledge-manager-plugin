@@ -5,10 +5,6 @@ export interface RootNode {
     children: HeaderNode[];
 }
 
-export interface ReplacementSpecs {
-    [key: string]: string;
-}
-
 export interface PluginSettings {
     openAIApiKey: string;
     headerContainingTranscript: string;

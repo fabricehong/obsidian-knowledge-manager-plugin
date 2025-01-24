@@ -1,9 +1,9 @@
 import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
 import { YamlService } from "../document/yaml.service";
 import { TranscriptionReplacementService } from "../replacement/transcription-replacement.service";
-import { ReplacementSpecs, ReplacementSummary } from "../../models/interfaces";
+import { ReplacementSummary } from "../../models/interfaces";
 import { TextCorrector } from "./textCorrector";
-import { VocabularySpecs } from "../../models/schemas";
+import { ReplacementSpecs, VocabularySpecs } from "../../models/schemas";
 import { YamlValidationError } from "../../models/errors";
 import { ReplacementReportModal } from "../../ui/replacement-report.modal";
 import { VocabularyReplacementSummaryModal } from "../../ui/vocabulary-replacement-summary.modal";

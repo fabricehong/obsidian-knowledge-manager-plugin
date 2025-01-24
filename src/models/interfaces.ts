@@ -65,16 +65,6 @@ export interface Intervention {
     text: string;
 }
 
-export interface ReplacementSpec {
-    target: string;
-    toSearch: string[];
-}
-
-export interface ReplacementSpecs {
-    category: string;
-    replacements: ReplacementSpec[];
-}
-
 export interface ReplacementReport {
     category: string;
     replacements: ReplacementMatch[];
