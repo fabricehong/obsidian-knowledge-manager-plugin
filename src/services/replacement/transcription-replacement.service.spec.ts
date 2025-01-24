@@ -61,6 +61,24 @@ describe('TranscriptionReplacementService', () => {
             expect(result.reports[0].replacements).toHaveLength(3);
         });
 
+        it('should treat regex special characters as literal in search terms', () => {
+            const content = 'Hello TPG how are you';
+            const specs: ReplacementSpecs = {
+                category: 'Speakers',
+                replacements: [
+                    {
+                        target: 'TPG+',
+                        toSearch: ['TPG+']
+                    },
+                ]
+            };
+
+            const expected = 'Hello TPG how are you';
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe(expected);
+            expect(result.reports).toHaveLength(0);
+        });
+
         it('should handle empty replacements', () => {
             const content = 'Hello World';
             const specs: ReplacementSpecs = {

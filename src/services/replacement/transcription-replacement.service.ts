@@ -129,7 +129,8 @@ export class TranscriptionReplacementService {
             return `\\b${pattern}\\b`;
         }
 
-        // For normal terms, just add word boundaries
-        return `\\b${term}\\b`;
+        // For normal terms, escape regex special characters and add word boundaries
+        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return `\\b${escapedTerm}\\b`;
     }
 }
