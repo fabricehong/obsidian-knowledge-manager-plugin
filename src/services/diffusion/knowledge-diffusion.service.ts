@@ -3,7 +3,7 @@ import { Notice, TFile, Vault } from "obsidian";
 import { ContentFusionService } from "./content-fusion.service";
 import { FilePathService } from "./file-path.service";
 import { REFERENCE_LINE_REGEX } from '../../constants/regex';
-import { ValidationService } from '../../document/validation.service';
+import { ValidationService } from '../document/validation.service';
 
 export class KnowledgeDiffusionService {
     constructor(

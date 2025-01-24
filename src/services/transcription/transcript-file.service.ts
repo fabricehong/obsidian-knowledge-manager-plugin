@@ -1,5 +1,6 @@
-import { Intervention } from "../models/interfaces";
-import { SPEAKER_DELIMITER } from "../constants/delimiters";
+import { SPEAKER_DELIMITER } from "../../constants/delimiters";
+import { Intervention } from "../../models/interfaces";
+
 
 export class TranscriptFileService {
     parseTranscript(content: string): Intervention[] {

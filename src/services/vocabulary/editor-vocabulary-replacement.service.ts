@@ -1,13 +1,13 @@
 import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
-import { DocumentStructureService } from "../document/document-structure.service";
-import { YamlService } from "../services/replacement/yaml.service";
-import { TranscriptionReplacementService } from "../services/replacement/transcription-replacement.service";
-import { ReplacementSpecs, ReplacementSummary } from "../models/interfaces";
+import { YamlService } from "../document/yaml.service";
+import { TranscriptionReplacementService } from "../replacement/transcription-replacement.service";
+import { ReplacementSpecs, ReplacementSummary } from "../../models/interfaces";
 import { TextCorrector } from "./textCorrector";
-import { VocabularySpecs } from "../models/schemas";
-import { YamlValidationError } from "../models/errors";
-import { ReplacementReportModal } from "../ui/replacement-report.modal";
-import { VocabularyReplacementSummaryModal } from "../ui/vocabulary-replacement-summary.modal";
+import { VocabularySpecs } from "../../models/schemas";
+import { YamlValidationError } from "../../models/errors";
+import { ReplacementReportModal } from "../../ui/replacement-report.modal";
+import { VocabularyReplacementSummaryModal } from "../../ui/vocabulary-replacement-summary.modal";
+import { DocumentStructureService } from "../document/document-structure.service";
 
 /**
  * Service responsible for managing vocabulary replacements in the Obsidian editor.

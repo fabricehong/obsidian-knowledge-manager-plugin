@@ -1,27 +1,27 @@
-import { App, TFile, TAbstractFile } from 'obsidian';
-import { OpenAIModelService } from '../llm/openai-model.service';
-import { OpenAICompletionService } from '../llm/openai-completion.service';
-import { NoteSummarizationService } from '../others/note-summarization.service';
+import { App } from 'obsidian';
 import { ContentFusionService } from './diffusion/content-fusion.service';
 import { VaultMapperService } from './vault-mapper.service';
-import { DocumentStructureService } from '../document/document-structure.service';
 import { FilePathService } from './diffusion/file-path.service';
 import { DocumentCleaningService } from './diffusion/document-cleaning.service';
-import { TranscriptFileService } from '../transcription/transcript-file.service';
 import { TranscriptionReplacementService } from './replacement/transcription-replacement.service';
-import { YamlService } from './replacement/yaml.service'; 
+import { YamlService } from './document/yaml.service'; 
 import { EditorTranscriptionReplacementService } from './replacement/editor-transcription-replacement.service';
-import { EditorVocabularyReplacementService } from '../vocabulary/editor-vocabulary-replacement.service';
+import { EditorVocabularyReplacementService } from './vocabulary/editor-vocabulary-replacement.service';
 import { GlossaryReplacementService } from './replacement/glossary-replacement.service';
 import { KnowledgeDiffusionService } from './diffusion/knowledge-diffusion.service';
-import { TextCorrector } from '../vocabulary/textCorrector';
-import { DoubleMetaphoneAlgorithm } from '../vocabulary/doubleMetaphone';
+import { TextCorrector } from './vocabulary/textCorrector';
+import { DoubleMetaphoneAlgorithm } from './vocabulary/doubleMetaphone';
 import { AICompletionService } from './interfaces/ai-completion.interface';
-import { GlossarySearchService } from "../glossary/glossary-search.service";
+import { GlossarySearchService } from "./glossary/glossary-search.service";
 import { PluginSettings } from '../settings/settings';
 import { DocumentationService } from './documentation/documentation.service';
 import { ConversationTopicsService } from './conversation/conversation-topics.service';
 import { ReplacementSpecSchema, ReplacementSpecs, VocabularySpecSchema, VocabularySpecs } from '../models/schemas';
+import { TranscriptFileService } from './transcription/transcript-file.service';
+import { NoteSummarizationService } from './others/note-summarization.service';
+import { DocumentStructureService } from './document/document-structure.service';
+import { OpenAICompletionService } from './llm/openai-completion.service';
+import { OpenAIModelService } from './llm/openai-model.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;

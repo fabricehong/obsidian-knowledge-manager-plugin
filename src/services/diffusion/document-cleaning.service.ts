@@ -1,7 +1,7 @@
 import { CachedMetadata } from "obsidian";
 import { HeaderNode, RootNode } from "../../models/interfaces";
 import { REFERENCE_LINE_REGEX } from '../../constants/regex';
-import { ValidationService } from "../../document/validation.service";
+import { ValidationService } from "../document/validation.service";
 
 export class DocumentCleaningService {
     cleanNode(node: RootNode | HeaderNode): RootNode | HeaderNode {

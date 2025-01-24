@@ -1,7 +1,7 @@
 import { KnowledgeDiffusionService } from './knowledge-diffusion.service';
 import { ContentFusionService } from './content-fusion.service';
 import { FilePathService } from './file-path.service';
-import { OpenAIModelService } from '../../llm/openai-model.service';
+import { OpenAIModelService } from '../llm/openai-model.service';
 import { HeaderNode, RootNode } from '../../models/interfaces';
 
 describe('KnowledgeDiffusionService', () => {

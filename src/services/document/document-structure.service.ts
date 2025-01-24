@@ -1,5 +1,5 @@
 import { CachedMetadata, HeadingCache, SectionCache } from 'obsidian';
-import { HeaderNode, RootNode } from '../models/interfaces';
+import { HeaderNode, RootNode } from '../../models/interfaces';
 
 export class DocumentStructureService {
     /**

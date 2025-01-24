@@ -1,5 +1,5 @@
-import { HeaderNode, RootNode } from "../models/interfaces";
-import { REFERENCE_LINE_REGEX } from "../constants/regex";
+import { HeaderNode, RootNode } from "../../models/interfaces";
+import { REFERENCE_LINE_REGEX } from "../../constants/regex";
 
 export class ValidationService {
     static validateNodeReferences(node: RootNode | HeaderNode, breadcrumbs: string[] = []): void {
