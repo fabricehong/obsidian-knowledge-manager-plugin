@@ -8,6 +8,7 @@ import { YamlValidationError } from "../../models/errors";
 import { ReplacementReportModal } from "../../ui/replacement-report.modal";
 import { VocabularyReplacementSummaryModal } from "../../ui/vocabulary-replacement-summary.modal";
 import { DocumentStructureService } from "../document/document-structure.service";
+import { TaggedFilesService } from '../document/tagged-files.service';
 
 /**
  * Service responsible for managing vocabulary replacements in the Obsidian editor.
@@ -19,6 +20,7 @@ export class EditorVocabularyReplacementService {
     private yamlVocabularyService: YamlService<VocabularySpecs>;
     private yamlReplacementService: YamlService<ReplacementSpecs>;
     private textCorrector: TextCorrector;
+    private taggedFilesService: TaggedFilesService;
 
     constructor(
         app: App,
@@ -26,7 +28,8 @@ export class EditorVocabularyReplacementService {
         transcriptionReplacementService: TranscriptionReplacementService,
         yamlVocabularyService: YamlService<VocabularySpecs>,
         yamlReplacementService: YamlService<ReplacementSpecs>,
-        textCorrector: TextCorrector
+        textCorrector: TextCorrector,
+        taggedFilesService: TaggedFilesService
     ) {
         this.app = app;
         this.documentStructureService = documentStructureService;
@@ -34,34 +37,15 @@ export class EditorVocabularyReplacementService {
         this.yamlVocabularyService = yamlVocabularyService;
         this.yamlReplacementService = yamlReplacementService;
         this.textCorrector = textCorrector;
+        this.taggedFilesService = taggedFilesService;
     }
 
     /**
      * Find all files tagged with the specified tag
      */
     private findTaggedFiles(vocabularySpecsTag: string): TFile[] {
-        const targetTag = `#${vocabularySpecsTag}`;
-        return this.app.vault.getMarkdownFiles().filter(file => {
-            const cache = this.app.metadataCache.getFileCache(file);
-            if (!cache) return false;
-
-            // Check both frontmatter tags and inline tags
-            const hasFrontmatterTag = cache.frontmatter?.tags?.some((tag: string) => 
-                tag === vocabularySpecsTag || tag === targetTag
-            );
-            
-            const hasInlineTag = cache.tags?.some(tag => tag.tag === targetTag);
-
-            if (hasFrontmatterTag || hasInlineTag) {
-                console.log('Found tag in file:', file.path);
-                console.log('Frontmatter tags:', cache.frontmatter?.tags);
-                console.log('Inline tags:', cache.tags);
-            }
-
-            return hasFrontmatterTag || hasInlineTag;
-        });
+        return this.taggedFilesService.findTaggedFiles(vocabularySpecsTag);
     }
-
 
     /**
      * Collect vocabulary specs from files tagged with the given tag

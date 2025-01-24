@@ -16,12 +16,15 @@ import { GlossarySearchService } from "./glossary/glossary-search.service";
 import { PluginSettings } from '../settings/settings';
 import { DocumentationService } from './documentation/documentation.service';
 import { ConversationTopicsService } from './conversation/conversation-topics.service';
-import { ReplacementSpecSchema, ReplacementSpecs, VocabularySpecSchema, VocabularySpecs } from '../models/schemas';
+import { ReplacementSpecs, ReplacementSpecsSchema, VocabularySpecSchema, VocabularySpecs } from '../models/schemas';
 import { TranscriptFileService } from './transcription/transcript-file.service';
 import { NoteSummarizationService } from './others/note-summarization.service';
 import { DocumentStructureService } from './document/document-structure.service';
 import { OpenAICompletionService } from './llm/openai-completion.service';
 import { OpenAIModelService } from './llm/openai-model.service';
+import { ReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/replacement-specs-integration.service';
+import { TaggedFilesService } from './document/tagged-files.service';
+import { EditorReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/editor-replacement-specs-integration.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -43,12 +46,15 @@ export class ServiceContainer {
     public readonly transcriptionReplacementService: TranscriptionReplacementService;
     public readonly documentationService: DocumentationService;
     public readonly conversationTopicsService: ConversationTopicsService;
+    public readonly replacementSpecsIntegrationService: ReplacementSpecsIntegrationService;
+    public readonly taggedFilesService: TaggedFilesService;
+    public readonly editorReplacementSpecsIntegrationService: EditorReplacementSpecsIntegrationService;
     private readonly textCorrector: TextCorrector;
 
     constructor(private app: App, settings: PluginSettings) {
         // Services sans dépendances
         this.documentStructureService = new DocumentStructureService();
-        this.yamlReplacementService = new YamlService<ReplacementSpecs>(ReplacementSpecSchema, 'Invalid replacement specs');
+        this.yamlReplacementService = new YamlService<ReplacementSpecs>(ReplacementSpecsSchema, 'Invalid replacement specs');
         this.yamlVocabularyService = new YamlService<VocabularySpecs>(VocabularySpecSchema, 'Invalid vocabulary specs');
         this.transcriptFileService = new TranscriptFileService();
         this.filePathService = new FilePathService();
@@ -56,6 +62,8 @@ export class ServiceContainer {
         this.glossaryReplacementService = new GlossaryReplacementService();
         this.vaultMapperService = new VaultMapperService(this.app.vault);
         this.transcriptionReplacementService = new TranscriptionReplacementService();
+        this.replacementSpecsIntegrationService = new ReplacementSpecsIntegrationService();
+        this.taggedFilesService = new TaggedFilesService(this.app);
 
         // Services avec OpenAI
         this.openAIModelService = new OpenAIModelService();
@@ -79,9 +87,10 @@ export class ServiceContainer {
         
         this.editorTranscriptionReplacementService = new EditorTranscriptionReplacementService(
             this.app,
-            this.transcriptionReplacementService,
             this.documentStructureService,
             this.yamlReplacementService,
+            this.transcriptionReplacementService,
+            this.taggedFilesService
         );
         
         this.editorVocabularyReplacementService = new EditorVocabularyReplacementService(
@@ -90,7 +99,8 @@ export class ServiceContainer {
             this.transcriptionReplacementService,
             this.yamlVocabularyService,
             this.yamlReplacementService,
-            this.textCorrector
+            this.textCorrector,
+            this.taggedFilesService
         );
 
         this.knowledgeDiffusionService = new KnowledgeDiffusionService(
@@ -104,6 +114,14 @@ export class ServiceContainer {
         this.glossarySearchService = new GlossarySearchService(
             this.aiCompletionService,
             true
+        );
+
+        this.editorReplacementSpecsIntegrationService = new EditorReplacementSpecsIntegrationService(
+            this.app,
+            this.documentStructureService,
+            this.yamlReplacementService,
+            this.replacementSpecsIntegrationService,
+            this.taggedFilesService
         );
     }
 }

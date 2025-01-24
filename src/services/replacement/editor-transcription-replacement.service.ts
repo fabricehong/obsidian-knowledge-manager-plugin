@@ -7,6 +7,7 @@ import { YamlValidationError } from '../../models/errors';
 import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal, ConfirmationModal } from "../../ui/replacement-statistics.modal";
 import { convertToReplacementStatistics } from "./replacement-statistics.service";
 import { ReplacementSpecs } from "../../models/schemas";
+import { TaggedFilesService } from '../document/tagged-files.service';
 
 /**
  * Service responsible for managing transcription replacements in the Obsidian editor.
@@ -25,59 +26,30 @@ import { ReplacementSpecs } from "../../models/schemas";
  */
 export class EditorTranscriptionReplacementService {
     private app: App;
-    private transcriptionReplacementService: TranscriptionReplacementService;
     private documentStructureService: DocumentStructureService;
     private yamlReplacementService: YamlService<ReplacementSpecs>;
+    private transcriptionReplacementService: TranscriptionReplacementService;
+    private taggedFilesService: TaggedFilesService;
 
     constructor(
         app: App,
-        transcriptionReplacementService: TranscriptionReplacementService,
         documentStructureService: DocumentStructureService,
-        yamlReplacementService: YamlService<ReplacementSpecs>
+        yamlReplacementService: YamlService<ReplacementSpecs>,
+        transcriptionReplacementService: TranscriptionReplacementService,
+        taggedFilesService: TaggedFilesService
     ) {
         this.app = app;
-        this.transcriptionReplacementService = transcriptionReplacementService;
         this.documentStructureService = documentStructureService;
         this.yamlReplacementService = yamlReplacementService;
+        this.transcriptionReplacementService = transcriptionReplacementService;
+        this.taggedFilesService = taggedFilesService;
     }
 
     /**
      * Find all files tagged with the specified tag
      */
     private findTaggedFiles(replacementSpecsTag: string): TFile[] {
-        const targetTag = `#${replacementSpecsTag}`.replace(/^##/, '#'); // Évite les doubles #
-        
-        return this.app.vault.getMarkdownFiles().filter(file => {
-            const cache = this.app.metadataCache.getFileCache(file);
-            if (!cache) return false;
-
-            // Check frontmatter tags
-            let hasFrontmatterTag = false;
-            if (cache.frontmatter?.tags) {
-                const frontmatterTags = cache.frontmatter.tags;
-                if (Array.isArray(frontmatterTags)) {
-                    // Si c'est un tableau, on utilise some
-                    hasFrontmatterTag = frontmatterTags.some(tag => 
-                        (tag === replacementSpecsTag || tag === targetTag)
-                    );
-                } else if (typeof frontmatterTags === 'string') {
-                    // Si c'est une chaîne, on split sur la virgule et on trim
-                    const tagArray = frontmatterTags.split(',').map(t => t.trim());
-                    hasFrontmatterTag = tagArray.some(tag => 
-                        (tag === replacementSpecsTag || tag === targetTag)
-                    );
-                }
-            }
-            
-            // Check inline tags
-            const hasInlineTag = cache.tags?.some(tag => tag.tag === targetTag);
-
-            if (hasFrontmatterTag || hasInlineTag) {
-                console.log('Found tag in file:', file.path);
-            }
-
-            return hasFrontmatterTag || hasInlineTag;
-        });
+        return this.taggedFilesService.findTaggedFiles(replacementSpecsTag);
     }
 
     /**

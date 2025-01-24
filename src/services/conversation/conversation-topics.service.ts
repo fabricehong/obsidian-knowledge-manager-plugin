@@ -1,7 +1,7 @@
 import { AICompletionService } from '../interfaces/ai-completion.interface';
 
 export class ConversationTopicsService {
-    private readonly SYSTEM_PROMPT = `Ta tâche va être de lister tous les sujets de conversations abordés dans la conversation qui suit, et formatte les dans un mindmap tab indented (indentation par tabs et non par espaces, pas de tirets, pas de retours à la ligne inutiles). Le mindmap être suffisemment structuré (par opposition à une liste à plat). Réponds dans un bloc de code.
+    private readonly SYSTEM_PROMPT = `Ta tâche va être de lister tous les sujets de conversations abordés dans la conversation qui suit, et formatte les dans un mindmap tab indented (indentation par tabs et non par espaces, pas de tirets, pas de retours à la ligne inutiles). Le mindmap être très structuré (par opposition à une liste à plat). Réponds dans un bloc de code.
 Exemple:
 \`\`\`
 Réunion sur les systèmes de gestion des données et des ventes

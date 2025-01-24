@@ -6,6 +6,7 @@ import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { ServiceContainer } from './services/service-container';
 import { LoadingModal } from './ui/loading.modal';
 import { MindmapInputModal } from './ui/mindmap-input.modal';
+import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
@@ -238,6 +239,22 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 if (markdownView) {
                     if (!checking) {
                         this.addGlossaryReplacementsSection(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the analyze replacement specs command
+        this.addCommand({
+            id: 'analyze-replacement-specs',
+            name: 'Analyze replacement specs integration',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.analyzeReplacementSpecs(markdownView);
                     }
                     return true;
                 }
@@ -664,5 +681,21 @@ export default class KnowledgeManagerPlugin extends Plugin {
             console.error('Error in listConversationTopics:', error);
             new Notice('Error in listConversationTopics. Check the console for details.');
         }
+    }
+
+    private async analyzeReplacementSpecs(markdownView: MarkdownView) {
+        const analysis = await this.serviceContainer.editorReplacementSpecsIntegrationService
+            .analyzeCurrentFileSpecs(
+                markdownView,
+                this.settings.replacementSpecsTag,
+                this.settings.replacementsHeader
+            );
+        
+        if (!analysis) {
+            new Notice('No replacement specs found in current file');
+            return;
+        }
+
+        new ReplacementSpecsAnalysisModal(this.app, analysis).open();
     }
 }
