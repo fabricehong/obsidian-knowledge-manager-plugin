@@ -2,7 +2,16 @@ import { ReplacementSpecs } from '../../models/schemas';
 import { Term } from '../../types/glossary';
 
 /**
- * Service for handling glossary term replacements
+ * Service responsible for managing glossary term replacements.
+ * This class handles the conversion of glossary terms into standardized
+ * replacement specifications for consistent use throughout the application.
+ * 
+ * Main responsibilities:
+ * - Converting glossary terms into replacement specifications
+ * - Maintaining consistency between source and target terms
+ * - Standardizing replacement format for glossary terms
+ * 
+ * @since 1.0.0
  */
 export class GlossaryReplacementService {
     /**

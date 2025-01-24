@@ -1,5 +1,20 @@
 import { ReplacementReport, ReplacementStatistics, ReplacementCount } from "../../models/interfaces";
 
+/**
+ * Utility service responsible for converting replacement reports into statistical summaries.
+ * This function aggregates and transforms raw replacement reports into structured statistics,
+ * grouping them by category and counting occurrences of each replacement pattern.
+ * 
+ * Main responsibilities:
+ * - Aggregating replacement reports by category
+ * - Counting occurrences of each replacement pattern
+ * - Converting raw data into structured statistics
+ * - Maintaining unique replacement patterns within categories
+ * 
+ * @param reports Array of replacement reports to be processed
+ * @returns Array of replacement statistics grouped by category
+ * @since 1.0.0
+ */
 export function convertToReplacementStatistics(reports: ReplacementReport[]): ReplacementStatistics[] {
     const categoryMap = new Map<string, Map<string, ReplacementCount>>();
 

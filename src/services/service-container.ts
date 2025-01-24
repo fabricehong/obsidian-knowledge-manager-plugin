@@ -9,8 +9,7 @@ import { FilePathService } from './diffusion/file-path.service';
 import { DocumentCleaningService } from './diffusion/document-cleaning.service';
 import { TranscriptFileService } from '../transcription/transcript-file.service';
 import { TranscriptionReplacementService } from './replacement/transcription-replacement.service';
-import { YamlReplacementService } from './replacement/yaml-replacement.service';
-import { YamlVocabularyService } from '../vocabulary/yaml-vocabulary.service';
+import { YamlService } from './replacement/yaml.service'; 
 import { EditorTranscriptionReplacementService } from './replacement/editor-transcription-replacement.service';
 import { EditorVocabularyReplacementService } from '../vocabulary/editor-vocabulary-replacement.service';
 import { GlossaryReplacementService } from './replacement/glossary-replacement.service';
@@ -22,10 +21,12 @@ import { GlossarySearchService } from "../glossary/glossary-search.service";
 import { PluginSettings } from '../settings/settings';
 import { DocumentationService } from './documentation/documentation.service';
 import { ConversationTopicsService } from './conversation/conversation-topics.service';
+import { ReplacementSpecSchema, ReplacementSpecs, VocabularySpecSchema, VocabularySpecs } from '../models/schemas';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
-    public readonly yamlReplacementService: YamlReplacementService;
+    public readonly yamlReplacementService: YamlService<ReplacementSpecs>;
+    public readonly yamlVocabularyService: YamlService<VocabularySpecs>;
     public readonly transcriptFileService: TranscriptFileService;
     public readonly filePathService: FilePathService;
     public readonly documentCleaningService: DocumentCleaningService;
@@ -35,7 +36,6 @@ export class ServiceContainer {
     public readonly noteSummarizationService: NoteSummarizationService;
     public readonly contentFusionService: ContentFusionService;
     public readonly vaultMapperService: VaultMapperService;
-    public readonly yamlVocabularyService: YamlVocabularyService;
     public readonly editorTranscriptionReplacementService: EditorTranscriptionReplacementService;
     public readonly editorVocabularyReplacementService: EditorVocabularyReplacementService;
     public readonly glossarySearchService: GlossarySearchService;
@@ -48,7 +48,8 @@ export class ServiceContainer {
     constructor(private app: App, settings: PluginSettings) {
         // Services sans dépendances
         this.documentStructureService = new DocumentStructureService();
-        this.yamlReplacementService = new YamlReplacementService();
+        this.yamlReplacementService = new YamlService<ReplacementSpecs>(ReplacementSpecSchema, 'Invalid replacement specs');
+        this.yamlVocabularyService = new YamlService<VocabularySpecs>(VocabularySpecSchema, 'Invalid vocabulary specs');
         this.transcriptFileService = new TranscriptFileService();
         this.filePathService = new FilePathService();
         this.documentCleaningService = new DocumentCleaningService();
@@ -75,7 +76,6 @@ export class ServiceContainer {
         // Services dépendants
         this.noteSummarizationService = new NoteSummarizationService(this.openAIModelService);
         this.contentFusionService = new ContentFusionService(this.openAIModelService);
-        this.yamlVocabularyService = new YamlVocabularyService(this.app);
         
         this.editorTranscriptionReplacementService = new EditorTranscriptionReplacementService(
             this.app,
@@ -87,8 +87,8 @@ export class ServiceContainer {
         this.editorVocabularyReplacementService = new EditorVocabularyReplacementService(
             this.app,
             this.documentStructureService,
-            this.yamlVocabularyService,
             this.transcriptionReplacementService,
+            this.yamlVocabularyService,
             this.yamlReplacementService,
             this.textCorrector
         );

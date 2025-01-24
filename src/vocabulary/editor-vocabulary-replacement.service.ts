@@ -1,35 +1,37 @@
 import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
 import { DocumentStructureService } from "../document/document-structure.service";
-import { YamlVocabularyService } from "./yaml-vocabulary.service";
+import { YamlService } from "../services/replacement/yaml.service";
 import { TranscriptionReplacementService } from "../services/replacement/transcription-replacement.service";
 import { ReplacementSpecs, ReplacementSummary } from "../models/interfaces";
-import { YamlReplacementService } from "../services/replacement/yaml-replacement.service";
 import { TextCorrector } from "./textCorrector";
 import { VocabularySpecs } from "../models/schemas";
 import { YamlValidationError } from "../models/errors";
 import { ReplacementReportModal } from "../ui/replacement-report.modal";
 import { VocabularyReplacementSummaryModal } from "../ui/vocabulary-replacement-summary.modal";
 
+/**
+ * Service responsible for managing vocabulary replacements in the Obsidian editor.
+ */
 export class EditorVocabularyReplacementService {
-    private documentStructureService: DocumentStructureService;
-    private yamlVocabularyService: YamlVocabularyService;
-    private transcriptionReplacementService: TranscriptionReplacementService;
-    private yamlReplacementService: YamlReplacementService;
-    private textCorrector: TextCorrector;
     private app: App;
+    private documentStructureService: DocumentStructureService;
+    private transcriptionReplacementService: TranscriptionReplacementService;
+    private yamlVocabularyService: YamlService<VocabularySpecs>;
+    private yamlReplacementService: YamlService<ReplacementSpecs>;
+    private textCorrector: TextCorrector;
 
     constructor(
         app: App,
         documentStructureService: DocumentStructureService,
-        yamlVocabularyService: YamlVocabularyService,
         transcriptionReplacementService: TranscriptionReplacementService,
-        yamlReplacementService: YamlReplacementService,
+        yamlVocabularyService: YamlService<VocabularySpecs>,
+        yamlReplacementService: YamlService<ReplacementSpecs>,
         textCorrector: TextCorrector
     ) {
         this.app = app;
         this.documentStructureService = documentStructureService;
-        this.yamlVocabularyService = yamlVocabularyService;
         this.transcriptionReplacementService = transcriptionReplacementService;
+        this.yamlVocabularyService = yamlVocabularyService;
         this.yamlReplacementService = yamlReplacementService;
         this.textCorrector = textCorrector;
     }
@@ -99,26 +101,33 @@ export class EditorVocabularyReplacementService {
         return {content: vocabularyHeader?.content, filePath: file.path};
     }
 
+    private processVocabularySpecs(file: {content: string, filePath: string}): VocabularySpecs {
+        const yamlContent = this.yamlVocabularyService.fromYamlBlock(file.content);
+        return this.yamlVocabularyService.fromYaml(yamlContent, file.filePath);
+    }
+
+    private processVocabularySpecsFiles(files: {content: string, filePath: string}[]): VocabularySpecs[] {
+        return files.map(file => this.processVocabularySpecs(file));
+    }
+
     private yamlStringsToVocabularySpecs(yamlStrings: {content: string, filePath: string}[]): VocabularySpecs[] {
         try {
             return yamlStrings.map(({content, filePath}) => {
                 try {
-                    const yamlContent = this.yamlReplacementService.fromBlock(content);
-                    return this.yamlVocabularyService.parse(yamlContent, filePath);
+                    return this.processVocabularySpecs({content, filePath});
                 } catch (error) {
                     let errorContent;
                     if (error instanceof YamlValidationError) {
-                        errorContent = `Error in file ${filePath}: ${error.details}`;
-                        
+                        errorContent = error.details;
                     } else {
-                        new Notice(`Unexpected error in file ${filePath}`);
-                        console.error(`Unexpected error in ${filePath}:`, error);
+                        errorContent = error instanceof Error ? error.message : 'Unknown error';
                     }
-                    throw Error(error);
+                    new Notice(`Error processing vocabulary specs in file ${filePath}: ${errorContent}`);
+                    throw error;
                 }
             });
         } catch (error) {
-            new Notice(error.message);
+            console.error('Error processing vocabulary specs:', error);
             throw error;
         }
     }
@@ -127,8 +136,8 @@ export class EditorVocabularyReplacementService {
         try {
             return yamlStrings.map(({content, filePath}) => {
                 try {
-                    const yamlContent = this.yamlReplacementService.fromBlock(content);
-                    return this.yamlReplacementService.parse(yamlContent, filePath);
+                    const yamlContent = this.yamlReplacementService.fromYamlBlock(content);
+                    return this.yamlReplacementService.fromYaml(yamlContent, filePath);
                 } catch (error) {
                     let errorContent;
                     if (error instanceof YamlValidationError) {

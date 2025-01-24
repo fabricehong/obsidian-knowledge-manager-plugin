@@ -381,7 +381,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
     }
 
     private modifyDocumentWithReplacementHeader(doc: RootNode, yamlContent: string): void {
-        const codeBlock = this.serviceContainer.yamlReplacementService.toBlock(yamlContent);
+        const codeBlock = this.serviceContainer.yamlReplacementService.toYamlBlock(yamlContent);
         const newHeader = Object.assign(new HeaderNode(), {
             level: 1,
             heading: this.settings.replacementsHeader,
@@ -423,7 +423,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         const specs = this.serviceContainer.transcriptionReplacementService.createFromSpeakers(speakers);
         
         // Convertir en YAML et ajouter au document
-        const yamlContent = this.serviceContainer.yamlReplacementService.stringify(specs);
+        const yamlContent = this.serviceContainer.yamlReplacementService.toYaml(specs);
         this.modifyDocumentWithReplacementHeader(doc, yamlContent);
 
         // Sauvegarder les modifications
@@ -474,7 +474,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
             const specs = this.serviceContainer.glossaryReplacementService.createFromGlossaryTerms(glossaryTerms.termes);
             
             // Convertir en YAML et ajouter au document
-            const yamlContent = this.serviceContainer.yamlReplacementService.stringify(specs);
+            const yamlContent = this.serviceContainer.yamlReplacementService.toYaml(specs);
             this.modifyDocumentWithReplacementHeader(doc, yamlContent);
 
             // Ajouter la section glossaire

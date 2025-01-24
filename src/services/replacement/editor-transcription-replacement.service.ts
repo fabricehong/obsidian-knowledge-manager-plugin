@@ -2,22 +2,37 @@ import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
 import { ReplacementSpec, ReplacementReport, ReplacementStatistics, ReplacementCount, ReplacementSpecs } from "../../models/interfaces";
 import { DocumentStructureService } from "../../document/document-structure.service";
 import { TranscriptionReplacementService } from "./transcription-replacement.service";
-import { YamlReplacementService } from "./yaml-replacement.service";
+import { YamlService } from "./yaml.service";
 import { YamlValidationError } from '../../models/errors';
 import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal, ConfirmationModal } from "../../ui/replacement-statistics.modal";
 import { convertToReplacementStatistics } from "./replacement-statistics.service";
 
+/**
+ * Service responsible for managing transcription replacements in the Obsidian editor.
+ * This class orchestrates text replacement operations in Markdown documents,
+ * coordinating interactions between the editor, transcription service, document
+ * structure, and YAML metadata management.
+ * 
+ * Main responsibilities:
+ * - Managing text replacements in the active editor
+ * - Finding and processing tagged files for replacement
+ * - Coordinating with transcription and YAML services
+ * - Managing replacement statistics and reports
+ * - Handling user interface interactions for confirmations
+ * 
+ * @since 1.0.0
+ */
 export class EditorTranscriptionReplacementService {
     private app: App;
     private transcriptionReplacementService: TranscriptionReplacementService;
     private documentStructureService: DocumentStructureService;
-    private yamlReplacementService: YamlReplacementService;
+    private yamlReplacementService: YamlService<ReplacementSpecs>;
 
     constructor(
         app: App,
         transcriptionReplacementService: TranscriptionReplacementService,
         documentStructureService: DocumentStructureService,
-        yamlReplacementService: YamlReplacementService
+        yamlReplacementService: YamlService<ReplacementSpecs>
     ) {
         this.app = app;
         this.transcriptionReplacementService = transcriptionReplacementService;
@@ -261,8 +276,8 @@ export class EditorTranscriptionReplacementService {
         try {
             return yamlStrings.map(({content, filePath}) => {
                 try {
-                    const yamlContent = this.yamlReplacementService.fromBlock(content);
-                    return this.yamlReplacementService.parse(yamlContent, filePath);
+                    const yamlContent = this.yamlReplacementService.fromYamlBlock(content);
+                    return this.yamlReplacementService.fromYaml(yamlContent, filePath);
                 } catch (error) {
                     let errorContent;
                     if (error instanceof YamlValidationError) {
