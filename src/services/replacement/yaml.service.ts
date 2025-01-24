@@ -3,8 +3,18 @@ import { dump, load } from 'js-yaml';
 import { YamlValidationError } from '../../models/errors';
 
 /**
- * Generic service for handling YAML data with schema validation.
- * @template T The type of data being handled
+ * Generic service for handling YAML data processing with schema validation.
+ * This service provides type-safe parsing, validation, and serialization of YAML content
+ * using Zod schemas for runtime type checking.
+ * 
+ * Main responsibilities:
+ * - Parsing and validating YAML content against defined schemas
+ * - Extracting YAML content from code blocks
+ * - Serializing data structures to YAML format
+ * - Providing type-safe data handling with generic type support
+ * 
+ * @template T The type of data being handled, defined by the Zod schema
+ * @since 1.0.0
  */
 export class YamlService<T> {
     /**

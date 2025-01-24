@@ -3,7 +3,17 @@ import { ReplacementReport, ReplacementMatch } from '../../models/interfaces';
 import { ReplacementSpecs } from '../../models/schemas';
 
 /**
- * Service for handling transcription replacements
+ * Service responsible for managing and processing transcription replacements in text content.
+ * This service handles the creation, validation, and application of replacement rules
+ * specifically designed for transcription text processing.
+ * 
+ * Main responsibilities:
+ * - Creating replacement specifications from speaker lists
+ * - Processing text content according to replacement rules
+ * - Generating replacement reports for tracking changes
+ * - Managing speaker-specific text transformations
+ * 
+ * @since 1.0.0
  */
 export class TranscriptionReplacementService {
     /**
