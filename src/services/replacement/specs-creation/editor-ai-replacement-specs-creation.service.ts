@@ -6,7 +6,7 @@ import { ReplacementSpecs } from "../../../models/schemas";
 import { GlossarySearchService } from "../../glossary/glossary-search.service";
 import { GlossaryReplacementService } from "./glossary-replacement.service";
 import { LoadingModal } from "../../../ui/loading.modal";
-import { GlossarySpecsSelectionModal } from "../../../ui/glossary-specs-selection.modal";
+import { GlossarySpecsSelectionModal } from "./ui/glossary-specs-selection.modal";
 import { DocumentModificationService } from "../../document/document-modification-utils";
 
 export class EditorAIReplacementSpecsCreationService {

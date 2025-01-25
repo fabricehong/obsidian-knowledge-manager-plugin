@@ -5,7 +5,7 @@ import { YamlValidationError, ReplacementSpecsError } from '../../../models/erro
 import { ReplacementSpecs } from '../../../models/schemas';
 import { ReplacementSpecsIntegrationService, ReplacementSpecsIntegrationSummary } from './replacement-specs-integration.service';
 import { TaggedFilesService } from '../../document/tagged-files.service';
-import { ReplacementSpecsAnalysisModal } from '../../../ui/replacement-specs-analysis.modal';
+import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
 
 export class EditorReplacementSpecsIntegrationService {
     constructor(

@@ -1,5 +1,5 @@
 import { App, Modal, ButtonComponent } from "obsidian";
-import { ReplacementStatistics } from "../models/interfaces";
+import { ReplacementStatistics } from "../../../../models/interfaces";
 
 export class ReplacementStatisticsModal extends Modal {
     constructor(app: App, private statistics: ReplacementStatistics[]) {

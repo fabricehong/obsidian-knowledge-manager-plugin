@@ -1,5 +1,5 @@
 import { App, Modal, Setting } from 'obsidian';
-import { ReplacementSpecs } from '../models/schemas';
+import { ReplacementSpecs } from '../../../../models/schemas';
 
 export class GlossarySpecsSelectionModal extends Modal {
     private selectedSpecs: Map<string, boolean>;

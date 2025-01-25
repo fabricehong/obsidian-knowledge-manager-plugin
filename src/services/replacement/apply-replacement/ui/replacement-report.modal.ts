@@ -1,5 +1,5 @@
 import { App, Modal } from "obsidian";
-import { ReplacementReport } from "../models/interfaces";
+import { ReplacementReport } from "../../../../models/interfaces";
 
 export class ReplacementReportModal extends Modal {
     private reports: ReplacementReport[];

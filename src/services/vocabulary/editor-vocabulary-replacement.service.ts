@@ -5,8 +5,8 @@ import { ReplacementSummary } from "../../models/interfaces";
 import { TextCorrector } from "./textCorrector";
 import { ReplacementSpecs, VocabularySpecs } from "../../models/schemas";
 import { YamlValidationError } from "../../models/errors";
-import { ReplacementReportModal } from "../../ui/replacement-report.modal";
-import { VocabularyReplacementSummaryModal } from "../../ui/vocabulary-replacement-summary.modal";
+import { ReplacementReportModal } from "../replacement/apply-replacement/ui/replacement-report.modal";
+import { VocabularyReplacementSummaryModal } from "./ui/vocabulary-replacement-summary.modal";
 import { DocumentStructureService } from "../document/document-structure.service";
 import { TaggedFilesService } from '../document/tagged-files.service';
 

@@ -4,7 +4,7 @@ import { DocumentStructureService } from "../../document/document-structure.serv
 import { TranscriptionReplacementService } from "./transcription-replacement.service";
 import { YamlService } from "../../document/yaml.service";
 import { YamlValidationError } from '../../../models/errors';
-import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal, ConfirmationModal } from "../../../ui/replacement-statistics.modal";
+import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal, ConfirmationModal } from "./ui/replacement-statistics.modal";
 import { convertToReplacementStatistics } from "./replacement-statistics.service";
 import { ReplacementSpecs } from "../../../models/schemas";
 import { TaggedFilesService } from '../../document/tagged-files.service';

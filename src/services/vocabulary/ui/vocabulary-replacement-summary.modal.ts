@@ -1,5 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
-import { ReplacementSummary } from "../models/interfaces";
+import { ReplacementSummary } from "../../../models/interfaces";
 
 export class VocabularyReplacementSummaryModal extends Modal {
     private onAccept: () => void;

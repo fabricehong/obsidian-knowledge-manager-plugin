@@ -1,5 +1,5 @@
 import { App, Modal } from 'obsidian';
-import { ReplacementSpecsIntegrationSummary } from '../services/replacement/replacement-diffusion/replacement-specs-integration.service';
+import { ReplacementSpecsIntegrationSummary } from '../replacement-specs-integration.service';
 
 export class ReplacementSpecsAnalysisModal extends Modal {
     constructor(

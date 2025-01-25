@@ -3,7 +3,7 @@ import { DocumentStructureService } from "../document/document-structure.service
 import { DocumentationService } from "./documentation.service";
 import { HeaderNode, RootNode } from "../../models/interfaces";
 import { LoadingModal } from "../../ui/loading.modal";
-import { MindmapInputModal } from "../../ui/mindmap-input.modal";
+import { MindmapInputModal } from "./ui/mindmap-input.modal";
 
 export class EditorDocumentationService {
     constructor(
