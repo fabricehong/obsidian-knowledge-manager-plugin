@@ -126,11 +126,14 @@ export class ReplacementSpecsAnalysisModal extends Modal {
             });
 
             for (const spec of integration.specsToIntegrate) {
+                // Initialiser à true par défaut
+                this.integrationChoices.set(spec.target, true);
+
                 new Setting(section)
                     .setName(`${spec.target}`)
                     .setDesc(`Termes : ${spec.toSearch.join(', ')}`)
                     .addToggle(toggle => toggle
-                        .setValue(true)  // Par défaut à true
+                        .setValue(true)
                         .onChange(value => {
                             this.integrationChoices.set(spec.target, value);
                         })
