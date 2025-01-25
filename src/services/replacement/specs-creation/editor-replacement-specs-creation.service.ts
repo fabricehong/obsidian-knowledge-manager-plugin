@@ -5,6 +5,7 @@ import { TranscriptionReplacementService } from "../apply-replacement/transcript
 import { YamlService } from "../../document/yaml.service";
 import { HeaderNode, RootNode } from "../../../models/interfaces";
 import { ReplacementSpecs } from "../../../models/schemas";
+import { createReplacementSpecsFromSpeakers } from "./speakers-specs-creator";
 
 export class EditorReplacementSpecsCreationService {
     constructor(
@@ -36,7 +37,7 @@ export class EditorReplacementSpecsCreationService {
         // Créer les specs à partir des speakers
         const interventions = this.transcriptFileService.parseTranscript(transcriptContent);
         const speakers = this.transcriptFileService.getUniqueSpeakers(interventions);
-        const specs = this.transcriptionReplacementService.createFromSpeakers(speakers);
+        const specs = createReplacementSpecsFromSpeakers(speakers);
         
         // Convertir en YAML et ajouter au document
         const yamlContent = this.yamlService.toYaml(specs);

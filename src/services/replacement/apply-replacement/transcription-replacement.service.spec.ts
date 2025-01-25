@@ -8,34 +8,6 @@ describe('TranscriptionReplacementService', () => {
         service = new TranscriptionReplacementService();
     });
 
-    describe('createFromSpeakers', () => {
-        it('should create replacement specs from speakers', () => {
-            const speakers = ['John', 'Jane'];
-            const expected: ReplacementSpecs = {
-                category: 'Speakers',
-                replacements: [
-                    {
-                        target: 'John',
-                        toSearch: ['John']
-                    },
-                    {
-                        target: 'Jane',
-                        toSearch: ['Jane']
-                    }
-                ]
-            };
-            expect(service.createFromSpeakers(speakers)).toEqual(expected);
-        });
-
-        it('should handle empty speakers list', () => {
-            const expected: ReplacementSpecs = {
-                category: 'Speakers',
-                replacements: []
-            };
-            expect(service.createFromSpeakers([])).toEqual(expected);
-        });
-    });
-
     describe('applyReplacements', () => {
         it('should replace text according to replacement specs', () => {
             const content = 'John: Hello\nJohn: Hi\nJane: Hey';

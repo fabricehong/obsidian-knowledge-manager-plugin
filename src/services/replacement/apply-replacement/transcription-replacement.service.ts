@@ -8,29 +8,12 @@ import { ReplacementSpecs } from '../../../models/schemas';
  * specifically designed for transcription text processing.
  * 
  * Main responsibilities:
- * - Creating replacement specifications from speaker lists
  * - Processing text content according to replacement rules
  * - Generating replacement reports for tracking changes
- * - Managing speaker-specific text transformations
  * 
  * @since 1.0.0
  */
 export class TranscriptionReplacementService {
-    /**
-     * Creates replacement specs from a list of speakers
-     * @param speakers List of speaker names
-     * @returns ReplacementSpecs object with each speaker as a target
-     */
-    createFromSpeakers(speakers: string[]): ReplacementSpecs {
-        return {
-            category: 'Speakers',
-            replacements: speakers.map(speaker => ({
-                target: speaker,
-                toSearch: [speaker]
-            }))
-        };
-    }
-
     /**
      * Applies a set of text replacement rules to a given content and returns both the modified content
      * and a report of what was actually replaced.
