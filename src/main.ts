@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Notice, Plugin, TFolder, TFile } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, TFolder, TFile, MarkdownRenderer } from 'obsidian';
 import { PluginSettings, DEFAULT_SETTINGS, RootNode } from './settings/settings';
 import { HeaderNode } from './models/header-node';
 import { SettingsTab } from './settings/settings-tab';
@@ -7,6 +7,71 @@ import { ServiceContainer } from './services/service-container';
 import { LoadingModal } from './ui/loading.modal';
 import { MindmapInputModal } from './ui/mindmap-input.modal';
 import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
+
+const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
+
+## Vue d'ensemble
+Les commandes de remplacement de transcript permettent de standardiser les noms et termes utilisés dans vos transcriptions de réunions.
+
+## Commandes disponibles
+
+### Création de specs de remplacement
+- \`transcript-replacement:replacement-specs:create:from-speakers\`
+  Extrait les noms des intervenants du transcript et crée une section de specs de remplacement. Ces specs peuvent ensuite être appliquées ou publiées dans le vault.
+
+- \`transcript-replacement:replacement-specs:create:from-ai\`
+  Alternative utilisant l'IA pour suggérer des specs de remplacement en analysant le transcript. Ces specs peuvent ensuite être appliquées ou publiées.
+
+### Application des remplacements
+- \`transcript-replacement:apply:from-specs\`
+  Applique les remplacements au transcript en utilisant les specs locales du fichier actif ET celles publiées dans le vault. Les specs locales sont prioritaires.
+
+- \`transcript-replacement:apply:from-vocabulary\`
+  Applique directement les remplacements depuis le vocabulaire global, sans passer par les specs. Alternative rapide quand les specs ne sont pas nécessaires.
+
+### Publication des specs
+- \`transcript-replacement:replacement-specs:publish-to-vault\`
+  Déplace les specs du fichier actif vers le vault pour une utilisation globale. Ces specs seront utilisées par 'apply:from-specs' pour tous les fichiers.
+
+## Workflow typique
+1. Créer des specs de remplacement :
+   - Soit via \`create:from-speakers\` pour extraire les noms des intervenants
+   - Soit via \`create:from-ai\` pour des suggestions basées sur l'IA
+2. Vérifier et ajuster les specs générées si nécessaire
+3. Appliquer les specs avec \`apply:from-specs\` pour tester localement
+4. Si les remplacements sont satisfaisants, utiliser \`publish-to-vault\` pour les rendre disponibles globalement
+5. Pour les cas simples, utiliser directement \`apply:from-vocabulary\``;
+
+class HelpModal extends Modal {
+    private plugin: KnowledgeManagerPlugin;
+
+    constructor(app: App, plugin: KnowledgeManagerPlugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+
+    async onOpen() {
+        let { contentEl } = this;
+        
+        // Créer un conteneur pour le contenu markdown
+        const markdownContainer = contentEl.createDiv({
+            cls: 'markdown-preview-view markdown-rendered'
+        });
+
+        // Rendre le markdown
+        await MarkdownRenderer.renderMarkdown(
+            HELP_CONTENT,
+            markdownContainer,
+            '',
+            this.plugin
+        );
+    }
+
+    onClose() {
+        let { contentEl } = this;
+        contentEl.empty();
+    }
+}
 
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
@@ -18,8 +83,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
         // Register commands
         this.addCommand({
-            id: 'diffuse-note',
-            name: 'Diffuse current note',
+            id: 'note-dissusion:diffuse-current-note',
+            name: 'note-dissusion:diffuse-current-note',
             checkCallback: (checking: boolean) => {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
@@ -32,10 +97,135 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        // Add the remove references content command
+        this.addCommand({
+            id: 'note-diffusion:remove-refs-content',
+            name: 'note-diffusion:remove-refs-content',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.removeRefsContent(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the add replacements section command
+        this.addCommand({
+            id: 'transcript-replacement:replacement-specs:create:from-speakers',
+            name: 'transcript-replacement:replacement-specs:create:from-speakers',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.addReplacementsSection(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the add glossary replacements section command
+        this.addCommand({
+            id: 'transcript-replacement:replacement-specs:create:from-ai',
+            name: 'transcript-replacement:replacement-specs:create:from-ai',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.addGlossaryReplacementsSection(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the replace transcription command
+        this.addCommand({
+            id: 'transcript-replacement:apply:from-specs',
+            name: 'transcript-replacement:apply:from-specs',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.replaceTranscription(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add vocabulary replacement command
+        this.addCommand({
+            id: 'transcript-replacement:apply:from-vocabulary',
+            name: 'transcript-replacement:apply:from-vocabulary',
+            editorCallback: (editor: Editor) => {
+                const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (view) {
+                    this.replaceWithVocabulary(view);
+                }
+            }
+        });
+
+        // Add the analyze replacement specs command
+        this.addCommand({
+            id: 'transcript-replacement:replacement-specs:publish-to-vault',
+            name: 'transcript-replacement:replacement-specs:publish-to-vault',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.analyzeReplacementSpecs(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the create documentation command
+        this.addCommand({
+            id: 'enrich:create-documentation',
+            name: 'enrich:create-documentation',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.createDocumentation(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add the list conversation topics command
+        this.addCommand({
+            id: 'enrich:list-conversation-topics',
+            name: 'enrich:list-conversation-topics',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.listConversationTopics(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+
         // Add the summarize command
         this.addCommand({
-            id: 'summarize-note',
-            name: 'Summarize current note',
+            id: 'debug:summarize-note',
+            name: 'debug:summarize-note',
             checkCallback: (checking: boolean) => {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
@@ -50,8 +240,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
         // Add the map vault command
         this.addCommand({
-            id: 'map-vault',
-            name: 'Map Vault',
+            id: 'debug:map-vault',
+            name: 'debug:map-vault',
             callback: () => {
                 new FolderSuggestModal(this.app, (folder: TFolder) => {
                     try {
@@ -69,8 +259,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
         // Add the print file cache command
         this.addCommand({
-            id: 'print-file-cache',
-            name: 'Print File Cache',
+            id: 'debug:print-file-cache',
+            name: 'debug:print-file-cache',
             checkCallback: (checking: boolean) => {
                 const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (activeView?.file) {
@@ -92,26 +282,10 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
-        // Add the remove references content command
-        this.addCommand({
-            id: 'remove-refs-content',
-            name: 'Remove References Content',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.removeRefsContent(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
         // Add command to print translation prompt template
         this.addCommand({
-            id: 'print-translation-template',
-            name: 'Print Translation Prompt Template',
+            id: 'debug:print-translation-template',
+            name: 'debug:print-translation-template',
             callback: async () => {
                 const templatePath = this.settings.translationPromptTemplate;
                 if (!templatePath) {
@@ -138,132 +312,17 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
-        // Add the add replacements section command
-        this.addCommand({
-            id: 'add-replacements-section',
-            name: 'Add section: replacements',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.addReplacementsSection(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        // Add the replace transcription command
-        this.addCommand({
-            id: 'replace-transcription',
-            name: 'Replace transcription',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.replaceTranscription(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        // Add vocabulary replacement command
-        this.addCommand({
-            id: 'replace-text-using-vocabulary',
-            name: 'Replace text using vocabulary',
-            editorCallback: (editor: Editor) => {
-                const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (view) {
-                    this.replaceWithVocabulary(view);
-                }
-            }
-        });
-
-        // Add the find glossary words command
-        this.addCommand({
-            id: 'find-glossary-words',
-            name: 'Find New Glossary Words with AI',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.findGlossaryWords(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        // Add the create documentation command
-        this.addCommand({
-            id: 'create-documentation',
-            name: 'Create Documentation from Mindmap',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.createDocumentation(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        // Add the list conversation topics command
-        this.addCommand({
-            id: 'list-conversation-topics',
-            name: 'Lister sujet de conversation',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.listConversationTopics(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        // Add the add glossary replacements section command
-        this.addCommand({
-            id: 'add-glossary-replacements-section',
-            name: 'Add section: glossary replacements',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.addGlossaryReplacementsSection(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        // Add the analyze replacement specs command
-        this.addCommand({
-            id: 'analyze-replacement-specs',
-            name: 'Analyze replacement specs integration',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.analyzeReplacementSpecs(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
         // Add settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
+
+        // Add the show transcript replacement help command
+        this.addCommand({
+            id: 'transcript-replacement:aide',
+            name: 'transcript-replacement:aide',
+            callback: () => {
+                this.showTranscriptReplacementHelp();
+            }
+        });
     }
 
     async loadSettings() {
@@ -528,31 +587,6 @@ export default class KnowledgeManagerPlugin extends Plugin {
         );
     }
 
-    private async findGlossaryWords(markdownView: MarkdownView) {
-        const file = markdownView.file;
-        if (!file) return;
-
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
-
-        // Obtenir le contenu de la transcription
-        const transcriptContent = this.getTranscriptContent(doc);
-        if (!transcriptContent) return;
-
-        try {
-            const glossary = await this.serviceContainer.glossarySearchService.findGlossaryTerms(
-                transcriptContent,
-                this.settings.maxGlossaryIterations
-            );
-
-            console.log('Glossary:', glossary);
-        } catch (error) {
-            console.error("Error in findGlossaryTerms:", error);
-            new Notice('Error finding glossary terms. Check the console for details.');
-        }
-    }
-
     private async createDocumentation(markdownView: MarkdownView) {
         try {
             const file = markdownView.file;
@@ -697,5 +731,14 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
 
         new ReplacementSpecsAnalysisModal(this.app, analysis).open();
+    }
+
+    private async showTranscriptReplacementHelp() {
+        try {
+            new HelpModal(this.app, this).open();
+        } catch (error) {
+            console.error('Error showing help:', error);
+            new Notice('Erreur lors de l\'affichage de l\'aide');
+        }
     }
 }
