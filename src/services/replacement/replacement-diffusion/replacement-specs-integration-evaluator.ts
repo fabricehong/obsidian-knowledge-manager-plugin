@@ -28,7 +28,8 @@ export type ReplacementSpecIntegrationResult =
     | NoMatchResult;
 
 export class ReplacementSpecsIntegrationEvaluator {
-    constructor(private replacementSpecs: ReplacementSpecs) {}
+    
+    constructor(public readonly replacementSpecs: ReplacementSpecs) {}
     
     /** 
      * Evaluates if and how a ReplacementSpec can be integrated into existing specs.
@@ -85,5 +86,23 @@ export class ReplacementSpecsIntegrationEvaluator {
         return {
             status: 'NO_MATCH'
         };
+    }
+
+    integrate(spec: ReplacementSpec) {
+        // Try to find existing replacement with same target
+        const existingReplacement = this.replacementSpecs.replacements.find(
+            r => r.target === spec.target
+        );
+
+        if (existingReplacement) {
+            // Add new search terms to existing replacement
+            existingReplacement.toSearch.push(...spec.toSearch);
+        } else {
+            // Add new replacement at the end
+            this.replacementSpecs.replacements.push({
+                target: spec.target,
+                toSearch: [...spec.toSearch]
+            });
+        }
     }
 }

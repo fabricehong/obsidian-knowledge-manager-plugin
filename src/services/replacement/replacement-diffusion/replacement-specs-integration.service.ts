@@ -119,4 +119,14 @@ export class ReplacementSpecsIntegrationService {
             }
         }
     }
+
+    public integrateReplacementSpecs(
+        existingSpecs: ReplacementSpecs,
+        specsToIntegrate: ReplacementSpec[]
+    ) {
+        const specsWrapper = new ReplacementSpecsIntegrationEvaluator(existingSpecs);
+        for (const spec of specsToIntegrate) {
+            specsWrapper.integrate(spec);
+        }
+    }
 }

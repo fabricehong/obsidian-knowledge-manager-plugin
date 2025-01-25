@@ -114,4 +114,48 @@ describe('ReplacementSpecsIntegrationEvaluator', () => {
             expect(result.status).toBe('NO_MATCH');
         });
     });
+
+    describe('integrate', () => {
+        it('should add new search terms to existing target', () => {
+            // Arrange
+            const specs: ReplacementSpecs = {
+                category: 'test',
+                replacements: [
+                    { target: 'hello', toSearch: ['hi'] }
+                ]
+            };
+            const evaluator = new ReplacementSpecsIntegrationEvaluator(specs);
+            
+            // Act
+            evaluator.integrate({ target: 'hello', toSearch: ['hey', 'bonjour'] });
+            
+            // Assert
+            expect(specs.replacements).toHaveLength(1);
+            expect(specs.replacements[0]).toEqual({
+                target: 'hello',
+                toSearch: ['hi', 'hey', 'bonjour']
+            });
+        });
+
+        it('should add new replacement when target does not exist', () => {
+            // Arrange
+            const specs: ReplacementSpecs = {
+                category: 'test',
+                replacements: [
+                    { target: 'hello', toSearch: ['hi'] }
+                ]
+            };
+            const evaluator = new ReplacementSpecsIntegrationEvaluator(specs);
+            
+            // Act
+            evaluator.integrate({ target: 'goodbye', toSearch: ['bye', 'ciao'] });
+            
+            // Assert
+            expect(specs.replacements).toHaveLength(2);
+            expect(specs.replacements[1]).toEqual({
+                target: 'goodbye',
+                toSearch: ['bye', 'ciao']
+            });
+        });
+    });
 });
