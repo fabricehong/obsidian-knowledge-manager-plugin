@@ -27,7 +27,7 @@ describe('ReplacementSpecsIntegrationService', () => {
         };
     }
 
-    describe('integrateSpecs', () => {
+    describe('determineHowToIntegrateSpecs', () => {
         it('should integrate specs with missing terms into the correct category', () => {
             // Arrange
             const existingSpecs = [
@@ -41,7 +41,7 @@ describe('ReplacementSpecsIntegrationService', () => {
             ];
 
             // Act
-            const result = service.integrateSpecs(existingSpecs, specsToIntegrate);
+            const result = service.determineHowToIntegrateSpecs(existingSpecs, specsToIntegrate);
 
             // Assert
             expect(result.integrations).toHaveLength(1);
@@ -64,7 +64,7 @@ describe('ReplacementSpecsIntegrationService', () => {
             ];
 
             // Act
-            const result = service.integrateSpecs(existingSpecs, specsToIntegrate);
+            const result = service.determineHowToIntegrateSpecs(existingSpecs, specsToIntegrate);
 
             // Assert
             expect(result.integrations).toHaveLength(0);
@@ -89,7 +89,7 @@ describe('ReplacementSpecsIntegrationService', () => {
             ];
 
             // Act & Assert
-            expect(() => service.integrateSpecs(existingSpecs, specsToIntegrate))
+            expect(() => service.determineHowToIntegrateSpecs(existingSpecs, specsToIntegrate))
                 .toThrow(/Incohérence détectée/);
         });
 
@@ -106,7 +106,7 @@ describe('ReplacementSpecsIntegrationService', () => {
             ];
 
             // Act
-            const result = service.integrateSpecs(existingSpecs, specsToIntegrate);
+            const result = service.determineHowToIntegrateSpecs(existingSpecs, specsToIntegrate);
 
             // Assert
             expect(result.integrations).toHaveLength(0);
@@ -129,13 +129,47 @@ describe('ReplacementSpecsIntegrationService', () => {
             ];
 
             // Act
-            const result = service.integrateSpecs(existingSpecs, specsToIntegrate);
+            const result = service.determineHowToIntegrateSpecs(existingSpecs, specsToIntegrate);
 
             // Assert
             expect(result.integrations).toHaveLength(1);
             expect(result.integrations[0].targetCategory).toBe('greetings');
             expect(result.integrations[0].specsToIntegrate).toEqual(specsToIntegrate);
             expect(result.analyzedFilesCount).toEqual(existingSpecs.length);
+        });
+    });
+
+    describe('checkSpecsIntegrity', () => {
+        it('should not throw error when all specs are valid', () => {
+            // Arrange
+            const specs = createExistingSpec('greetings',
+                { target: 'hello', terms: ['hi', 'hey'] }
+            );
+
+            // Act & Assert
+            expect(() => service.checkSpecsIntegrity(specs)).not.toThrow();
+        });
+
+        it('should throw error when a search term equals its target', () => {
+            // Arrange
+            const specs = createExistingSpec('greetings',
+                { target: 'hello', terms: ['hi', 'hello', 'hey'] }
+            );
+
+            // Act & Assert
+            expect(() => service.checkSpecsIntegrity(specs))
+                .toThrow('Invalid replacement specs in category "greetings": Search term(s) "hello" cannot be equal to their target "hello"');
+        });
+
+        it('should throw error when multiple search terms equal their target', () => {
+            // Arrange
+            const specs = createExistingSpec('greetings',
+                { target: 'hello', terms: ['hello', 'hi', 'hello'] }
+            );
+
+            // Act & Assert
+            expect(() => service.checkSpecsIntegrity(specs))
+                .toThrow('Invalid replacement specs in category "greetings": Search term(s) "hello", "hello" cannot be equal to their target "hello"');
         });
     });
 });

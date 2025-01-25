@@ -25,11 +25,12 @@ export class ReplacementSpecsAnalysisModal extends Modal {
         // Section 1: Specs intégrables
         this.displayIntegrableSpecs(contentDiv);
 
-        // Section 2: Specs déjà intégrées
+        // Section 2: Specs sans correspondance
+        this.displayNoMatchSpecs(contentDiv);
+
+        // Section 3: Specs déjà intégrées
         this.displayAlreadyIntegratedSpecs(contentDiv);
 
-        // Section 3: Specs sans correspondance
-        this.displayNoMatchSpecs(contentDiv);
     }
 
     private displayIntegrableSpecs(container: HTMLElement) {

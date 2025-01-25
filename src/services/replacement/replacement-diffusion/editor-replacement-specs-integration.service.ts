@@ -38,12 +38,7 @@ export class EditorReplacementSpecsIntegrationService {
 
             new ReplacementSpecsAnalysisModal(this.app, analysis).open();
         } catch (error) {
-            if (error instanceof ReplacementSpecsError) {
-                new Notice('Erreur lors de l\'analyse des specs. Voir la console pour plus de détails.');
-            } else {
-                new Notice('Une erreur inattendue est survenue. Voir la console pour plus de détails.');
-            }
-            // L'erreur est déjà loguée dans le service
+            new Notice('Erreur: ' + error.message);
         }
     }
 
@@ -78,12 +73,14 @@ export class EditorReplacementSpecsIntegrationService {
                 }
             }
 
+            this.replacementSpecsIntegrationService.checkSpecsIntegrity(currentSpecs);
+
             // 2. Collecter les specs existantes
             const existingSpecs = await this.collectExistingSpecs(replacementSpecsTag);
 
             // 3. Retourner l'analyse
             return this.replacementSpecsIntegrationService
-                .integrateSpecs(existingSpecs, currentSpecs.replacements);
+                .determineHowToIntegrateSpecs(existingSpecs, currentSpecs.replacements);
         } catch (error) {
             if (error instanceof ReplacementSpecsError) {
                 console.error(`Error analyzing specs: ${error.message} in ${error.filePath}`);

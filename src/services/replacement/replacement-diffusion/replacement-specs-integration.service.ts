@@ -67,7 +67,7 @@ export class ReplacementSpecsIntegrationService {
         };
     }
 
-    public integrateSpecs(existingSpecs: ReplacementSpecs[], specsToIntegrate: ReplacementSpec[]): ReplacementSpecsIntegrationSummary {
+    public determineHowToIntegrateSpecs(existingSpecs: ReplacementSpecs[], specsToIntegrate: ReplacementSpec[]): ReplacementSpecsIntegrationSummary {
         const result: ReplacementSpecsIntegrationSummary = {
             integrations: [],
             alreadyIntegrated: [],
@@ -106,5 +106,17 @@ export class ReplacementSpecsIntegrationService {
         }
 
         return result;
+    }
+
+    public checkSpecsIntegrity(specs: ReplacementSpecs) {
+        for (const replacement of specs.replacements) {
+            const invalidTerms = replacement.toSearch.filter(term => term === replacement.target);
+            if (invalidTerms.length > 0) {
+                throw new Error(
+                    `Invalid replacement specs in category "${specs.category}": ` +
+                    `Search term(s) "${invalidTerms.join('", "')}" cannot be equal to their target "${replacement.target}"`
+                );
+            }
+        }
     }
 }
