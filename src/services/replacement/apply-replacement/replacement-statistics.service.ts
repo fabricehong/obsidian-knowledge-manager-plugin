@@ -1,4 +1,4 @@
-import { ReplacementReport, ReplacementStatistics, ReplacementCount } from "../../models/interfaces";
+import { ReplacementReport, ReplacementStatistics, ReplacementCount } from "../../../models/interfaces";
 
 /**
  * Utility service responsible for converting replacement reports into statistical summaries.

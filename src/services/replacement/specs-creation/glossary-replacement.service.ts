@@ -1,5 +1,5 @@
-import { ReplacementSpecs } from '../../models/schemas';
-import { Term } from '../../types/glossary';
+import { ReplacementSpecs } from '../../../models/schemas';
+import { Term } from '../../../types/glossary';
 
 /**
  * Service responsible for managing glossary term replacements.

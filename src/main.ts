@@ -1,15 +1,8 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, TFolder, TFile, MarkdownRenderer } from 'obsidian';
-import { PluginSettings, DEFAULT_SETTINGS, RootNode } from './settings/settings';
-import { HeaderNode } from './models/header-node';
+import { App, Editor, MarkdownRenderer, MarkdownView, Modal, Notice, Plugin, TFile, TFolder } from 'obsidian';
+import { ServiceContainer } from './services/service-container';
+import { DEFAULT_SETTINGS, PluginSettings } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
-import { ServiceContainer } from './services/service-container';
-import { LoadingModal } from './ui/loading.modal';
-import { MindmapInputModal } from './ui/mindmap-input.modal';
-import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
-import { ReplacementSpecsError } from './models/errors';
-import { GlossarySpecsSelectionModal } from './ui/glossary-specs-selection.modal';
-import { ReplacementSpecs } from './models/schemas';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 

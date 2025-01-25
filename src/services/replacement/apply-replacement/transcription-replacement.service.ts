@@ -1,6 +1,6 @@
-import { SPEAKER_DELIMITER } from '../../constants/delimiters';
-import { ReplacementReport, ReplacementMatch } from '../../models/interfaces';
-import { ReplacementSpecs } from '../../models/schemas';
+import { SPEAKER_DELIMITER } from '../../../constants/delimiters';
+import { ReplacementReport, ReplacementMatch } from '../../../models/interfaces';
+import { ReplacementSpecs } from '../../../models/schemas';
 
 /**
  * Service responsible for managing and processing transcription replacements in text content.

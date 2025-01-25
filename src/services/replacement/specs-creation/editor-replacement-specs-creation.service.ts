@@ -1,7 +1,7 @@
 import { App, MarkdownView, Notice } from "obsidian";
 import { DocumentStructureService } from "../../document/document-structure.service";
 import { TranscriptFileService } from "../../transcription/transcript-file.service";
-import { TranscriptionReplacementService } from "../transcription-replacement.service";
+import { TranscriptionReplacementService } from "../apply-replacement/transcription-replacement.service";
 import { YamlService } from "../../document/yaml.service";
 import { HeaderNode, RootNode } from "../../../models/interfaces";
 import { ReplacementSpecs } from "../../../models/schemas";

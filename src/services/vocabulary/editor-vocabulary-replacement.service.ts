@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
 import { YamlService } from "../document/yaml.service";
-import { TranscriptionReplacementService } from "../replacement/transcription-replacement.service";
+import { TranscriptionReplacementService } from "../replacement/apply-replacement/transcription-replacement.service";
 import { ReplacementSummary } from "../../models/interfaces";
 import { TextCorrector } from "./textCorrector";
 import { ReplacementSpecs, VocabularySpecs } from "../../models/schemas";

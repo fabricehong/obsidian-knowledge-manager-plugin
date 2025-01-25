@@ -1,4 +1,4 @@
-import { ReplacementReport, ReplacementStatistics, ReplacementCount } from "../../models/interfaces";
+import { ReplacementReport, ReplacementStatistics, ReplacementCount } from "../../../models/interfaces";
 import { convertToReplacementStatistics } from "./replacement-statistics.service";
 
 describe('convertToReplacementStatistics', () => {

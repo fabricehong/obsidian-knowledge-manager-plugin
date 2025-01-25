@@ -1,13 +1,13 @@
 import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
-import { ReplacementReport, ReplacementStatistics } from "../../models/interfaces";
-import { DocumentStructureService } from "../document/document-structure.service";
+import { ReplacementReport, ReplacementStatistics } from "../../../models/interfaces";
+import { DocumentStructureService } from "../../document/document-structure.service";
 import { TranscriptionReplacementService } from "./transcription-replacement.service";
-import { YamlService } from "../document/yaml.service";
-import { YamlValidationError } from '../../models/errors';
-import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal, ConfirmationModal } from "../../ui/replacement-statistics.modal";
+import { YamlService } from "../../document/yaml.service";
+import { YamlValidationError } from '../../../models/errors';
+import { ReplacementStatisticsModal, InfoModal, ReplacementConfirmationModal, ConfirmationModal } from "../../../ui/replacement-statistics.modal";
 import { convertToReplacementStatistics } from "./replacement-statistics.service";
-import { ReplacementSpecs } from "../../models/schemas";
-import { TaggedFilesService } from '../document/tagged-files.service';
+import { ReplacementSpecs } from "../../../models/schemas";
+import { TaggedFilesService } from '../../document/tagged-files.service';
 
 /**
  * Service responsible for managing transcription replacements in the Obsidian editor.

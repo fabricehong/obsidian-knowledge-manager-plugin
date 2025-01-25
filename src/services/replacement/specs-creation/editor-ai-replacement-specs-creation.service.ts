@@ -4,7 +4,7 @@ import { YamlService } from "../../document/yaml.service";
 import { HeaderNode, RootNode } from "../../../models/interfaces";
 import { ReplacementSpecs } from "../../../models/schemas";
 import { GlossarySearchService } from "../../glossary/glossary-search.service";
-import { GlossaryReplacementService } from "../glossary-replacement.service";
+import { GlossaryReplacementService } from "./glossary-replacement.service";
 
 export class EditorAIReplacementSpecsCreationService {
     constructor(
