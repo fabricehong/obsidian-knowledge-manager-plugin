@@ -21,7 +21,7 @@ export class GlossaryReplacementService {
      */
     createFromGlossaryTerms(terms: Term[]): ReplacementSpecs {
         return {
-            category: 'Glossary',
+            category: 'Local',
             replacements: terms.map(term => ({
                 target: term.terme,
                 toSearch: [term.terme]

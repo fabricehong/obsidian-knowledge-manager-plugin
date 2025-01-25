@@ -1,0 +1,17 @@
+.replacement-specs-analysis-header {
+    margin-bottom: 20px;
+}
+
+.replacement-specs-analysis-header h2 {
+    margin-bottom: 8px;
+}
+
+.replacement-specs-analysis-header p {
+    color: var(--text-muted);
+    font-size: 0.9em;
+    margin: 0;
+}
+
+.replacement-specs-analysis-content {
+    margin-top: 20px;
+}

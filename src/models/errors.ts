@@ -8,3 +8,10 @@ export class YamlValidationError extends Error {
         this.name = 'YamlValidationError';
     }
 }
+
+export class ReplacementSpecsError extends Error {
+    constructor(message: string, public readonly filePath: string) {
+        super(message);
+        this.name = 'ReplacementSpecsError';
+    }
+}

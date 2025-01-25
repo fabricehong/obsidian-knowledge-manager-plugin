@@ -11,6 +11,7 @@ export interface ReplacementSpecsIntegrationSummary {
         category: string;
     }[];
     needsClassification: ReplacementSpec[];
+    analyzedFilesCount: number;
 }
 
 interface IntegrationTarget {
@@ -70,7 +71,8 @@ export class ReplacementSpecsIntegrationService {
         const result: ReplacementSpecsIntegrationSummary = {
             integrations: [],
             alreadyIntegrated: [],
-            needsClassification: []
+            needsClassification: [],
+            analyzedFilesCount: existingSpecs.length
         };
 
         // Pour chaque spec à intégrer

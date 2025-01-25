@@ -7,6 +7,9 @@ import { ServiceContainer } from './services/service-container';
 import { LoadingModal } from './ui/loading.modal';
 import { MindmapInputModal } from './ui/mindmap-input.modal';
 import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
+import { ReplacementSpecsError } from './models/errors';
+import { GlossarySpecsSelectionModal } from './ui/glossary-specs-selection.modal';
+import { ReplacementSpecs } from './models/schemas';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
@@ -547,7 +550,24 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 return;
             }
 
-            const specs = this.serviceContainer.glossaryReplacementService.createFromGlossaryTerms(glossaryTerms.termes);
+            const initialSpecs = this.serviceContainer.glossaryReplacementService.createFromGlossaryTerms(glossaryTerms.termes);
+
+            // Afficher la modale de sélection
+            const specs = await new Promise<ReplacementSpecs | null>(resolve => {
+                new GlossarySpecsSelectionModal(
+                    this.app,
+                    initialSpecs,
+                    selectedSpecs => {
+                        resolve(selectedSpecs);
+                    }
+                ).open();
+            });
+
+            // Si annulé ou aucune spec sélectionnée
+            if (!specs || specs.replacements.length === 0) {
+                new Notice('Opération annulée');
+                return;
+            }
             
             // Convertir en YAML et ajouter au document
             const yamlContent = this.serviceContainer.yamlReplacementService.toYaml(specs);
@@ -718,19 +738,28 @@ export default class KnowledgeManagerPlugin extends Plugin {
     }
 
     private async analyzeReplacementSpecs(markdownView: MarkdownView) {
-        const analysis = await this.serviceContainer.editorReplacementSpecsIntegrationService
-            .analyzeCurrentFileSpecs(
-                markdownView,
-                this.settings.replacementSpecsTag,
-                this.settings.replacementsHeader
-            );
-        
-        if (!analysis) {
-            new Notice('No replacement specs found in current file');
-            return;
+        try {
+            const analysis = await this.serviceContainer.editorReplacementSpecsIntegrationService
+                .analyzeCurrentFileSpecs(
+                    markdownView,
+                    this.settings.replacementSpecsTag,
+                    this.settings.replacementsHeader
+                );
+            
+            if (!analysis) {
+                new Notice('No replacement specs found in current file');
+                return;
+            }
+    
+            new ReplacementSpecsAnalysisModal(this.app, analysis).open();
+        } catch (error) {
+            if (error instanceof ReplacementSpecsError) {
+                new Notice('Erreur lors de l\'analyse des specs. Voir la console pour plus de détails.');
+            } else {
+                new Notice('Une erreur inattendue est survenue. Voir la console pour plus de détails.');
+            }
+            // L'erreur est déjà loguée dans le service
         }
-
-        new ReplacementSpecsAnalysisModal(this.app, analysis).open();
     }
 
     private async showTranscriptReplacementHelp() {

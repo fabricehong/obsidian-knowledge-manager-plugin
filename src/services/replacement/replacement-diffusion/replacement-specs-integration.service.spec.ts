@@ -48,6 +48,7 @@ describe('ReplacementSpecsIntegrationService', () => {
             expect(result.integrations[0].targetCategory).toBe('greetings');
             expect(result.integrations[0].specsToIntegrate).toEqual(specsToIntegrate);
             expect(result.alreadyIntegrated).toHaveLength(0);
+            expect(result.analyzedFilesCount).toEqual(existingSpecs.length);
         });
 
         it('should mark specs as already integrated with their category', () => {
@@ -71,6 +72,7 @@ describe('ReplacementSpecsIntegrationService', () => {
                 spec: specsToIntegrate[0],
                 category: 'greetings'
             }]);
+            expect(result.analyzedFilesCount).toEqual(existingSpecs.length);
         });
 
         it('should throw error when terms exist in another target', () => {
@@ -110,6 +112,7 @@ describe('ReplacementSpecsIntegrationService', () => {
             expect(result.integrations).toHaveLength(0);
             expect(result.alreadyIntegrated).toHaveLength(0);
             expect(result.needsClassification).toEqual(specsToIntegrate);
+            expect(result.analyzedFilesCount).toEqual(existingSpecs.length);
         });
 
         it('should group multiple specs by target category', () => {
@@ -132,6 +135,7 @@ describe('ReplacementSpecsIntegrationService', () => {
             expect(result.integrations).toHaveLength(1);
             expect(result.integrations[0].targetCategory).toBe('greetings');
             expect(result.integrations[0].specsToIntegrate).toEqual(specsToIntegrate);
+            expect(result.analyzedFilesCount).toEqual(existingSpecs.length);
         });
     });
 });

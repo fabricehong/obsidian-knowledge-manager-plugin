@@ -12,17 +12,24 @@ export class ReplacementSpecsAnalysisModal extends Modal {
     onOpen() {
         const {contentEl} = this;
         
-        // Titre
-        contentEl.createEl('h2', {text: 'Analyse des specs'});
+        // Header
+        const headerDiv = contentEl.createDiv({ cls: 'replacement-specs-analysis-header' });
+        headerDiv.createEl('h2', { text: 'Analyse des specs' });
+        headerDiv.createEl('p', { 
+            text: `${this.analysisResults.analyzedFilesCount} fichiers analysés`
+        });
+
+        // Contenu
+        const contentDiv = contentEl.createDiv({ cls: 'replacement-specs-analysis-content' });
 
         // Section 1: Specs intégrables
-        this.displayIntegrableSpecs(contentEl);
+        this.displayIntegrableSpecs(contentDiv);
 
         // Section 2: Specs déjà intégrées
-        this.displayAlreadyIntegratedSpecs(contentEl);
+        this.displayAlreadyIntegratedSpecs(contentDiv);
 
         // Section 3: Specs sans correspondance
-        this.displayNoMatchSpecs(contentEl);
+        this.displayNoMatchSpecs(contentDiv);
     }
 
     private displayIntegrableSpecs(container: HTMLElement) {

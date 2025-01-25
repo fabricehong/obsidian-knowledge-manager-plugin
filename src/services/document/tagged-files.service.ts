@@ -19,14 +19,14 @@ export class TaggedFilesService {
                 const frontmatterTags = cache.frontmatter.tags;
                 if (Array.isArray(frontmatterTags)) {
                     // Si c'est un tableau, on utilise some
-                    hasFrontmatterTag = frontmatterTags.some(tag => 
-                        (tag === tag || tag === targetTag)
+                    hasFrontmatterTag = frontmatterTags.some(t => 
+                        (t === tag || t === targetTag)
                     );
                 } else if (typeof frontmatterTags === 'string') {
                     // Si c'est une chaîne, on split sur la virgule et on trim
                     const tagArray = frontmatterTags.split(',').map(t => t.trim());
-                    hasFrontmatterTag = tagArray.some(tag => 
-                        (tag === tag || tag === targetTag)
+                    hasFrontmatterTag = tagArray.some(t => 
+                        (t === tag || t === targetTag)
                     );
                 }
             }
