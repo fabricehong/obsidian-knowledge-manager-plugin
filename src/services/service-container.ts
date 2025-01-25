@@ -31,6 +31,7 @@ import { EditorReplacementSpecsCreationService } from './replacement/specs-creat
 import { EditorAIReplacementSpecsCreationService } from './replacement/specs-creation/editor-ai-replacement-specs-creation.service';
 import { EditorDocumentCleaningService } from './diffusion/editor-document-cleaning.service';
 import { EditorKnowledgeDiffusionService } from './diffusion/editor-knowledge-diffusion.service';
+import { DocumentModificationService } from './document/document-modification-utils';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -61,6 +62,7 @@ export class ServiceContainer {
     public readonly editorConversationTopicsService: EditorConversationTopicsService;
     public readonly editorDocumentCleaningService: EditorDocumentCleaningService;
     public readonly editorKnowledgeDiffusionService: EditorKnowledgeDiffusionService;
+    public readonly documentModificationService: DocumentModificationService;
     private readonly textCorrector: TextCorrector;
 
     constructor(private app: App, settings: PluginSettings) {
@@ -155,12 +157,17 @@ export class ServiceContainer {
             this.yamlReplacementService
         );
 
+        this.documentModificationService = new DocumentModificationService(
+            this.yamlReplacementService
+        );
+
         this.editorAIReplacementSpecsCreationService = new EditorAIReplacementSpecsCreationService(
             this.app,
             this.documentStructureService,
             this.yamlReplacementService,
             this.glossarySearchService,
-            this.glossaryReplacementService
+            this.glossaryReplacementService,
+            this.documentModificationService
         );
 
         this.editorDocumentCleaningService = new EditorDocumentCleaningService(
