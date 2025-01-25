@@ -92,7 +92,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.diffuseCurrentNote(markdownView);
+                        this.serviceContainer.editorKnowledgeDiffusionService.diffuseCurrentNote(markdownView);
                     }
                     return true;
                 }
@@ -108,7 +108,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.removeReferenceContent(markdownView);
+                        this.serviceContainer.editorDocumentCleaningService.cleanReferenceContent(markdownView);
                     }
                     return true;
                 }
@@ -124,7 +124,11 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.createReplacementSpecsFromSpeakers(markdownView);
+                        this.serviceContainer.editorReplacementSpecsCreationService.createReplacementSpecsFromSpeakers(
+                            markdownView,
+                            this.settings.headerContainingTranscript,
+                            this.settings.replacementsHeader
+                        );
                     }
                     return true;
                 }
@@ -140,7 +144,12 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.createReplacementSpecsFromAI(markdownView);
+                        this.serviceContainer.editorAIReplacementSpecsCreationService.createReplacementSpecs(
+                            markdownView,
+                            this.settings.headerContainingTranscript,
+                            this.settings.replacementsHeader,
+                            this.settings.maxGlossaryIterations
+                        );
                     }
                     return true;
                 }
@@ -156,7 +165,12 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.applyReplacementSpecs(markdownView);
+                        this.serviceContainer.editorTranscriptionReplacementService.replaceTranscription(
+                            markdownView,
+                            this.settings.replacementSpecsTag,
+                            this.settings.headerContainingTranscript,
+                            this.settings.replacementsHeader,
+                        );
                     }
                     return true;
                 }
@@ -171,7 +185,12 @@ export default class KnowledgeManagerPlugin extends Plugin {
             editorCallback: (editor: Editor) => {
                 const view = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (view) {
-                    this.applyVocabularyReplacements(view);
+                    this.serviceContainer.editorVocabularyReplacementService.replaceWithVocabulary(
+                        view,
+                        this.settings.vocabularySpecsTag,
+                        this.settings.headerContainingTranscript,
+                        this.settings.replacementsHeader
+                    );
                 }
             }
         });
@@ -184,7 +203,11 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.publishReplacementSpecsToVault(markdownView);
+                        this.serviceContainer.editorReplacementSpecsIntegrationService.publishCurrentFileSpecs(
+                            markdownView,
+                            this.settings.replacementSpecsTag,
+                            this.settings.replacementsHeader
+                        );
                     }
                     return true;
                 }
@@ -200,7 +223,10 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.createDocumentation(markdownView);
+                        this.serviceContainer.editorDocumentationService.createDocumentation(
+                            markdownView,
+                            this.settings.headerContainingTranscript
+                        );
                     }
                     return true;
                 }
@@ -216,7 +242,10 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.listConversationTopics(markdownView);
+                        this.serviceContainer.editorConversationTopicsService.listTopics(
+                            markdownView,
+                            this.settings.headerContainingTranscript
+                        );
                     }
                     return true;
                 }
@@ -318,14 +347,21 @@ export default class KnowledgeManagerPlugin extends Plugin {
         // Add settings tab
         this.addSettingTab(new SettingsTab(this.app, this));
 
-        // Add the show transcript replacement help command
+        // Add the help command
         this.addCommand({
-            id: 'transcript-replacement:aide',
-            name: 'transcript-replacement:aide',
+            id: 'transcript-replacement:help',
+            name: 'transcript-replacement:help',
             callback: () => {
-                this.showTranscriptReplacementHelp();
+                try {
+                    new HelpModal(this.app, this).open();
+                } catch (error) {
+                    console.error('Error showing help:', error);
+                    new Notice('Erreur lors de l\'affichage de l\'aide');
+                }
             }
         });
+
+        // Add the show transcript replacement help command
     }
 
     async loadSettings() {
@@ -352,422 +388,6 @@ export default class KnowledgeManagerPlugin extends Plugin {
         } catch (error) {
             console.error('Error during summarization:', error);
             new Notice('Error during summarization. Check the console for details.');
-        }
-    }
-
-    private async diffuseCurrentNote(markdownView: MarkdownView) {
-        const editor = markdownView.editor;
-        const content = editor.getValue();
-        const file = markdownView.file;
-        if (!file) {
-            new Notice('No file is currently open');
-            return;
-        }
-        
-        try {
-            new Notice('Diffusing note...');
-
-            // Get the file cache and build header tree
-            const cache = this.app.metadataCache.getFileCache(file);
-            if (!cache) {
-                throw new Error('No cache available for this file');
-            }
-
-            const headerTree = this.serviceContainer.documentStructureService.buildHeaderTree(cache, content);
-            const diffusionPlans = this.serviceContainer.knowledgeDiffusionService.buildDiffusionRepresentation(headerTree);
-
-            if (diffusionPlans.length === 0) {
-                new Notice('No diffusion references found in the note');
-                return;
-            }
-
-            // Execute the diffusion plans
-            await this.serviceContainer.knowledgeDiffusionService.diffuseKnowledge(
-                diffusionPlans,
-                this.app.vault
-            );
-
-            console.log('Diffusion completed:', diffusionPlans);
-            new Notice('Note has been diffused! Check the console for details.');
-        } catch (error) {
-            console.error('Error during diffusion:', error);
-            new Notice(`Error during diffusion: ${error.message}`); 
-        }
-    }
-
-    private async removeReferenceContent(view: MarkdownView) {
-        try {
-            new Notice('Cleaning references content...');
-            
-            const editor = view.editor;
-            const content = editor.getValue();
-            const file = view.file;
-            
-            if (!file) {
-                new Notice('No file is currently open');
-                return;
-            }
-
-            const cache = this.app.metadataCache.getFileCache(file);
-            if (!cache) {
-                new Notice('No cache found for the current file');
-                return;
-            }
-
-            // Build the document tree using document structure service
-            const rootNode = this.serviceContainer.documentStructureService.buildHeaderTree(cache, content);
-            
-            // Clean the content using document cleaning service
-            const cleanedRootNode = this.serviceContainer.documentCleaningService.cleanNode(rootNode) as RootNode;
-            
-            // Convert back to markdown
-            const cleanedContent = this.serviceContainer.documentStructureService.renderToMarkdown(cleanedRootNode);
-            
-            // Update the editor with the cleaned content
-            editor.setValue(cleanedContent);
-            
-            new Notice('References content has been removed');
-        } catch (error) {
-            console.error('Error while removing references:', error);
-            new Notice(`Error while removing references: ${error.message}`);
-        }
-    }
-
-    private getTranscriptContent(doc: RootNode): string | null {
-        const transcriptHeader = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            doc,
-            this.settings.headerContainingTranscript
-        );
-
-        if (!transcriptHeader) {
-            new Notice(`Header '${this.settings.headerContainingTranscript}' not found`);
-            return null;
-        }
-
-        return transcriptHeader.content;
-    }
-
-    private checkReplacementHeaderInDocument(doc: RootNode): boolean {
-        const existingReplacements = this.serviceContainer.documentStructureService.findFirstNodeMatchingHeading(
-            doc,
-            this.settings.replacementsHeader
-        );
-        if (existingReplacements) {
-            new Notice('Replacements section already exists');
-            return false;
-        }
-        return true;
-    }
-
-    private modifyDocumentWithReplacementHeader(doc: RootNode, yamlContent: string): void {
-        const codeBlock = this.serviceContainer.yamlReplacementService.toYamlBlock(yamlContent);
-        const newHeader = Object.assign(new HeaderNode(), {
-            level: 1,
-            heading: this.settings.replacementsHeader,
-            content: codeBlock,
-        });
-        doc.children.unshift(newHeader);
-    }
-
-    private addGlossarySection(doc: RootNode, terms: { terme: string, definition: string }[]) {
-        const header = new HeaderNode();
-        header.level = 1;
-        header.heading = "Glossaire";
-        header.content = terms
-            .filter(({definition}) => definition.trim() !== '-')  
-            .map(({terme, definition}) => `- **${terme}** : ${definition.trim()}`)
-            .join('\n');
-        
-        doc.children.unshift(header);
-        return true;
-    }
-
-    private async createReplacementSpecsFromSpeakers(markdownView: MarkdownView) {
-        const file = markdownView.file;
-        if (!file) return;
-
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
-
-        if (!this.checkReplacementHeaderInDocument(doc)) return;
-
-        // Obtenir le contenu de la transcription
-        const transcriptContent = this.getTranscriptContent(doc);
-        if (!transcriptContent) return;
-
-        // Créer les specs à partir des speakers
-        const interventions = this.serviceContainer.transcriptFileService.parseTranscript(transcriptContent);
-        const speakers = this.serviceContainer.transcriptFileService.getUniqueSpeakers(interventions);
-        const specs = this.serviceContainer.transcriptionReplacementService.createFromSpeakers(speakers);
-        
-        // Convertir en YAML et ajouter au document
-        const yamlContent = this.serviceContainer.yamlReplacementService.toYaml(specs);
-        this.modifyDocumentWithReplacementHeader(doc, yamlContent);
-
-        // Sauvegarder les modifications
-        const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
-        await this.app.vault.modify(file, newContent);
-        
-        new Notice('Added replacements section');
-    }
-
-    private async createReplacementSpecsFromAI(markdownView: MarkdownView) {
-        const file = markdownView.file;
-        if (!file) {
-            console.log("No file found in markdownView");
-            return;
-        }
-
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
-
-        if (!this.checkReplacementHeaderInDocument(doc)) return;
-
-        // Obtenir le contenu de la transcription
-        const transcriptContent = this.getTranscriptContent(doc);
-        if (!transcriptContent) {
-            console.log(`No transcript content found in header '${this.settings.headerContainingTranscript}'`);
-            return;
-        }
-
-        // Créer les specs à partir du glossaire
-        let isCancelled = false;
-        const loadingModal = new LoadingModal(this.app, () => {
-            isCancelled = true;
-        });
-        loadingModal.open();
-
-        try {
-            const glossaryTerms = await this.serviceContainer.glossarySearchService.findGlossaryTerms(
-                transcriptContent,
-                this.settings.maxGlossaryIterations
-            );
-            
-            if (isCancelled) {
-                new Notice('Operation cancelled');
-                return;
-            }
-
-            const initialSpecs = this.serviceContainer.glossaryReplacementService.createFromGlossaryTerms(glossaryTerms.termes);
-
-            // Afficher la modale de sélection
-            const specs = await new Promise<ReplacementSpecs | null>(resolve => {
-                new GlossarySpecsSelectionModal(
-                    this.app,
-                    initialSpecs,
-                    selectedSpecs => {
-                        resolve(selectedSpecs);
-                    }
-                ).open();
-            });
-
-            // Si annulé ou aucune spec sélectionnée
-            if (!specs || specs.replacements.length === 0) {
-                new Notice('Opération annulée');
-                return;
-            }
-            
-            // Convertir en YAML et ajouter au document
-            const yamlContent = this.serviceContainer.yamlReplacementService.toYaml(specs);
-            this.modifyDocumentWithReplacementHeader(doc, yamlContent);
-
-            // Ajouter la section glossaire
-            if (!this.addGlossarySection(doc, glossaryTerms.termes)) {
-                console.log("Failed to add glossary section - could not find replacements header");
-                return;
-            }
-
-            // Sauvegarder les modifications
-            const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
-            await this.app.vault.modify(file, newContent);
-            
-            new Notice('Successfully added glossary replacements section');
-        } finally {
-            loadingModal.forceClose();
-        }
-    }
-
-    private async applyReplacementSpecs(markdownView: MarkdownView) {
-        await this.serviceContainer.editorTranscriptionReplacementService.replaceTranscription(
-            markdownView,
-            this.settings.replacementSpecsTag,
-            this.settings.headerContainingTranscript,
-            this.settings.replacementsHeader,
-        );
-    }
-
-    private async applyVocabularyReplacements(view: MarkdownView) {
-        await this.serviceContainer.editorVocabularyReplacementService.replaceWithVocabulary(
-            view,
-            this.settings.vocabularySpecsTag,
-            this.settings.headerContainingTranscript,
-            this.settings.replacementsHeader
-        );
-    }
-
-    private async publishReplacementSpecsToVault(markdownView: MarkdownView) {
-        try {
-            const analysis = await this.serviceContainer.editorReplacementSpecsIntegrationService
-                .analyzeCurrentFileSpecs(
-                    markdownView,
-                    this.settings.replacementSpecsTag,
-                    this.settings.replacementsHeader
-                );
-            
-            if (!analysis) {
-                new Notice('No replacement specs found in current file');
-                return;
-            }
-    
-            new ReplacementSpecsAnalysisModal(this.app, analysis).open();
-        } catch (error) {
-            if (error instanceof ReplacementSpecsError) {
-                new Notice('Erreur lors de l\'analyse des specs. Voir la console pour plus de détails.');
-            } else {
-                new Notice('Une erreur inattendue est survenue. Voir la console pour plus de détails.');
-            }
-            // L'erreur est déjà loguée dans le service
-        }
-    }
-
-    private async createDocumentation(markdownView: MarkdownView) {
-        try {
-            const file = markdownView.file;
-            if (!file) {
-                new Notice('No file is currently open');
-                return;
-            }
-
-            const content = await this.app.vault.read(file);
-            const metadata = this.app.metadataCache.getFileCache(file);
-            const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
-
-            // Get transcript content
-            const transcriptContent = this.getTranscriptContent(doc);
-            if (!transcriptContent) {
-                return;
-            }
-
-            // Show loading modal
-            let isCancelled = false;
-            const loadingModal = new LoadingModal(this.app, () => {
-                isCancelled = true;
-            });
-            loadingModal.open();
-
-            try {
-                // Get mindmap from user
-                await new Promise<void>((resolve) => {
-                    new MindmapInputModal(this.app, async (mindmap: string) => {
-                        try {
-                            if (isCancelled) {
-                                resolve();
-                                return;
-                            }
-
-                            // Generate documentation
-                            const documentation = await this.serviceContainer.documentationService.createDocumentation(
-                                transcriptContent,
-                                mindmap
-                            );
-
-                            // Add documentation as a new section
-                            const header = new HeaderNode();
-                            header.level = 1;
-                            header.heading = "Résumé";
-                            header.content = documentation;
-                            doc.children.unshift(header);
-
-                            // Save changes
-                            const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
-                            await this.app.vault.modify(file, newContent);
-
-                            new Notice('Documentation has been created successfully!');
-                        } catch (error) {
-                            console.error('Error creating documentation:', error);
-                            new Notice('Error creating documentation. Check the console for details.');
-                        } finally {
-                            loadingModal.forceClose();
-                            resolve();
-                        }
-                    }).open();
-                });
-            } catch (error) {
-                loadingModal.forceClose();
-                throw error;
-            }
-        } catch (error) {
-            console.error('Error in createDocumentation:', error);
-            new Notice('Error in createDocumentation. Check the console for details.');
-        }
-    }
-
-    private async listConversationTopics(markdownView: MarkdownView) {
-        try {
-            const file = markdownView.file;
-            if (!file) {
-                new Notice('No file is currently open');
-                return;
-            }
-
-            const content = await this.app.vault.read(file);
-            const metadata = this.app.metadataCache.getFileCache(file);
-            const doc = this.serviceContainer.documentStructureService.buildHeaderTree(metadata!, content);
-
-            // Get transcript content
-            const transcriptContent = this.getTranscriptContent(doc);
-            if (!transcriptContent) {
-                return;
-            }
-
-            // Show loading modal
-            let isCancelled = false;
-            const loadingModal = new LoadingModal(this.app, () => {
-                isCancelled = true;
-            });
-            loadingModal.open();
-
-            try {
-                // Generate topics list
-                const topics = await this.serviceContainer.conversationTopicsService.listTopics(transcriptContent);
-
-                if (isCancelled) {
-                    new Notice('Operation cancelled');
-                    return;
-                }
-
-                // Add topics as a new section
-                const header = new HeaderNode();
-                header.level = 1;
-                header.heading = "Sujets";
-                header.content = topics;
-                doc.children.unshift(header);
-
-                // Save changes
-                const newContent = this.serviceContainer.documentStructureService.renderToMarkdown(doc);
-                await this.app.vault.modify(file, newContent);
-
-                new Notice('Topics list has been created successfully!');
-            } catch (error) {
-                console.error('Error listing topics:', error);
-                new Notice('Error listing topics. Check the console for details.');
-            } finally {
-                loadingModal.forceClose();
-            }
-        } catch (error) {
-            console.error('Error in listConversationTopics:', error);
-            new Notice('Error in listConversationTopics. Check the console for details.');
-        }
-    }
-
-    private async showTranscriptReplacementHelp() {
-        try {
-            new HelpModal(this.app, this).open();
-        } catch (error) {
-            console.error('Error showing help:', error);
-            new Notice('Erreur lors de l\'affichage de l\'aide');
         }
     }
 }

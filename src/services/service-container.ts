@@ -15,7 +15,9 @@ import { AICompletionService } from './interfaces/ai-completion.interface';
 import { GlossarySearchService } from "./glossary/glossary-search.service";
 import { PluginSettings } from '../settings/settings';
 import { DocumentationService } from './documentation/documentation.service';
+import { EditorDocumentationService } from './documentation/editor-documentation.service';
 import { ConversationTopicsService } from './conversation/conversation-topics.service';
+import { EditorConversationTopicsService } from './conversation/editor-conversation-topics.service';
 import { ReplacementSpecs, ReplacementSpecsSchema, VocabularySpecSchema, VocabularySpecs } from '../models/schemas';
 import { TranscriptFileService } from './transcription/transcript-file.service';
 import { NoteSummarizationService } from './others/note-summarization.service';
@@ -25,6 +27,10 @@ import { OpenAIModelService } from './llm/openai-model.service';
 import { ReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/replacement-specs-integration.service';
 import { TaggedFilesService } from './document/tagged-files.service';
 import { EditorReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/editor-replacement-specs-integration.service';
+import { EditorReplacementSpecsCreationService } from './replacement/replacement-specs/editor-replacement-specs-creation.service';
+import { EditorAIReplacementSpecsCreationService } from './replacement/replacement-specs/editor-ai-replacement-specs-creation.service';
+import { EditorDocumentCleaningService } from './diffusion/editor-document-cleaning.service';
+import { EditorKnowledgeDiffusionService } from './diffusion/editor-knowledge-diffusion.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -49,6 +55,12 @@ export class ServiceContainer {
     public readonly replacementSpecsIntegrationService: ReplacementSpecsIntegrationService;
     public readonly taggedFilesService: TaggedFilesService;
     public readonly editorReplacementSpecsIntegrationService: EditorReplacementSpecsIntegrationService;
+    public readonly editorReplacementSpecsCreationService: EditorReplacementSpecsCreationService;
+    public readonly editorAIReplacementSpecsCreationService: EditorAIReplacementSpecsCreationService;
+    public readonly editorDocumentationService: EditorDocumentationService;
+    public readonly editorConversationTopicsService: EditorConversationTopicsService;
+    public readonly editorDocumentCleaningService: EditorDocumentCleaningService;
+    public readonly editorKnowledgeDiffusionService: EditorKnowledgeDiffusionService;
     private readonly textCorrector: TextCorrector;
 
     constructor(private app: App, settings: PluginSettings) {
@@ -109,7 +121,18 @@ export class ServiceContainer {
         );
 
         this.documentationService = new DocumentationService(this.aiCompletionService);
+        this.editorDocumentationService = new EditorDocumentationService(
+            this.app,
+            this.documentStructureService,
+            this.documentationService
+        );
+
         this.conversationTopicsService = new ConversationTopicsService(this.aiCompletionService);
+        this.editorConversationTopicsService = new EditorConversationTopicsService(
+            this.app,
+            this.documentStructureService,
+            this.conversationTopicsService
+        );
 
         this.glossarySearchService = new GlossarySearchService(
             this.aiCompletionService,
@@ -122,6 +145,34 @@ export class ServiceContainer {
             this.yamlReplacementService,
             this.replacementSpecsIntegrationService,
             this.taggedFilesService
+        );
+
+        this.editorReplacementSpecsCreationService = new EditorReplacementSpecsCreationService(
+            this.app,
+            this.documentStructureService,
+            this.transcriptFileService,
+            this.transcriptionReplacementService,
+            this.yamlReplacementService
+        );
+
+        this.editorAIReplacementSpecsCreationService = new EditorAIReplacementSpecsCreationService(
+            this.app,
+            this.documentStructureService,
+            this.yamlReplacementService,
+            this.glossarySearchService,
+            this.glossaryReplacementService
+        );
+
+        this.editorDocumentCleaningService = new EditorDocumentCleaningService(
+            this.app,
+            this.documentStructureService,
+            this.documentCleaningService
+        );
+
+        this.editorKnowledgeDiffusionService = new EditorKnowledgeDiffusionService(
+            this.app,
+            this.documentStructureService,
+            this.knowledgeDiffusionService
         );
     }
 }

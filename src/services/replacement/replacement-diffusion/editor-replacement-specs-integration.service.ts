@@ -5,6 +5,7 @@ import { YamlValidationError, ReplacementSpecsError } from '../../../models/erro
 import { ReplacementSpecs } from '../../../models/schemas';
 import { ReplacementSpecsIntegrationService, ReplacementSpecsIntegrationSummary } from './replacement-specs-integration.service';
 import { TaggedFilesService } from '../../document/tagged-files.service';
+import { ReplacementSpecsAnalysisModal } from '../../../ui/replacement-specs-analysis.modal';
 
 export class EditorReplacementSpecsIntegrationService {
     constructor(
@@ -16,10 +17,42 @@ export class EditorReplacementSpecsIntegrationService {
     ) {}
 
     /**
+     * Publie les specs du fichier actif vers le vault
+     */
+    async publishCurrentFileSpecs(
+        markdownView: MarkdownView,
+        replacementSpecsTag: string,
+        replacementsHeader: string
+    ): Promise<void> {
+        try {
+            const analysis = await this.analyzeCurrentFileSpecs(
+                markdownView,
+                replacementSpecsTag,
+                replacementsHeader
+            );
+            
+            if (!analysis) {
+                new Notice('No replacement specs found in current file');
+                return;
+            }
+
+            new ReplacementSpecsAnalysisModal(this.app, analysis).open();
+        } catch (error) {
+            if (error instanceof ReplacementSpecsError) {
+                new Notice('Erreur lors de l\'analyse des specs. Voir la console pour plus de détails.');
+            } else {
+                new Notice('Une erreur inattendue est survenue. Voir la console pour plus de détails.');
+            }
+            // L'erreur est déjà loguée dans le service
+        }
+    }
+
+    /**
      * Analyse les possibilités d'intégration des specs du fichier actif
      * @returns L'analyse d'intégration ou null si pas de specs trouvées
+     * @private
      */
-    async analyzeCurrentFileSpecs(
+    private async analyzeCurrentFileSpecs(
         markdownView: MarkdownView,
         replacementSpecsTag: string,
         replacementsHeader: string
