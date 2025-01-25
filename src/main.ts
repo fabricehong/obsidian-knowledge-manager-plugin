@@ -33,7 +33,7 @@ Les commandes de remplacement de transcript permettent de standardiser les noms 
   Applique directement les remplacements depuis le vocabulaire global, sans passer par les specs. Alternative rapide quand les specs ne sont pas nécessaires.
 
 ### Publication des specs
-- \`transcript-replacement:replacement-specs:publish-to-vault\`
+- \`transcript-replacement:replacement-specs:to-vault\`
   Déplace les specs du fichier actif vers le vault pour une utilisation globale. Ces specs seront utilisées par 'apply:from-specs' pour tous les fichiers.
 
 ## Workflow typique
@@ -42,7 +42,7 @@ Les commandes de remplacement de transcript permettent de standardiser les noms 
    - Soit via \`create:from-ai\` pour des suggestions basées sur l'IA
 2. Vérifier et ajuster les specs générées si nécessaire
 3. Appliquer les specs avec \`apply:from-specs\` pour tester localement
-4. Si les remplacements sont satisfaisants, utiliser \`publish-to-vault\` pour les rendre disponibles globalement
+4. Si les remplacements sont satisfaisants, utiliser \`to-vault\` pour les rendre disponibles globalement
 5. Pour les cas simples, utiliser directement \`apply:from-vocabulary\``;
 
 class HelpModal extends Modal {
@@ -92,7 +92,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.diffuseNote(markdownView);
+                        this.diffuseCurrentNote(markdownView);
                     }
                     return true;
                 }
@@ -108,7 +108,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.removeRefsContent(markdownView);
+                        this.removeReferenceContent(markdownView);
                     }
                     return true;
                 }
@@ -124,7 +124,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.addReplacementsSection(markdownView);
+                        this.createReplacementSpecsFromSpeakers(markdownView);
                     }
                     return true;
                 }
@@ -140,7 +140,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.addGlossaryReplacementsSection(markdownView);
+                        this.createReplacementSpecsFromAI(markdownView);
                     }
                     return true;
                 }
@@ -156,7 +156,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.replaceTranscription(markdownView);
+                        this.applyReplacementSpecs(markdownView);
                     }
                     return true;
                 }
@@ -171,20 +171,20 @@ export default class KnowledgeManagerPlugin extends Plugin {
             editorCallback: (editor: Editor) => {
                 const view = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (view) {
-                    this.replaceWithVocabulary(view);
+                    this.applyVocabularyReplacements(view);
                 }
             }
         });
 
         // Add the analyze replacement specs command
         this.addCommand({
-            id: 'transcript-replacement:replacement-specs:publish-to-vault',
-            name: 'transcript-replacement:replacement-specs:publish-to-vault',
+            id: 'transcript-replacement:replacement-specs:to-vault',
+            name: 'transcript-replacement:replacement-specs:to-vault',
             checkCallback: (checking: boolean) => {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView) {
                     if (!checking) {
-                        this.analyzeReplacementSpecs(markdownView);
+                        this.publishReplacementSpecsToVault(markdownView);
                     }
                     return true;
                 }
@@ -355,7 +355,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
     }
 
-    private async diffuseNote(markdownView: MarkdownView) {
+    private async diffuseCurrentNote(markdownView: MarkdownView) {
         const editor = markdownView.editor;
         const content = editor.getValue();
         const file = markdownView.file;
@@ -395,7 +395,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
     }
 
-    private async removeRefsContent(view: MarkdownView) {
+    private async removeReferenceContent(view: MarkdownView) {
         try {
             new Notice('Cleaning references content...');
             
@@ -482,7 +482,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         return true;
     }
 
-    private async addReplacementsSection(markdownView: MarkdownView) {
+    private async createReplacementSpecsFromSpeakers(markdownView: MarkdownView) {
         const file = markdownView.file;
         if (!file) return;
 
@@ -512,7 +512,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         new Notice('Added replacements section');
     }
 
-    private async addGlossaryReplacementsSection(markdownView: MarkdownView) {
+    private async createReplacementSpecsFromAI(markdownView: MarkdownView) {
         const file = markdownView.file;
         if (!file) {
             console.log("No file found in markdownView");
@@ -589,7 +589,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
     }
 
-    private async replaceTranscription(markdownView: MarkdownView) {
+    private async applyReplacementSpecs(markdownView: MarkdownView) {
         await this.serviceContainer.editorTranscriptionReplacementService.replaceTranscription(
             markdownView,
             this.settings.replacementSpecsTag,
@@ -598,13 +598,38 @@ export default class KnowledgeManagerPlugin extends Plugin {
         );
     }
 
-    private async replaceWithVocabulary(markdownView: MarkdownView) {
+    private async applyVocabularyReplacements(view: MarkdownView) {
         await this.serviceContainer.editorVocabularyReplacementService.replaceWithVocabulary(
-            markdownView,
+            view,
             this.settings.vocabularySpecsTag,
             this.settings.headerContainingTranscript,
             this.settings.replacementsHeader
         );
+    }
+
+    private async publishReplacementSpecsToVault(markdownView: MarkdownView) {
+        try {
+            const analysis = await this.serviceContainer.editorReplacementSpecsIntegrationService
+                .analyzeCurrentFileSpecs(
+                    markdownView,
+                    this.settings.replacementSpecsTag,
+                    this.settings.replacementsHeader
+                );
+            
+            if (!analysis) {
+                new Notice('No replacement specs found in current file');
+                return;
+            }
+    
+            new ReplacementSpecsAnalysisModal(this.app, analysis).open();
+        } catch (error) {
+            if (error instanceof ReplacementSpecsError) {
+                new Notice('Erreur lors de l\'analyse des specs. Voir la console pour plus de détails.');
+            } else {
+                new Notice('Une erreur inattendue est survenue. Voir la console pour plus de détails.');
+            }
+            // L'erreur est déjà loguée dans le service
+        }
     }
 
     private async createDocumentation(markdownView: MarkdownView) {
@@ -734,31 +759,6 @@ export default class KnowledgeManagerPlugin extends Plugin {
         } catch (error) {
             console.error('Error in listConversationTopics:', error);
             new Notice('Error in listConversationTopics. Check the console for details.');
-        }
-    }
-
-    private async analyzeReplacementSpecs(markdownView: MarkdownView) {
-        try {
-            const analysis = await this.serviceContainer.editorReplacementSpecsIntegrationService
-                .analyzeCurrentFileSpecs(
-                    markdownView,
-                    this.settings.replacementSpecsTag,
-                    this.settings.replacementsHeader
-                );
-            
-            if (!analysis) {
-                new Notice('No replacement specs found in current file');
-                return;
-            }
-    
-            new ReplacementSpecsAnalysisModal(this.app, analysis).open();
-        } catch (error) {
-            if (error instanceof ReplacementSpecsError) {
-                new Notice('Erreur lors de l\'analyse des specs. Voir la console pour plus de détails.');
-            } else {
-                new Notice('Une erreur inattendue est survenue. Voir la console pour plus de détails.');
-            }
-            // L'erreur est déjà loguée dans le service
         }
     }
 
