@@ -14,7 +14,7 @@ Le répertoire `replacement` est responsable de la gestion des remplacements de 
 
 ## Services et leurs responsabilités
 
-### [EditorTranscriptionReplacementService](editor-transcription-replacement.service.ts)
+### [EditorTranscriptionReplacementService](apply-replacement/editor-transcription-replacement.service.ts)
 Service principal pour l'interaction avec l'éditeur Obsidian.
 
 Dépendances :
@@ -28,7 +28,7 @@ Responsabilités :
 - Appliquer les remplacements de texte
 - Coordonner les différents services de remplacement
 
-### [TranscriptionReplacementService](transcription-replacement.service.ts)
+### [TranscriptionReplacementService](apply-replacement/transcription-replacement.service.ts)
 Service central pour la logique de remplacement.
 
 Responsabilités :
@@ -36,19 +36,19 @@ Responsabilités :
 - Gérer les règles de transcription
 - Fournir des méthodes de transformation de texte
 
-### [GlossaryReplacementService](glossary-replacement.service.ts)
-Service pour la gestion des remplacements basés sur le glossaire.
-
-Responsabilités :
-- Gérer les remplacements basés sur le glossaire
-- Appliquer les règles de remplacement spécifiques au glossaire
-
-### [ReplacementStatisticsService](replacement-statistics.service.ts)
+### [ReplacementStatisticsService](apply-replacement/replacement-statistics.service.ts)
 Service pour le suivi des statistiques de remplacement.
 
 Responsabilités :
 - Collecter des statistiques sur les remplacements effectués
 - Fournir des métriques sur l'utilisation des règles
+
+### [GlossaryReplacementService](specs-creation/glossary-replacement.service.ts)
+Service pour la gestion des remplacements basés sur le glossaire.
+
+Responsabilités :
+- Gérer les remplacements basés sur le glossaire
+- Appliquer les règles de remplacement spécifiques au glossaire
 
 ## Flux typiques
 
@@ -61,4 +61,3 @@ Responsabilités :
    - Applique les règles de remplacement
    - Transforme le texte selon les spécifications
 4. Résultat : Texte modifié dans l'éditeur
-
