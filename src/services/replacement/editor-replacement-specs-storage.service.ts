@@ -6,7 +6,7 @@ import { ReplacementSpecsError } from "../../models/errors";
 import { YamlValidationError } from "../../models/errors";
 import { TaggedFilesService } from "../document/tagged-files.service";
 
-export class ReplacementSpecsStorageService {
+export class EditorReplacementSpecsStorageService {
     constructor(
         private app: App,
         private yamlReplacementService: YamlService<ReplacementSpecs>,

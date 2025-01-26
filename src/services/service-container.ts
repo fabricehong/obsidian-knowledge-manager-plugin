@@ -32,7 +32,7 @@ import { EditorAIReplacementSpecsCreationService } from './replacement/specs-cre
 import { EditorDocumentCleaningService } from './diffusion/editor-document-cleaning.service';
 import { EditorKnowledgeDiffusionService } from './diffusion/editor-knowledge-diffusion.service';
 import { DocumentModificationService } from './document/document-modification-utils';
-import { ReplacementSpecsStorageService } from './replacement/replacement-specs-storage.service';
+import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -55,7 +55,7 @@ export class ServiceContainer {
     public readonly documentationService: DocumentationService;
     public readonly conversationTopicsService: ConversationTopicsService;
     public readonly replacementSpecsIntegrationService: ReplacementSpecsIntegrationService;
-    public readonly replacementSpecsStorageService: ReplacementSpecsStorageService;
+    public readonly replacementSpecsStorageService: EditorReplacementSpecsStorageService;
     public readonly taggedFilesService: TaggedFilesService;
     public readonly editorReplacementSpecsIntegrationService: EditorReplacementSpecsIntegrationService;
     public readonly editorReplacementSpecsCreationService: EditorReplacementSpecsCreationService;
@@ -80,7 +80,7 @@ export class ServiceContainer {
         this.transcriptionReplacementService = new TranscriptionReplacementService();
         this.replacementSpecsIntegrationService = new ReplacementSpecsIntegrationService();
         this.taggedFilesService = new TaggedFilesService(this.app);
-        this.replacementSpecsStorageService = new ReplacementSpecsStorageService(
+        this.replacementSpecsStorageService = new EditorReplacementSpecsStorageService(
             this.app,
             this.yamlReplacementService,
             this.taggedFilesService

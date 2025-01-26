@@ -9,13 +9,13 @@ import { TaggedFilesService } from '../../document/tagged-files.service';
 import { ReplacementSpecsError } from '../../../models/errors';
 import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
 import { ReplacementSpecsFile } from '../../../models/interfaces';
-import { ReplacementSpecsStorageService } from "../replacement-specs-storage.service";
+import { EditorReplacementSpecsStorageService } from "../editor-replacement-specs-storage.service";
 
 export class EditorReplacementSpecsIntegrationService {
     constructor(
         private app: App,
         private yamlReplacementService: YamlService<ReplacementSpecs>,
-        private replacementSpecsStorageService: ReplacementSpecsStorageService,
+        private replacementSpecsStorageService: EditorReplacementSpecsStorageService,
         private documentStructureService: DocumentStructureService,
         private replacementSpecsIntegrationService: ReplacementSpecsIntegrationService,
         private taggedFilesService: TaggedFilesService
