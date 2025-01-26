@@ -67,7 +67,40 @@ export class ReplacementSpecsIntegrationService {
         };
     }
 
-    public determineHowToIntegrateSpecs(existingSpecs: ReplacementSpecs[], specsToIntegrate: ReplacementSpec[]): ReplacementSpecsIntegrationSummary {
+    /**
+     * Analyse les specs à intégrer et détermine comment les intégrer dans les specs existantes.
+     * 
+     * Pour chaque spec à intégrer, la méthode :
+     * 1. Cherche une catégorie existante appropriée via findIntegrationTarget
+     * 2. Classe la spec dans l'une des trois catégories :
+     *    - integrations : specs qui peuvent être intégrées dans une catégorie existante
+     *    - alreadyIntegrated : specs qui sont déjà présentes dans une catégorie
+     *    - needsClassification : specs qui nécessitent une classification manuelle
+     * 
+     * @param existingSpecs - Les specs existantes dans le vault, organisées par catégorie
+     * @param specsToIntegrate - Les nouvelles specs à intégrer
+     * @returns Un objet ReplacementSpecsIntegrationSummary contenant :
+     *          - integrations : les specs qui peuvent être intégrées, groupées par catégorie cible
+     *          - alreadyIntegrated : les specs qui sont déjà présentes, avec leur catégorie
+     *          - needsClassification : les specs qui nécessitent une classification manuelle
+     *          - analyzedFilesCount : le nombre de fichiers analysés
+     * 
+     * @example
+     * // Exemple de retour pour une spec "chat" à intégrer :
+     * {
+     *   integrations: [{
+     *     targetCategory: "animaux",
+     *     specsToIntegrate: [{ target: "chat", toSearch: ["minou", "matou"] }]
+     *   }],
+     *   alreadyIntegrated: [],
+     *   needsClassification: [],
+     *   analyzedFilesCount: 1
+     * }
+     */
+    public determineHowToIntegrateSpecs(
+        existingSpecs: { category: string; replacements: ReplacementSpec[] }[],
+        specsToIntegrate: ReplacementSpec[]
+    ): ReplacementSpecsIntegrationSummary {
         const result: ReplacementSpecsIntegrationSummary = {
             integrations: [],
             alreadyIntegrated: [],

@@ -8,6 +8,7 @@ import { ReplacementSpecsIntegrationService, ReplacementSpecsIntegrationSummary 
 import { TaggedFilesService } from '../../document/tagged-files.service';
 import { ReplacementSpecsError } from '../../../models/errors';
 import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
+import { ReplacementSpecsFile } from '../../../models/interfaces';
 
 export class EditorReplacementSpecsIntegrationService {
     constructor(
@@ -105,14 +106,18 @@ export class EditorReplacementSpecsIntegrationService {
 
         // Sauvegarder les fichiers modifiés
         console.log('Fichiers à modifier:', Array.from(modifiedFiles.entries()));
+        const replacmentFileToSave: ReplacementSpecsFile[] = Array.from(modifiedFiles.entries()).map(([file, specs]) => ({
+            file: file,
+            specs: specs
+        }));
         
-        for (const [file, specs] of modifiedFiles) {
-            console.log(`Sauvegarde du fichier ${file}`);
+        replacmentFileToSave.forEach(async specFile => {
+            console.log(`Sauvegarde du fichier ${specFile.file}`);
             
             // Récupérer le fichier
-            const abstractFile = this.app.vault.getAbstractFileByPath(file);
+            const abstractFile = this.app.vault.getAbstractFileByPath(specFile.file);
             if (!abstractFile || !(abstractFile instanceof TFile)) {
-                throw new Error(`Le fichier ${file} n'existe pas ou n'est pas un fichier`);
+                throw new Error(`Le fichier ${specFile.file} n'existe pas ou n'est pas un fichier`);
             }
             
             // Lire le contenu actuel du fichier pour préserver le frontmatter
@@ -127,7 +132,7 @@ export class EditorReplacementSpecsIntegrationService {
             console.log('Frontmatter extrait:', frontmatter);
             
             // Convertir les specs en YAML
-            const yamlContent = this.yamlReplacementService.toYaml(specs);
+            const yamlContent = this.yamlReplacementService.toYaml(specFile.specs);
             console.log('Nouveau contenu YAML:', yamlContent);
             
             // Construire le nouveau contenu en préservant le frontmatter
@@ -136,8 +141,9 @@ export class EditorReplacementSpecsIntegrationService {
             
             // Sauvegarder le fichier
             await this.app.vault.modify(abstractFile, newContent);
-            console.log(`Fichier ${file} sauvegardé`);
-        }
+            console.log(`Fichier ${specFile} sauvegardé`);
+        });
+        
         
         console.log('Fin de integrateSpecs');
     }

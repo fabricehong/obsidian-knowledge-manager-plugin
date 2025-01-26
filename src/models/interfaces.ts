@@ -1,3 +1,5 @@
+import { ReplacementSpecs } from "./schemas";
+
 export interface PluginSettings {
     openAIApiKey: string;
     translationPromptTemplate: string;
@@ -93,4 +95,9 @@ export interface ReplacementCount {
 export interface ReplacementStatistics {
     category: string;
     replacements: ReplacementCount[];
+}
+
+export interface ReplacementSpecsFile {
+    file: string;
+    specs: ReplacementSpecs;
 }
