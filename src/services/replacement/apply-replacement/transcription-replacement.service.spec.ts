@@ -33,6 +33,42 @@ describe('TranscriptionReplacementService', () => {
             expect(result.reports[0].replacements).toHaveLength(3);
         });
 
+        it('should not replace parts of words with accented characters', () => {
+            const content = 'Demain nous allons a Genève mais pas tout de suite';
+            const specs: ReplacementSpecs = {
+                category: 'Categ',
+                replacements: [
+                    {
+                        target: 'V1',
+                        toSearch: ['ve']
+                    },
+                ]
+            };
+
+            const expected = 'Demain nous allons a Genève mais pas tout de suite';
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe(expected);
+            expect(result.reports).toHaveLength(0);
+        });
+
+        it('should not replace parts of words with unaccented characters', () => {
+            const content = 'Demain nous allons a Geneve mais pas tout de suite';
+            const specs: ReplacementSpecs = {
+                category: 'Categ',
+                replacements: [
+                    {
+                        target: 'V1',
+                        toSearch: ['ve']
+                    },
+                ]
+            };
+
+            const expected = 'Demain nous allons a Geneve mais pas tout de suite';
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe(expected);
+            expect(result.reports).toHaveLength(0);
+        });
+
         it('should treat regex special characters as literal in search terms', () => {
             const content = 'Hello TPG how are you';
             const specs: ReplacementSpecs = {

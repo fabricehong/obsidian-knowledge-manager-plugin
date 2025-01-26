@@ -14,6 +14,8 @@ import { ReplacementSpecs } from '../../../models/schemas';
  * @since 1.0.0
  */
 export class TranscriptionReplacementService {
+    constructor() {}
+
     /**
      * Applies a set of text replacement rules to a given content and returns both the modified content
      * and a report of what was actually replaced.
@@ -72,7 +74,7 @@ export class TranscriptionReplacementService {
                 
                 // Join all patterns with | for alternation
                 const pattern = searchPatterns.join('|');
-                const regex = new RegExp(`(${pattern})`, 'gi');
+                const regex = new RegExp(`(${pattern})`, 'giu');
                 
                 // Find and collect all matches before replacing
                 let match;
@@ -108,22 +110,25 @@ export class TranscriptionReplacementService {
      * Otherwise, it's treated as a literal string and only the part before special characters is used
      * 
      * @example
-     * createSearchPattern("nova-14") -> "\bnova-14\b"
-     * createSearchPattern("/nova.?14/") -> "\bnova.?14\b"
+     * createSearchPattern("nova-14") -> "(?:(?<=\p{L}\p{M}*)(?!\p{L}\p{M}*)|(?<!\p{L}\p{M}*)(?=\p{L}\p{M}*))nova-14(?:(?<=\p{L}\p{M}*)(?!\p{L}\p{M}*)|(?<!\p{L}\p{M}*)(?=\p{L}\p{M}*))"
+     * createSearchPattern("/nova.?14/") -> "(?:(?<=\p{L}\p{M}*)(?!\p{L}\p{M}*)|(?<!\p{L}\p{M}*)(?=\p{L}\p{M}*))nova.?14(?:(?<=\p{L}\p{M}*)(?!\p{L}\p{M}*)|(?<!\p{L}\p{M}*)(?=\p{L}\p{M}*))"
      * 
      * @param term The search term to convert into a pattern
-     * @returns The regex pattern with word boundaries
+     * @returns The regex pattern with Unicode word boundaries
      */
     private createSearchPattern(term: string): string {
+        // Define Unicode word boundary pattern that includes letters, numbers and combining marks
+        const unicodeWordBoundary = '(?:(?<=(?:\\p{L}|\\p{N})\\p{M}*)(?!(?:\\p{L}|\\p{N})\\p{M}*)|(?<!(?:\\p{L}|\\p{N})\\p{M}*)(?=(?:\\p{L}|\\p{N})\\p{M}*))';
+
         // Check if the term is a regex pattern (surrounded by /)
         if (term.startsWith('/') && term.endsWith('/')) {
             // Extract the pattern between the slashes and add word boundaries
             const pattern = term.slice(1, -1);
-            return `\\b${pattern}\\b`;
+            return `${unicodeWordBoundary}${pattern}${unicodeWordBoundary}`;
         }
 
         // For normal terms, escape regex special characters and add word boundaries
         const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return `\\b${escapedTerm}\\b`;
+        return `${unicodeWordBoundary}${escapedTerm}${unicodeWordBoundary}`;
     }
 }
