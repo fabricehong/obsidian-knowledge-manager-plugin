@@ -17,31 +17,51 @@ export class TranscriptionReplacementService {
     constructor() {}
 
     /**
-     * Applies a set of text replacement rules to a given content and returns both the modified content
-     * and a report of what was actually replaced.
+     * Applies text replacements according to the provided specifications.
      * 
-     * The algorithm works as follows:
-     * 1. It processes longer words before shorter ones to ensure that larger phrases are not broken up
-     *    (e.g., "New York" won't be partially replaced if "York" is also in the replacement list)
-     * 2. It only replaces complete words, not parts of words
-     *    (e.g., "cat" won't match inside "category")
-     * 3. It ensures each part of the text is only replaced once, preventing chain reactions
-     *    (e.g., if A→B and B→C are both rules, A will not become C)
-     * 4. When conflicts occur between different replacement rules, it keeps the first successful replacement
+     * Business Rules:
+     * 1. Word Boundary Rules:
+     *    - Only replaces complete words (e.g., "ve" won't match inside "Genève")
+     *    - Handles both accented and unaccented characters
+     *    - Treats numbers as part of words (e.g., "nova14" is one word)
+     * 
+     * 2. Pattern Matching:
+     *    - Normal terms: Treated as literal text with special characters escaped
+     *    - Regex patterns: Must be enclosed in slashes (e.g., "/nova.?14/")
+     *    - Case-insensitive matching (using 'i' flag)
+     * 
+     * 3. Replacement Logic:
+     *    - Multiple occurrences: All matching instances are replaced
+     *    - Multiple specs: Processes each spec independently
+     *    - Order: Processes longest terms first to prevent partial matches
+     *            (e.g., "New York City" before "New York" to avoid partial replacement)
+     *    - Reports: Generates a report for each spec with replacement counts
+     * 
+     * 4. Special Cases:
+     *    - Empty replacements: Returns original content with empty report
+     *    - Special characters: In normal terms, treated as literal text
+     *    - Overlapping matches: Longer matches take precedence over shorter ones
      * 
      * @example
-     * // Given these replacement specs:
-     * // Spec 1: "NY" → "New York"
-     * // Spec 2: "NYC" → "New York City"
-     * // Spec 3: "New York" → "NY State"
+     * // Simple replacement
+     * const specs = {
+     *   category: 'Speakers',
+     *   replacements: [{ target: 'John Smith', toSearch: ['John'] }]
+     * };
+     * service.applyReplacements('John: Hello', [specs]);
+     * // Returns: { result: 'John Smith: Hello', reports: [{ category: 'Speakers', replacements: [1] }] }
      * 
-     * const text = "I love NYC and NY";
-     * // Result: "I love New York City and New York"
-     * // Note: "NYC" is replaced first (being longer), then "NY"
+     * // Regex pattern
+     * const specs = {
+     *   category: 'Test',
+     *   replacements: [{ target: 'NOVA', toSearch: ['/nova.?14/'] }]
+     * };
+     * service.applyReplacements('nova14 nova-14', [specs]);
+     * // Returns: { result: 'NOVA NOVA', reports: [{ category: 'Test', replacements: [2] }] }
      * 
-     * @param content The text content to apply replacements to
-     * @param specs Array of replacement specifications, each containing search terms and their target replacement
-     * @returns The text with all replacements applied according to the rules above
+     * @param content - The text content to process
+     * @param specs - Array of replacement specifications
+     * @returns Object containing the processed text and replacement reports
      */
     applyReplacements(content: string, specs: ReplacementSpecs[]): { result: string, reports: ReplacementReport[] } {
         let result = content;
@@ -110,25 +130,25 @@ export class TranscriptionReplacementService {
      * Otherwise, it's treated as a literal string and only the part before special characters is used
      * 
      * @example
-     * createSearchPattern("nova-14") -> "(?:(?<=\p{L}\p{M}*)(?!\p{L}\p{M}*)|(?<!\p{L}\p{M}*)(?=\p{L}\p{M}*))nova-14(?:(?<=\p{L}\p{M}*)(?!\p{L}\p{M}*)|(?<!\p{L}\p{M}*)(?=\p{L}\p{M}*))"
-     * createSearchPattern("/nova.?14/") -> "(?:(?<=\p{L}\p{M}*)(?!\p{L}\p{M}*)|(?<!\p{L}\p{M}*)(?=\p{L}\p{M}*))nova.?14(?:(?<=\p{L}\p{M}*)(?!\p{L}\p{M}*)|(?<!\p{L}\p{M}*)(?=\p{L}\p{M}*))"
+     * createSearchPattern("nova-14") -> "(?:(?<!(?:\\p{L}|\\p{N}))(?=(?:\\p{L}|\\p{N}))|(?<=(?:\\p{L}|\\p{N}))(?!(?:\\p{L}|\\p{N})))nova-14(?:(?<!(?:\\p{L}|\\p{N}))(?=(?:\\p{L}|\\p{N}))|(?<=(?:\\p{L}|\\p{N}))(?!(?:\\p{L}|\\p{N})))"
+     * createSearchPattern("/nova.?14/") -> "(?:(?<!(?:\\p{L}|\\p{N}))(?=(?:\\p{L}|\\p{N}))|(?<=(?:\\p{L}|\\p{N}))(?!(?:\\p{L}|\\p{N})))nova.?14(?:(?<!(?:\\p{L}|\\p{N}))(?=(?:\\p{L}|\\p{N}))|(?<=(?:\\p{L}|\\p{N}))(?!(?:\\p{L}|\\p{N})))"
      * 
      * @param term The search term to convert into a pattern
-     * @returns The regex pattern with Unicode word boundaries
+     * @returns The regex pattern with word boundaries
      */
     private createSearchPattern(term: string): string {
-        // Define Unicode word boundary pattern that includes letters, numbers and combining marks
-        const unicodeWordBoundary = '(?:(?<=(?:\\p{L}|\\p{N})\\p{M}*)(?!(?:\\p{L}|\\p{N})\\p{M}*)|(?<!(?:\\p{L}|\\p{N})\\p{M}*)(?=(?:\\p{L}|\\p{N})\\p{M}*))';
+        // Define word boundary pattern using Unicode categories for letters and numbers
+        const wordBoundary = '(?:(?<!(?:\\p{L}|\\p{N}))(?=(?:\\p{L}|\\p{N}))|(?<=(?:\\p{L}|\\p{N}))(?!(?:\\p{L}|\\p{N})))';
 
         // Check if the term is a regex pattern (surrounded by /)
         if (term.startsWith('/') && term.endsWith('/')) {
             // Extract the pattern between the slashes and add word boundaries
             const pattern = term.slice(1, -1);
-            return `${unicodeWordBoundary}${pattern}${unicodeWordBoundary}`;
+            return `${wordBoundary}${pattern}${wordBoundary}`;
         }
 
         // For normal terms, escape regex special characters and add word boundaries
         const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return `${unicodeWordBoundary}${escapedTerm}${unicodeWordBoundary}`;
+        return `${wordBoundary}${escapedTerm}${wordBoundary}`;
     }
 }
