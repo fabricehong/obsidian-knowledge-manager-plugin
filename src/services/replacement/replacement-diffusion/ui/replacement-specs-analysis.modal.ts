@@ -2,6 +2,7 @@ import { App, Modal, Setting } from 'obsidian';
 import { ReplacementSpec } from '../../../../models/schemas';
 import { ReplacementSpecsIntegrationSummary } from '../replacement-specs-integration.service';
 import { ExistingCategory } from '../editor-replacement-specs-integration.service';
+import { ReplacementSpecsFile } from '../../../../models/interfaces';
 
 export interface UserIntegrationChoices {
     integrations: {
@@ -22,7 +23,7 @@ export class ReplacementSpecsAnalysisModal extends Modal {
     constructor(
         app: App,
         private analysisResults: ReplacementSpecsIntegrationSummary,
-        private existingCategories: ExistingCategory[]
+        private existingCategories: string[]
     ) {
         super(app);
     }
@@ -163,7 +164,7 @@ export class ReplacementSpecsAnalysisModal extends Modal {
                     
                     // Ajouter toutes les catégories existantes
                     for (const category of this.existingCategories) {
-                        dropdown.addOption(category.name, category.name);
+                        dropdown.addOption(category, category);
                     }
 
                     dropdown.onChange(value => {

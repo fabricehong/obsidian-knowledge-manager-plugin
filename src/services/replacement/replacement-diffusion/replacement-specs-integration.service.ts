@@ -98,7 +98,7 @@ export class ReplacementSpecsIntegrationService {
      * }
      */
     public determineHowToIntegrateSpecs(
-        existingSpecs: { category: string; replacements: ReplacementSpec[] }[],
+        existingSpecs: ReplacementSpecs[],
         specsToIntegrate: ReplacementSpec[]
     ): ReplacementSpecsIntegrationSummary {
         const result: ReplacementSpecsIntegrationSummary = {

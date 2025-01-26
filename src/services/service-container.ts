@@ -32,6 +32,7 @@ import { EditorAIReplacementSpecsCreationService } from './replacement/specs-cre
 import { EditorDocumentCleaningService } from './diffusion/editor-document-cleaning.service';
 import { EditorKnowledgeDiffusionService } from './diffusion/editor-knowledge-diffusion.service';
 import { DocumentModificationService } from './document/document-modification-utils';
+import { ReplacementSpecsStorageService } from './replacement/replacement-specs-storage.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -54,6 +55,7 @@ export class ServiceContainer {
     public readonly documentationService: DocumentationService;
     public readonly conversationTopicsService: ConversationTopicsService;
     public readonly replacementSpecsIntegrationService: ReplacementSpecsIntegrationService;
+    public readonly replacementSpecsStorageService: ReplacementSpecsStorageService;
     public readonly taggedFilesService: TaggedFilesService;
     public readonly editorReplacementSpecsIntegrationService: EditorReplacementSpecsIntegrationService;
     public readonly editorReplacementSpecsCreationService: EditorReplacementSpecsCreationService;
@@ -78,6 +80,11 @@ export class ServiceContainer {
         this.transcriptionReplacementService = new TranscriptionReplacementService();
         this.replacementSpecsIntegrationService = new ReplacementSpecsIntegrationService();
         this.taggedFilesService = new TaggedFilesService(this.app);
+        this.replacementSpecsStorageService = new ReplacementSpecsStorageService(
+            this.app,
+            this.yamlReplacementService,
+            this.taggedFilesService
+        );
 
         // Services avec OpenAI
         this.openAIModelService = new OpenAIModelService();
@@ -143,8 +150,9 @@ export class ServiceContainer {
 
         this.editorReplacementSpecsIntegrationService = new EditorReplacementSpecsIntegrationService(
             this.app,
-            this.documentStructureService,
             this.yamlReplacementService,
+            this.replacementSpecsStorageService,
+            this.documentStructureService,
             this.replacementSpecsIntegrationService,
             this.taggedFilesService
         );

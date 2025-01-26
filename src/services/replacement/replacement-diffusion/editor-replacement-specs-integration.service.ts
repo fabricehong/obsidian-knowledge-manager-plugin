@@ -9,12 +9,14 @@ import { TaggedFilesService } from '../../document/tagged-files.service';
 import { ReplacementSpecsError } from '../../../models/errors';
 import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
 import { ReplacementSpecsFile } from '../../../models/interfaces';
+import { ReplacementSpecsStorageService } from "../replacement-specs-storage.service";
 
 export class EditorReplacementSpecsIntegrationService {
     constructor(
         private app: App,
-        private documentStructureService: DocumentStructureService,
         private yamlReplacementService: YamlService<ReplacementSpecs>,
+        private replacementSpecsStorageService: ReplacementSpecsStorageService,
+        private documentStructureService: DocumentStructureService,
         private replacementSpecsIntegrationService: ReplacementSpecsIntegrationService,
         private taggedFilesService: TaggedFilesService
     ) {}
@@ -50,7 +52,7 @@ export class EditorReplacementSpecsIntegrationService {
             const userChoices = await new ReplacementSpecsAnalysisModal(
                 this.app,
                 analysis.analysis,
-                analysis.existingCategories
+                analysis.replacementSpecsFiles.map(specsFile => specsFile.specs.category)
             ).open();
 
             if (!userChoices) {
@@ -61,7 +63,7 @@ export class EditorReplacementSpecsIntegrationService {
             console.log('Choix utilisateur:', userChoices);
 
             // 3. Effectuer les intégrations
-            await this.integrateSpecs(userChoices, analysis.existingCategories);
+            await this.integrateSpecs(userChoices, analysis.replacementSpecsFiles);
 
             new Notice('Specs intégrées avec succès');
             console.log('Fin de publishCurrentFileSpecs avec succès');
@@ -74,23 +76,23 @@ export class EditorReplacementSpecsIntegrationService {
 
     private async integrateSpecs(
         userChoices: UserIntegrationChoices,
-        existingCategories: ExistingCategory[]
+        replacementSpecsFiles: ReplacementSpecsFile[]
     ): Promise<void> {
         console.log('Début de integrateSpecs');
         console.log('Choix utilisateur:', userChoices);
-        console.log('Catégories existantes:', existingCategories);
+        console.log('Catégories existantes avant intégration:', replacementSpecsFiles);
 
         // Map pour éviter de sauvegarder plusieurs fois le même fichier
         const modifiedFiles = new Map<string, ReplacementSpecs>();
 
         for (const integration of userChoices.integrations) {
             // Trouver la catégorie existante
-            const category = existingCategories.find(c => c.name === integration.targetCategory);
+            const category = replacementSpecsFiles.find(c => c.specs.category === integration.targetCategory);
             if (!category) {
                 throw new Error(`La catégorie ${integration.targetCategory} n'existe pas`);
             }
 
-            console.log(`Intégration pour la catégorie ${category.name} dans le fichier ${category.file}`);
+            console.log(`Intégration pour la catégorie ${category.specs.category} dans le fichier ${category.file}`);
             console.log('Specs avant intégration:', category.specs);
             console.log('Specs à intégrer:', integration.specsToIntegrate);
 
@@ -106,45 +108,15 @@ export class EditorReplacementSpecsIntegrationService {
 
         // Sauvegarder les fichiers modifiés
         console.log('Fichiers à modifier:', Array.from(modifiedFiles.entries()));
-        const replacmentFileToSave: ReplacementSpecsFile[] = Array.from(modifiedFiles.entries()).map(([file, specs]) => ({
-            file: file,
-            specs: specs
+        const replacementFilesToSave = Array.from(modifiedFiles.entries()).map(([file, specs]) => ({
+            file,
+            specs
         }));
         
-        replacmentFileToSave.forEach(async specFile => {
-            console.log(`Sauvegarde du fichier ${specFile.file}`);
-            
-            // Récupérer le fichier
-            const abstractFile = this.app.vault.getAbstractFileByPath(specFile.file);
-            if (!abstractFile || !(abstractFile instanceof TFile)) {
-                throw new Error(`Le fichier ${specFile.file} n'existe pas ou n'est pas un fichier`);
-            }
-            
-            // Lire le contenu actuel du fichier pour préserver le frontmatter
-            const content = await this.app.vault.read(abstractFile);
-            console.log('Contenu actuel du fichier:', content);
-            
-            const metadata = this.app.metadataCache.getFileCache(abstractFile);
-            
-            // Extraire le frontmatter existant
-            const frontmatterEnd = metadata?.frontmatterPosition?.end.offset ?? 0;
-            const frontmatter = content.slice(0, frontmatterEnd);
-            console.log('Frontmatter extrait:', frontmatter);
-            
-            // Convertir les specs en YAML
-            const yamlContent = this.yamlReplacementService.toYaml(specFile.specs);
-            console.log('Nouveau contenu YAML:', yamlContent);
-            
-            // Construire le nouveau contenu en préservant le frontmatter
-            const newContent = frontmatter + '\n\n' + yamlContent;
-            console.log('Nouveau contenu complet:', newContent);
-            
-            // Sauvegarder le fichier
-            await this.app.vault.modify(abstractFile, newContent);
-            console.log(`Fichier ${specFile} sauvegardé`);
-        });
-        
-        
+        for (const specFile of replacementFilesToSave) {
+            await this.replacementSpecsStorageService.persistSpecsInTaggedFile(specFile);
+        }
+
         console.log('Fin de integrateSpecs');
     }
 
@@ -239,31 +211,13 @@ export class EditorReplacementSpecsIntegrationService {
 
             // 2. Collecter les specs existantes et construire le mapping des catégories
             console.log('Collecte des specs existantes avec le tag', replacementSpecsTag);
-            const fileSpecs = await this.collectExistingSpecs(replacementSpecsTag);
-            console.log('Specs existantes trouvées:', fileSpecs);
-            
-            const existingCategories: ExistingCategory[] = [];
-            
-            // Pour chaque fichier, extraire les catégories
-            for (const {file, specs} of fileSpecs) {
-                Object.keys(specs).forEach(category => {
-                    existingCategories.push({
-                        name: category,
-                        file,
-                        specs
-                    });
-                });
-            }
-
-            console.log('Catégories existantes:', existingCategories);
+            const replacementSpecsFiles: ReplacementSpecsFile[] = await this.replacementSpecsStorageService.readSpecsFromTaggedFiles(replacementSpecsTag);
+            console.log('Specs existantes trouvées:', replacementSpecsFiles);
 
             // 3. Retourner l'analyse
             const analysis = this.replacementSpecsIntegrationService
                 .determineHowToIntegrateSpecs(
-                    existingCategories.map(c => ({
-                        category: c.name,
-                        replacements: c.specs.replacements
-                    })),
+                    replacementSpecsFiles.map(c => c.specs),
                     currentSpecs.replacements
                 );
 
@@ -271,7 +225,7 @@ export class EditorReplacementSpecsIntegrationService {
 
             return {
                 analysis,
-                existingCategories
+                replacementSpecsFiles
             };
         } catch (error) {
             console.error('Erreur dans analyzeCurrentFileSpecs:', error);
@@ -323,7 +277,7 @@ export interface ExistingCategory {
 
 interface AnalysisWithCategories {
     analysis: ReplacementSpecsIntegrationSummary;
-    existingCategories: ExistingCategory[];
+    replacementSpecsFiles: ReplacementSpecsFile[];
 }
 
 interface FileSpecs {
