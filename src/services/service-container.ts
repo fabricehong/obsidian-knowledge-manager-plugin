@@ -33,6 +33,7 @@ import { EditorDocumentCleaningService } from './diffusion/editor-document-clean
 import { EditorKnowledgeDiffusionService } from './diffusion/editor-knowledge-diffusion.service';
 import { DocumentModificationService } from './document/document-modification-utils';
 import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
+import { EditorDocumentService } from './document/editor-document.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -55,7 +56,7 @@ export class ServiceContainer {
     public readonly documentationService: DocumentationService;
     public readonly conversationTopicsService: ConversationTopicsService;
     public readonly replacementSpecsIntegrationService: ReplacementSpecsIntegrationService;
-    public readonly replacementSpecsStorageService: EditorReplacementSpecsStorageService;
+    public readonly editorReplacementSpecsStorageService: EditorReplacementSpecsStorageService;
     public readonly taggedFilesService: TaggedFilesService;
     public readonly editorReplacementSpecsIntegrationService: EditorReplacementSpecsIntegrationService;
     public readonly editorReplacementSpecsCreationService: EditorReplacementSpecsCreationService;
@@ -65,6 +66,7 @@ export class ServiceContainer {
     public readonly editorDocumentCleaningService: EditorDocumentCleaningService;
     public readonly editorKnowledgeDiffusionService: EditorKnowledgeDiffusionService;
     public readonly documentModificationService: DocumentModificationService;
+    private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
 
     constructor(private app: App, settings: PluginSettings) {
@@ -80,7 +82,7 @@ export class ServiceContainer {
         this.transcriptionReplacementService = new TranscriptionReplacementService();
         this.replacementSpecsIntegrationService = new ReplacementSpecsIntegrationService();
         this.taggedFilesService = new TaggedFilesService(this.app);
-        this.replacementSpecsStorageService = new EditorReplacementSpecsStorageService(
+        this.editorReplacementSpecsStorageService = new EditorReplacementSpecsStorageService(
             this.app,
             this.yamlReplacementService,
             this.taggedFilesService
@@ -151,17 +153,20 @@ export class ServiceContainer {
         this.editorReplacementSpecsIntegrationService = new EditorReplacementSpecsIntegrationService(
             this.app,
             this.yamlReplacementService,
-            this.replacementSpecsStorageService,
+            this.editorReplacementSpecsStorageService,
             this.documentStructureService,
             this.replacementSpecsIntegrationService,
             this.taggedFilesService
         );
 
-        this.editorReplacementSpecsCreationService = new EditorReplacementSpecsCreationService(
+        this.editorDocumentService = new EditorDocumentService(
             this.app,
-            this.documentStructureService,
+            this.documentStructureService
+        );
+
+        this.editorReplacementSpecsCreationService = new EditorReplacementSpecsCreationService(
             this.transcriptFileService,
-            this.transcriptionReplacementService,
+            this.editorDocumentService,
             this.yamlReplacementService
         );
 

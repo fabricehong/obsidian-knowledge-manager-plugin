@@ -81,9 +81,7 @@ export class EditorTranscriptionReplacementService {
         if (!file)
             throw new Error('No file is currently open');
 
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        const rootNode = this.documentStructureService.buildHeaderTree(metadata!, content);
+        const rootNode = await this.documentStructureService.buildHeaderTree(this.app, file);
         const replacementsHeader = this.documentStructureService.findFirstNodeMatchingHeading(
             rootNode,
             headerContainingReplacements
@@ -103,7 +101,7 @@ export class EditorTranscriptionReplacementService {
             }
             return null;
         }
-        return  {content: replacementsHeader?.content, filePath: file.path};
+        return {content: replacementsHeader?.content, filePath: file.path};
     }
 
     /**
@@ -118,9 +116,7 @@ export class EditorTranscriptionReplacementService {
         const file = markdownView.file;
         if (!file) return [];
 
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        const rootNode = this.documentStructureService.buildHeaderTree(metadata!, content);
+        const rootNode = await this.documentStructureService.buildHeaderTree(this.app, file);
 
         // Collect all replacement specs from both sources
         let allSpecs : ReplacementSpecs[] = [];

@@ -20,14 +20,7 @@ export class EditorKnowledgeDiffusionService {
         
         try {
             new Notice('Diffusing note...');
-
-            // Get the file cache and build header tree
-            const cache = this.app.metadataCache.getFileCache(file);
-            if (!cache) {
-                throw new Error('No cache available for this file');
-            }
-
-            const headerTree = this.documentStructureService.buildHeaderTree(cache, content);
+            const headerTree = await this.documentStructureService.buildHeaderTree(this.app, file);
             const diffusionPlans = this.knowledgeDiffusionService.buildDiffusionRepresentation(headerTree);
 
             if (diffusionPlans.length === 0) {

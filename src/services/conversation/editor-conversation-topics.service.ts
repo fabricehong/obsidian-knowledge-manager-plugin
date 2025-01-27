@@ -16,15 +16,7 @@ export class EditorConversationTopicsService {
         headerContainingTranscript: string
     ): Promise<void> {
         try {
-            const file = markdownView.file;
-            if (!file) {
-                new Notice('No file is currently open');
-                return;
-            }
-
-            const content = await this.app.vault.read(file);
-            const metadata = this.app.metadataCache.getFileCache(file);
-            const doc = this.documentStructureService.buildHeaderTree(metadata!, content);
+            const doc = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
 
             // Get transcript content
             const transcriptContent = this.getTranscriptContent(doc, headerContainingTranscript);

@@ -14,7 +14,7 @@ describe('DocumentStructureService', () => {
             const cache: CachedMetadata = { headings: [] };
             const content = '';
 
-            const result = service.buildHeaderTree(cache, content);
+            const result = service.buildTree(cache, content);
 
             expect(result).toEqual({
                 children: [],
@@ -26,7 +26,7 @@ describe('DocumentStructureService', () => {
             const cache: CachedMetadata = { headings: [] };
             const content = 'This is some content\nwith multiple lines';
 
-            const result = service.buildHeaderTree(cache, content);
+            const result = service.buildTree(cache, content);
 
             expect(result).toEqual({
                 children: [],
@@ -46,7 +46,7 @@ describe('DocumentStructureService', () => {
             const cache: CachedMetadata = { headings: [heading] };
             const content = 'Initial content\n\n# Test Header\nHeader content';
 
-            const result = service.buildHeaderTree(cache, content);
+            const result = service.buildTree(cache, content);
 
             expect(result).toEqual({
                 children: [{
@@ -89,7 +89,7 @@ describe('DocumentStructureService', () => {
             const cache: CachedMetadata = { headings };
             const content = '# Main\nMain content\n## Sub1\nSub1 content\n## Sub2\nSub2 content';
 
-            const result = service.buildHeaderTree(cache, content);
+            const result = service.buildTree(cache, content);
 
             expect(result).toEqual({
                 children: [{
@@ -211,7 +211,7 @@ H2-2 content`;
             const cache: CachedMetadata = { headings };
             const content = '# Valid\nValid content\n## Invalid\nInvalid content';
 
-            const result = service.buildHeaderTree(cache, content);
+            const result = service.buildTree(cache, content);
 
             expect(result.children).toHaveLength(1);
             expect(result.children[0].heading).toBe('Valid');
@@ -221,7 +221,7 @@ H2-2 content`;
             const cache: CachedMetadata = {};
             const content = 'Some content\n# Header\nMore content';
 
-            const result = service.buildHeaderTree(cache, content);
+            const result = service.buildTree(cache, content);
 
             expect(result).toEqual({
                 children: [],

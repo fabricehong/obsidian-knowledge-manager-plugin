@@ -23,9 +23,7 @@ export class EditorDocumentationService {
                 return;
             }
 
-            const content = await this.app.vault.read(file);
-            const metadata = this.app.metadataCache.getFileCache(file);
-            const doc = this.documentStructureService.buildHeaderTree(metadata!, content);
+            const doc = await this.documentStructureService.buildHeaderTree(this.app, file);
 
             // Get transcript content
             const transcriptContent = this.getTranscriptContent(doc, headerContainingTranscript);

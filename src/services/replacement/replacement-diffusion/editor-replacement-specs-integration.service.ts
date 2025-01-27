@@ -15,7 +15,7 @@ export class EditorReplacementSpecsIntegrationService {
     constructor(
         private app: App,
         private yamlReplacementService: YamlService<ReplacementSpecs>,
-        private replacementSpecsStorageService: EditorReplacementSpecsStorageService,
+        private editorReplacementSpecsStorageService: EditorReplacementSpecsStorageService,
         private documentStructureService: DocumentStructureService,
         private replacementSpecsIntegrationService: ReplacementSpecsIntegrationService,
         private taggedFilesService: TaggedFilesService
@@ -114,7 +114,7 @@ export class EditorReplacementSpecsIntegrationService {
         }));
         
         for (const specFile of replacementFilesToSave) {
-            await this.replacementSpecsStorageService.persistSpecsInTaggedFile(specFile);
+            await this.editorReplacementSpecsStorageService.persistSpecsInTaggedFile(specFile);
         }
 
         console.log('Fin de integrateSpecs');
@@ -195,15 +195,15 @@ export class EditorReplacementSpecsIntegrationService {
             // Parser le YAML des specs
             let currentSpecs: ReplacementSpecs;
             try {
-                const yamlContent = this.yamlReplacementService.fromYamlBlock(currentSpecsString.content);
-                currentSpecs = this.yamlReplacementService.fromYaml(yamlContent, currentSpecsString.filePath);
+                const yamlContent = this.yamlReplacementService.fromYamlBlock(currentSpecsString);
+                currentSpecs = this.yamlReplacementService.fromYaml(yamlContent, markdownView.file.path);
                 console.log('Specs du fichier actif parsées:', currentSpecs);
             } catch (error) {
                 console.error('Erreur lors du parsing des specs:', error);
                 if (error instanceof YamlValidationError) {
-                    throw new ReplacementSpecsError(error.details, currentSpecsString.filePath);
+                    throw new ReplacementSpecsError(error.details, markdownView.file.path);
                 } else {
-                    throw new ReplacementSpecsError('Failed to parse replacement specs', currentSpecsString.filePath);
+                    throw new ReplacementSpecsError('Failed to parse replacement specs', markdownView.file.path);
                 }
             }
 
@@ -211,7 +211,7 @@ export class EditorReplacementSpecsIntegrationService {
 
             // 2. Collecter les specs existantes et construire le mapping des catégories
             console.log('Collecte des specs existantes avec le tag', replacementSpecsTag);
-            const replacementSpecsFiles: ReplacementSpecsFile[] = await this.replacementSpecsStorageService.readSpecsFromTaggedFiles(replacementSpecsTag);
+            const replacementSpecsFiles: ReplacementSpecsFile[] = await this.editorReplacementSpecsStorageService.readSpecsFromTaggedFiles(replacementSpecsTag);
             console.log('Specs existantes trouvées:', replacementSpecsFiles);
 
             // 3. Retourner l'analyse
@@ -245,15 +245,7 @@ export class EditorReplacementSpecsIntegrationService {
         markdownView: MarkdownView, 
         replacementsHeader: string
     ): Promise<{content: string, filePath: string} | null> {
-        const file = markdownView.file;
-        if (!file) return null;
-
-        // Lire le contenu et construire l'arbre
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        if (!metadata) return null;
-
-        const doc = this.documentStructureService.buildHeaderTree(metadata, content);
+        const doc = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
 
         // Trouver le header des replacements
         const replacementsNode = this.documentStructureService.findFirstNodeMatchingHeading(
@@ -264,7 +256,7 @@ export class EditorReplacementSpecsIntegrationService {
 
         return {
             content: replacementsNode.content,
-            filePath: file.path
+            filePath: doc.file.path
         };
     }
 }

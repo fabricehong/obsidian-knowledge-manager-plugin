@@ -1,3 +1,4 @@
+import { TFile } from "obsidian";
 import { ReplacementSpecs } from "./schemas";
 
 export interface PluginSettings {
@@ -43,6 +44,7 @@ export class HeaderNode {
 }
 
 export class RootNode {
+    file: TFile;
     children: HeaderNode[];
     content: string;
 

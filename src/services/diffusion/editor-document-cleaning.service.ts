@@ -30,10 +30,10 @@ export class EditorDocumentCleaningService {
             }
 
             // Build the document tree using document structure service
-            const rootNode = this.documentStructureService.buildHeaderTree(cache, content);
+            const rootNode = await this.documentStructureService.buildHeaderTree(this.app, file);
             
             // Clean the content using document cleaning service
-            const cleanedRootNode = this.documentCleaningService.cleanNode(rootNode) as RootNode;
+            const cleanedRootNode = await this.documentCleaningService.cleanNode(rootNode) as RootNode;
             
             // Convert back to markdown
             const cleanedContent = this.documentStructureService.renderToMarkdown(cleanedRootNode);

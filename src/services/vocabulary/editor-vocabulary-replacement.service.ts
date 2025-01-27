@@ -69,20 +69,14 @@ export class EditorVocabularyReplacementService {
      * Collect vocabulary specs from the active file
      */
     private async collectActiveFileSpecsString(markdownView: MarkdownView, headerContainingVocabulary: string): Promise<{content: string, filePath: string}> {
-        const file = markdownView.file;
-        if (!file)
-            throw new Error('No file is currently open');
-
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        const rootNode = this.documentStructureService.buildHeaderTree(metadata!, content);
+        const rootNode = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
         const vocabularyHeader = this.documentStructureService.findFirstNodeMatchingHeading(
             rootNode,
             headerContainingVocabulary
         );
         if (!vocabularyHeader)
-            throw new Error(`Vocabulary header '${headerContainingVocabulary}' not found in file ${file.path}`);
-        return {content: vocabularyHeader?.content, filePath: file.path};
+            throw new Error(`Vocabulary header '${headerContainingVocabulary}' not found in file ${markdownView.file.path}`);
+        return {content: vocabularyHeader?.content, filePath: markdownView.file!.path};
     }
 
     private processVocabularySpecs(file: {content: string, filePath: string}): VocabularySpecs {
@@ -170,11 +164,7 @@ export class EditorVocabularyReplacementService {
             this.textCorrector.setVocabulary(vocabularyTerms);
 
             // Find transcription
-            const file = markdownView.file;
-            if (!file) return;
-            const content = await this.app.vault.read(file);
-            const metadata = this.app.metadataCache.getFileCache(file);
-            const rootNode = this.documentStructureService.buildHeaderTree(metadata!, content);
+            const rootNode = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
             const transcriptHeader = this.documentStructureService.findFirstNodeMatchingHeading(
                 rootNode,
                 headerContainingTranscript

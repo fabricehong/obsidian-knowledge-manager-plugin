@@ -19,32 +19,20 @@ export class EditorAIReplacementSpecsCreationService {
         private documentModificationService: DocumentModificationService,
     ) {}
 
-    async createReplacementSpecs(
-        markdownView: MarkdownView,
-        headerContainingTranscript: string,
-        replacementsHeader: string,
-        maxGlossaryIterations: number
-    ): Promise<void> {
-        const file = markdownView.file;
-        if (!file) {
-            console.log("No file found in markdownView");
-            return;
-        }
-
-        const content = await this.app.vault.read(file);
-        const metadata = this.app.metadataCache.getFileCache(file);
-        const doc = this.documentStructureService.buildHeaderTree(metadata!, content);
-
+    async createReplacementSpecs(headerContainingTranscript: string, replacementsHeader: string): Promise<void> {
+        const doc = await this.documentStructureService.buildHeaderTree(this.app, this.file);
         if (!this.checkReplacementHeaderInDocument(doc, replacementsHeader)) return;
 
-        // Obtenir le contenu de la transcription
-        const transcriptContent = this.getTranscriptContent(doc, headerContainingTranscript);
-        if (!transcriptContent) {
-            console.log(`No transcript content found in header '${headerContainingTranscript}'`);
-            return;
+        const headerContainingTranscriptNode = this.documentStructureService.findFirstNodeMatchingHeading(doc, headerContainingTranscript);
+        if (!headerContainingTranscriptNode) {
+            throw new Error('No transcript header found');
         }
 
-        // Créer les specs à partir du glossaire
+        const transcriptContent = this.getTranscriptContent(doc, headerContainingTranscript);
+        if (!transcriptContent) {
+            throw new Error('No transcript content found');
+        }
+
         let isCancelled = false;
         const loadingModal = new LoadingModal(this.app, () => {
             isCancelled = true;
@@ -52,10 +40,7 @@ export class EditorAIReplacementSpecsCreationService {
         loadingModal.open();
 
         try {
-            const glossaryTerms = await this.glossarySearchService.findGlossaryTerms(
-                transcriptContent,
-                maxGlossaryIterations
-            );
+            const glossaryTerms = await this.glossarySearchService.findGlossaryTerms(transcriptContent, 10);
             
             if (isCancelled) {
                 new Notice('Operation cancelled');
@@ -91,13 +76,11 @@ export class EditorAIReplacementSpecsCreationService {
                 .map(({terme, definition}) => `- **${terme}** : ${definition.trim()}`)
                 .join('\n');
             if (!this.documentModificationService.addGlossarySection(doc, contentStr)) {
-                console.log("Failed to add glossary section - could not find replacements header");
-                return;
+                throw new Error('Failed to add glossary section');
             }
 
-            // Sauvegarder les modifications
             const newContent = this.documentStructureService.renderToMarkdown(doc);
-            await this.app.vault.modify(file, newContent);
+            await this.app.vault.modify(this.file, newContent);
             
             new Notice('Successfully added glossary replacements section');
         } finally {

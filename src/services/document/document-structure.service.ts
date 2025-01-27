@@ -1,4 +1,4 @@
-import { CachedMetadata, HeadingCache, SectionCache } from 'obsidian';
+import { App, CachedMetadata, HeadingCache, SectionCache, TFile } from 'obsidian';
 import { HeaderNode, RootNode } from '../../models/interfaces';
 
 export class DocumentStructureService {
@@ -20,12 +20,33 @@ export class DocumentStructureService {
      * @param fileContent Raw file content, used to extract text between headings
      * @returns A RootNode containing the complete document structure
      */
-    buildHeaderTree(cache: CachedMetadata, fileContent: string): RootNode {
-        const sections = cache.sections ?? [];
+    async buildHeaderTree(app: App, file: TFile | null): Promise<RootNode> {
+        if (!file)
+            throw new Error('No file is currently open');
+        
+        const content = await app.vault.read(file);
+        const metadata = app.metadataCache.getFileCache(file);
+
+        const rootHeading = this.buildTree(metadata!, content);
+
+        const root: RootNode = {
+            file: file,
+            content: rootHeading.content,
+            children: rootHeading.children
+        };
+
+        return root;
+    }
+
+    buildTree(cache: CachedMetadata, fileContent: string): HeaderNode {
+
+        
         const headings = cache.headings ?? [];
         
         // Initialize root node
-        const root: RootNode = {
+        const root: HeaderNode = {
+            level: 0,
+            heading: '',
             children: [],
             content: ''
         };
