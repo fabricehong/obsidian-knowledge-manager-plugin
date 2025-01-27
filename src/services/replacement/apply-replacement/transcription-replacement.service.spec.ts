@@ -33,6 +33,26 @@ describe('TranscriptionReplacementService', () => {
             expect(result.reports[0].replacements).toHaveLength(3);
         });
 
+        it('new specc', () => {
+            const content = 'John du côté de la mer';
+            const specs: ReplacementSpecs = {
+                category: 'Speakers',
+                replacements: [
+                    {
+                        target: 'GOT',
+                        toSearch: ['cote']
+                    },
+                    
+                ]
+            };
+
+            const expected = 'John du côté de la mer';
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe(expected);
+        });
+
+        
+
         it('should not replace parts of words with accented characters', () => {
             const content = 'Demain nous allons a Genève mais pas tout de suite';
             const specs: ReplacementSpecs = {
@@ -51,7 +71,7 @@ describe('TranscriptionReplacementService', () => {
             expect(result.reports).toHaveLength(0);
         });
 
-        it('should not replace parts of words with unaccented characters', () => {
+        it('should not match unaccented search terms with accented text', () => {
             const content = 'Demain nous allons a Geneve mais pas tout de suite';
             const specs: ReplacementSpecs = {
                 category: 'Categ',
@@ -219,6 +239,24 @@ describe('TranscriptionReplacementService', () => {
             const result = service.applyReplacements(content, [specs]);
             expect(result.result).toBe('supernova14 NOVA subnova14');
             expect(result.reports[0].replacements).toHaveLength(1);
+        });
+
+        it('should handle accented characters in search terms', () => {
+            const content = 'John du côté de la mer';
+            const specs: ReplacementSpecs = {
+                category: 'Speakers',
+                replacements: [
+                    {
+                        target: 'GOT',
+                        toSearch: ['cote']
+                    },
+                    
+                ]
+            };
+
+            const expected = 'John du côté de la mer';
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe(expected);
         });
     });
 });
