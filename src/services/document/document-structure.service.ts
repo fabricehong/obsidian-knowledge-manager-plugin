@@ -1,52 +1,50 @@
 import { App, CachedMetadata, HeadingCache, SectionCache, TFile } from 'obsidian';
-import { HeaderNode, RootNode } from '../../models/interfaces';
+import { FileNode, FileRootNode, HeaderNode, RootNode } from '../../models/interfaces';
 
 export class DocumentStructureService {
     /**
      * Builds a tree structure from a markdown document using Obsidian's cache and file content.
-     * 
+     *
      * This method uses both Obsidian's cached metadata and the raw file content for optimal performance
      * and accuracy:
      * - CachedMetadata: Provides pre-parsed structural information (headings, their levels and positions)
      *   avoiding the need to parse markdown syntax manually
      * - fileContent: Used to extract the actual text content between headings, which isn't stored in the cache
-     * 
+     *
      * The resulting tree structure has:
      * - A root node containing content before the first heading
      * - Nested header nodes matching the document's heading hierarchy
      * - Each header node containing its heading text and the content until the next heading
-     * 
+     *
      * @param cache Obsidian's cached metadata for the file, containing pre-parsed heading information
      * @param fileContent Raw file content, used to extract text between headings
      * @returns A RootNode containing the complete document structure
      */
-    async buildHeaderTree(app: App, file: TFile | null): Promise<RootNode> {
+    async buildHeaderTree(app: App, file: TFile | null): Promise<FileRootNode> {
         if (!file)
             throw new Error('No file is currently open');
-        
+
         const content = await app.vault.read(file);
         const metadata = app.metadataCache.getFileCache(file);
 
         const rootHeading = this.buildTree(metadata!, content);
 
-        const root: RootNode = {
+        const root: FileRootNode = {
             file: file,
-            content: rootHeading.content,
-            children: rootHeading.children
+            root: {
+                content: rootHeading.content,
+                children: rootHeading.children
+            },
         };
 
         return root;
     }
 
-    buildTree(cache: CachedMetadata, fileContent: string): HeaderNode {
-
-        
+    buildTree(cache: CachedMetadata, fileContent: string): RootNode {
         const headings = cache.headings ?? [];
-        
+
         // Initialize root node
-        const root: HeaderNode = {
-            level: 0,
-            heading: '',
+        const root: RootNode = {
             children: [],
             content: ''
         };
@@ -114,8 +112,8 @@ export class DocumentStructureService {
      * Checks if a heading has valid position information
      */
     private isValidHeading(heading: HeadingCache): boolean {
-        return heading.position !== undefined 
-            && heading.position.start !== undefined 
+        return heading.position !== undefined
+            && heading.position.start !== undefined
             && heading.position.end !== undefined
             && typeof heading.position.start.line === 'number'
             && typeof heading.position.end.line === 'number';
@@ -128,7 +126,7 @@ export class DocumentStructureService {
         const lines = fileContent.split('\n');
         const startLine = currentHeading.position.start.line + 1;
         const endLine = nextHeading ? nextHeading.position.start.line : lines.length;
-        
+
         return lines.slice(startLine, endLine).join('\n').trim();
     }
 
@@ -149,15 +147,15 @@ export class DocumentStructureService {
                     nodeMarkdown += '\n\n';
                 }
             }
-            
+
             for (const child of node.children) {
                 nodeMarkdown += renderNode(child);
             }
-            
+
             if (node.children.length === 0 && node.content && !nodeMarkdown.endsWith('\n\n')) {
                 nodeMarkdown += '\n\n';
             }
-            
+
             return nodeMarkdown;
         };
 
@@ -173,7 +171,7 @@ export class DocumentStructureService {
             if (child.heading === heading) {
                 return child;
             }
-            
+
             // Recursively search in children
             const found = this.findFirstNodeMatchingHeadingInNode(child, heading);
             if (found) {
@@ -188,7 +186,7 @@ export class DocumentStructureService {
             if (child.heading === heading) {
                 return child;
             }
-            
+
             const found = this.findFirstNodeMatchingHeadingInNode(child, heading);
             if (found) {
                 return found;

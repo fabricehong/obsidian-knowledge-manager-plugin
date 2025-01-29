@@ -1,5 +1,5 @@
 import { App, MarkdownView, Notice } from "obsidian";
-import { HeaderNode, RootNode } from "../../models/interfaces";
+import { FileRootNode, HeaderNode, RootNode } from "../../models/interfaces";
 import { DocumentStructureService } from "./document-structure.service";
 
 export class EditorDocumentService {
@@ -9,12 +9,12 @@ export class EditorDocumentService {
         private documentStructureService: DocumentStructureService,
     ) {}
 
-    async getDocument(markdownView: MarkdownView): Promise<RootNode> {
+    async getDocument(markdownView: MarkdownView): Promise<FileRootNode> {
         return await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
     }
 
-    async writeDocument(doc: RootNode): Promise<void> {
-        const newContent = this.documentStructureService.renderToMarkdown(doc);
+    async writeDocument(doc: FileRootNode): Promise<void> {
+        const newContent = this.documentStructureService.renderToMarkdown(doc.root);
         await this.app.vault.modify(doc.file, newContent);
     }
 

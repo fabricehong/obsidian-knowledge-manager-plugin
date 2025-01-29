@@ -1,12 +1,13 @@
-import { App, MarkdownView, TFile, Notice } from 'obsidian';
+import { App, MarkdownView, Notice } from 'obsidian';
 import { DocumentStructureService } from '../../document/document-structure.service';
 import { YamlService } from '../../document/yaml.service';
-import { YamlValidationError } from '../../../models/errors';
-import { ReplacementSpecs } from '../../../models/schemas';
-import { ReplacementSpec } from '../../../models/schemas';
-import { ReplacementSpecsIntegrationService, ReplacementSpecsIntegrationSummary } from './replacement-specs-integration.service';
+import { ReplacementSpecsError, YamlValidationError } from '../../../models/errors';
+import { ReplacementSpec, ReplacementSpecs } from '../../../models/schemas';
+import {
+    ReplacementSpecsIntegrationService,
+    ReplacementSpecsIntegrationSummary
+} from './replacement-specs-integration.service';
 import { TaggedFilesService } from '../../document/tagged-files.service';
-import { ReplacementSpecsError } from '../../../models/errors';
 import { ReplacementSpecsAnalysisModal } from './ui/replacement-specs-analysis.modal';
 import { ReplacementSpecsFile } from '../../../models/interfaces';
 import { EditorReplacementSpecsStorageService } from "../editor-replacement-specs-storage.service";
@@ -101,7 +102,7 @@ export class EditorReplacementSpecsIntegrationService {
                 category.specs,
                 integration.specsToIntegrate
             );
-            
+
             console.log('Specs après intégration:', category.specs);
             modifiedFiles.set(category.file, category.specs);
         }
@@ -112,7 +113,7 @@ export class EditorReplacementSpecsIntegrationService {
             file,
             specs
         }));
-        
+
         for (const specFile of replacementFilesToSave) {
             await this.editorReplacementSpecsStorageService.persistSpecsInTaggedFile(specFile);
         }
@@ -125,7 +126,7 @@ export class EditorReplacementSpecsIntegrationService {
      */
     private async collectExistingSpecs(replacementSpecsTag: string): Promise<FileSpecs[]> {
         console.log('Début de collectExistingSpecs avec tag:', replacementSpecsTag);
-        
+
         const taggedFiles = this.taggedFilesService.findTaggedFiles(replacementSpecsTag);
         console.log(`Found ${taggedFiles.length} files with tag ${replacementSpecsTag}:`, taggedFiles);
 
@@ -135,15 +136,15 @@ export class EditorReplacementSpecsIntegrationService {
                 console.log(`Lecture du fichier ${file.path}`);
                 const content = await this.app.vault.read(file);
                 console.log('Contenu du fichier:', content);
-                
+
                 // Parser le YAML des specs directement depuis le contenu du fichier
                 try {
                     const yamlContent = this.yamlReplacementService.fromYamlBlock(content);
                     console.log('YAML extrait:', yamlContent);
-                    
+
                     const fileSpecs = this.yamlReplacementService.fromYaml(yamlContent, file.path);
                     console.log('Specs parsées:', fileSpecs);
-                    
+
                     specs.push({ file: file.path, specs: fileSpecs });
                 } catch (error) {
                     console.error(`Erreur lors du parsing YAML du fichier ${file.path}:`, error);
@@ -179,35 +180,10 @@ export class EditorReplacementSpecsIntegrationService {
     ): Promise<AnalysisWithCategories | null> {
         try {
             console.log('Début de analyzeCurrentFileSpecs');
-            
-            // 1. Extraire les specs du fichier actif
-            const currentSpecsString = await this.collectActiveFileSpecsString(
-                markdownView,
-                replacementsHeader
-            );
-            if (!currentSpecsString) {
-                console.log('Pas de specs trouvées dans la section', replacementsHeader);
-                return null;
-            }
 
-            console.log('Specs trouvées dans le fichier actif:', currentSpecsString);
+            const replacementSpecsFile = await this.editorReplacementSpecsStorageService.readSpecsFromActiveFile(markdownView.file!);
 
-            // Parser le YAML des specs
-            let currentSpecs: ReplacementSpecs;
-            try {
-                const yamlContent = this.yamlReplacementService.fromYamlBlock(currentSpecsString);
-                currentSpecs = this.yamlReplacementService.fromYaml(yamlContent, markdownView.file.path);
-                console.log('Specs du fichier actif parsées:', currentSpecs);
-            } catch (error) {
-                console.error('Erreur lors du parsing des specs:', error);
-                if (error instanceof YamlValidationError) {
-                    throw new ReplacementSpecsError(error.details, markdownView.file.path);
-                } else {
-                    throw new ReplacementSpecsError('Failed to parse replacement specs', markdownView.file.path);
-                }
-            }
-
-            this.replacementSpecsIntegrationService.checkSpecsIntegrity(currentSpecs);
+            this.replacementSpecsIntegrationService.checkSpecsIntegrity(replacementSpecsFile.specs);
 
             // 2. Collecter les specs existantes et construire le mapping des catégories
             console.log('Collecte des specs existantes avec le tag', replacementSpecsTag);
@@ -218,7 +194,7 @@ export class EditorReplacementSpecsIntegrationService {
             const analysis = this.replacementSpecsIntegrationService
                 .determineHowToIntegrateSpecs(
                     replacementSpecsFiles.map(c => c.specs),
-                    currentSpecs.replacements
+                    replacementSpecsFile.specs.replacements
                 );
 
             console.log('Analyse des intégrations:', analysis);
@@ -237,34 +213,6 @@ export class EditorReplacementSpecsIntegrationService {
             throw error;
         }
     }
-
-    /**
-     * Collect replacement specs from the active file
-     */
-    private async collectActiveFileSpecsString(
-        markdownView: MarkdownView, 
-        replacementsHeader: string
-    ): Promise<{content: string, filePath: string} | null> {
-        const doc = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
-
-        // Trouver le header des replacements
-        const replacementsNode = this.documentStructureService.findFirstNodeMatchingHeading(
-            doc,
-            replacementsHeader
-        );
-        if (!replacementsNode?.content) return null;
-
-        return {
-            content: replacementsNode.content,
-            filePath: doc.file.path
-        };
-    }
-}
-
-export interface ExistingCategory {
-    name: string;
-    file: string;
-    specs: ReplacementSpecs;
 }
 
 interface AnalysisWithCategories {

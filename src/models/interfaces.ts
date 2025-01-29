@@ -1,5 +1,5 @@
 import { TFile } from "obsidian";
-import { ReplacementSpecs } from "./schemas";
+import { ReplacementSpecs, VocabularySpecs } from "./schemas";
 
 export interface PluginSettings {
     openAIApiKey: string;
@@ -43,8 +43,12 @@ export class HeaderNode {
     }
 }
 
-export class RootNode {
+export interface FileRootNode {
     file: TFile;
+    root: RootNode;
+}
+
+export class RootNode {
     children: HeaderNode[];
     content: string;
 
@@ -102,4 +106,9 @@ export interface ReplacementStatistics {
 export interface ReplacementSpecsFile {
     file: string;
     specs: ReplacementSpecs;
+}
+
+export interface VocabularySpecsFile {
+    file: string;
+    voc: VocabularySpecs;
 }

@@ -17,11 +17,11 @@ export class EditorKnowledgeDiffusionService {
             new Notice('No file is currently open');
             return;
         }
-        
+
         try {
             new Notice('Diffusing note...');
             const headerTree = await this.documentStructureService.buildHeaderTree(this.app, file);
-            const diffusionPlans = this.knowledgeDiffusionService.buildDiffusionRepresentation(headerTree);
+            const diffusionPlans = this.knowledgeDiffusionService.buildDiffusionRepresentation(headerTree.root);
 
             if (diffusionPlans.length === 0) {
                 new Notice('No diffusion references found in the note');
@@ -38,7 +38,7 @@ export class EditorKnowledgeDiffusionService {
             new Notice('Note has been diffused! Check the console for details.');
         } catch (error) {
             console.error('Error during diffusion:', error);
-            new Notice(`Error during diffusion: ${error.message}`); 
+            new Notice(`Error during diffusion: ${error.message}`);
         }
     }
 }

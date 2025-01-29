@@ -18,19 +18,19 @@ export class EditorReplacementSpecsCreationService {
         replacementsHeader: string
     ): Promise<void> {
         const doc = await this.editorTranscriptionService.getDocument(markdownView);
-        const transcriptContent = await this.editorTranscriptionService.getHeaderContent(doc, headerContainingTranscript);
+        const transcriptContent = await this.editorTranscriptionService.getHeaderContent(doc.root, headerContainingTranscript);
 
-        this.editorTranscriptionService.checkHeaderNotInDocument(doc, replacementsHeader);
+        this.editorTranscriptionService.checkHeaderNotInDocument(doc.root, replacementsHeader);
 
         // Créer les specs à partir des speakers
         const interventions = this.transcriptFileService.parseTranscript(transcriptContent);
         const speakers = this.transcriptFileService.getUniqueSpeakers(interventions);
         const specs = createReplacementSpecsFromSpeakers(speakers);
-        
+
         // Convertir en YAML et ajouter au document
         const yamlContent = this.yamlService.toYaml(specs);
         const codeBlock = this.yamlService.toYamlBlock(yamlContent);
-        this.editorTranscriptionService.addHeaderToDocument(doc, replacementsHeader, codeBlock);
+        this.editorTranscriptionService.addHeaderToDocument(doc.root, replacementsHeader, codeBlock);
 
         // Sauvegarder les modifications
         await this.editorTranscriptionService.writeDocument(doc);

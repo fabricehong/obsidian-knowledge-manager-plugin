@@ -34,6 +34,7 @@ import { EditorKnowledgeDiffusionService } from './diffusion/editor-knowledge-di
 import { DocumentModificationService } from './document/document-modification-utils';
 import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
 import { EditorDocumentService } from './document/editor-document.service';
+import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -66,6 +67,7 @@ export class ServiceContainer {
     public readonly editorDocumentCleaningService: EditorDocumentCleaningService;
     public readonly editorKnowledgeDiffusionService: EditorKnowledgeDiffusionService;
     public readonly documentModificationService: DocumentModificationService;
+    public readonly editorVocabularySpecsStorageService: EditorVocabularySpecsStorageService;
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
 
@@ -85,7 +87,17 @@ export class ServiceContainer {
         this.editorReplacementSpecsStorageService = new EditorReplacementSpecsStorageService(
             this.app,
             this.yamlReplacementService,
-            this.taggedFilesService
+            this.taggedFilesService,
+            this.documentStructureService,
+            settings.replacementsHeader
+        );
+
+        // Ajout du service de stockage pour le vocabulaire
+        this.editorVocabularySpecsStorageService = new EditorVocabularySpecsStorageService(
+            this.app,
+            this.taggedFilesService,
+            settings.vocabularySpecsTag,
+            this.yamlVocabularyService
         );
 
         // Services avec OpenAI
@@ -123,7 +135,9 @@ export class ServiceContainer {
             this.yamlVocabularyService,
             this.yamlReplacementService,
             this.textCorrector,
-            this.taggedFilesService
+            this.taggedFilesService,
+            this.editorVocabularySpecsStorageService,
+            this.editorReplacementSpecsStorageService
         );
 
         this.knowledgeDiffusionService = new KnowledgeDiffusionService(

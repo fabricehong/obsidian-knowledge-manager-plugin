@@ -14,14 +14,14 @@ import { TaggedFilesService } from '../../document/tagged-files.service';
  * This class orchestrates text replacement operations in Markdown documents,
  * coordinating interactions between the editor, transcription service, document
  * structure, and YAML metadata management.
- * 
+ *
  * Main responsibilities:
  * - Managing text replacements in the active editor
  * - Finding and processing tagged files for replacement
  * - Coordinating with transcription and YAML services
  * - Managing replacement statistics and reports
  * - Handling user interface interactions for confirmations
- * 
+ *
  * @since 1.0.0
  */
 export class EditorTranscriptionReplacementService {
@@ -62,7 +62,7 @@ export class EditorTranscriptionReplacementService {
 
         for (const file of taggedFiles) {
             const content = await this.app.vault.read(file);
-            
+
             allSpecs.push({
                 content,
                 filePath: file.path
@@ -83,7 +83,7 @@ export class EditorTranscriptionReplacementService {
 
         const rootNode = await this.documentStructureService.buildHeaderTree(this.app, file);
         const replacementsHeader = this.documentStructureService.findFirstNodeMatchingHeading(
-            rootNode,
+            rootNode.root,
             headerContainingReplacements
         );
         if (!replacementsHeader) {
@@ -108,7 +108,7 @@ export class EditorTranscriptionReplacementService {
      * Replace transcription in the current file using all collected replacement specs
      */
     public async replaceTranscription(
-        markdownView: MarkdownView, 
+        markdownView: MarkdownView,
         replacementSpecsTag: string,
         headerContainingTranscript: string,
         headerContainingReplacements: string
@@ -120,7 +120,7 @@ export class EditorTranscriptionReplacementService {
 
         // Collect all replacement specs from both sources
         let allSpecs : ReplacementSpecs[] = [];
-        
+
         // 1. Get specs from active file if they exist
         const activeFileSpecsStr = await this.collectActiveFileSpecsString(markdownView, headerContainingReplacements);
         if (activeFileSpecsStr !== null) {
@@ -149,7 +149,7 @@ export class EditorTranscriptionReplacementService {
 
         // Find the transcript header
         const transcriptHeader = this.documentStructureService.findFirstNodeMatchingHeading(
-            rootNode,
+            rootNode.root,
             headerContainingTranscript
         );
         if (!transcriptHeader) {
@@ -206,10 +206,10 @@ export class EditorTranscriptionReplacementService {
                 totalReplacements += replacement.count;
             }
         }
-        
+
         // Add total at the beginning
         lines.push(`Total replacements: ${totalReplacements}\n`);
-        
+
         // Add details for each category
         for (const stat of statistics) {
             lines.push(`${stat.category}:`);
@@ -224,17 +224,17 @@ export class EditorTranscriptionReplacementService {
 
     private formatReplacementStatistics(statistics: ReplacementStatistics): string {
         const lines: string[] = [];
-        
+
         // Category
         lines.push(`${statistics.category}:`);
-        
+
         // Replacements
         let totalReplacements = 0;
         for (const replacement of statistics.replacements) {
             lines.push(`- ${replacement.from} → ${replacement.to} (${replacement.count} occurrences)`);
             totalReplacements += replacement.count;
         }
-        
+
         // Add total at the beginning
         lines.unshift(`Total replacements: ${totalReplacements}`);
 
@@ -251,7 +251,7 @@ export class EditorTranscriptionReplacementService {
                     let errorContent;
                     if (error instanceof YamlValidationError) {
                         errorContent = `Error in file ${filePath}: ${error.details}`;
-                        
+
                     } else {
                         new Notice(`Unexpected error in file ${filePath}`);
                         console.error(`Unexpected error in ${filePath}:`, error);
@@ -263,6 +263,6 @@ export class EditorTranscriptionReplacementService {
             new Notice(error.message);
             throw error;
         }
-        
+
     }
 }

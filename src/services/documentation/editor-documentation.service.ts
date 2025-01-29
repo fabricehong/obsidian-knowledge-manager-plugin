@@ -26,7 +26,7 @@ export class EditorDocumentationService {
             const doc = await this.documentStructureService.buildHeaderTree(this.app, file);
 
             // Get transcript content
-            const transcriptContent = this.getTranscriptContent(doc, headerContainingTranscript);
+            const transcriptContent = this.getTranscriptContent(doc.root, headerContainingTranscript);
             if (!transcriptContent) {
                 return;
             }
@@ -61,10 +61,10 @@ export class EditorDocumentationService {
                                 content: documentation,
                                 children: []
                             };
-                            doc.children.unshift(header);
+                            doc.root.children.unshift(header);
 
                             // Save changes
-                            const newContent = this.documentStructureService.renderToMarkdown(doc);
+                            const newContent = this.documentStructureService.renderToMarkdown(doc.root);
                             await this.app.vault.modify(file, newContent);
 
                             new Notice('Documentation has been created successfully!');

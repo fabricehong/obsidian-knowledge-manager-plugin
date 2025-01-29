@@ -15,11 +15,16 @@ export class EditorConversationTopicsService {
         markdownView: MarkdownView,
         headerContainingTranscript: string
     ): Promise<void> {
+        if (!markdownView.file) {
+            new Notice('No active file');
+            return;
+        }
+
         try {
             const doc = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
 
             // Get transcript content
-            const transcriptContent = this.getTranscriptContent(doc, headerContainingTranscript);
+            const transcriptContent = this.getTranscriptContent(doc.root, headerContainingTranscript);
             if (!transcriptContent) {
                 return;
             }
@@ -47,11 +52,11 @@ export class EditorConversationTopicsService {
                     content: topics,
                     children: []
                 };
-                doc.children.unshift(header);
+                doc.root.children.unshift(header);
 
                 // Save changes
-                const newContent = this.documentStructureService.renderToMarkdown(doc);
-                await this.app.vault.modify(file, newContent);
+                const newContent = this.documentStructureService.renderToMarkdown(doc.root);
+                await this.app.vault.modify(markdownView.file, newContent);
 
                 new Notice('Topics list has been created successfully!');
             } catch (error) {

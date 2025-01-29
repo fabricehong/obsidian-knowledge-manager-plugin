@@ -1,4 +1,4 @@
-import { App, MarkdownView, Notice } from "obsidian";
+import { App, MarkdownView, Notice, TFile } from "obsidian";
 import { DocumentStructureService } from "../../document/document-structure.service";
 import { YamlService } from "../../document/yaml.service";
 import { HeaderNode, RootNode } from "../../../models/interfaces";
@@ -19,16 +19,16 @@ export class EditorAIReplacementSpecsCreationService {
         private documentModificationService: DocumentModificationService,
     ) {}
 
-    async createReplacementSpecs(headerContainingTranscript: string, replacementsHeader: string): Promise<void> {
-        const doc = await this.documentStructureService.buildHeaderTree(this.app, this.file);
-        if (!this.checkReplacementHeaderInDocument(doc, replacementsHeader)) return;
+    async createReplacementSpecs(
+        file: TFile,
+        headerContainingTranscript: string,
+        replacementsHeader: string,
+        maxGlossaryIterations: number
+    ): Promise<void> {
+        const doc = await this.documentStructureService.buildHeaderTree(this.app, file);
+        if (!this.checkReplacementHeaderInDocument(doc.root, replacementsHeader)) return;
 
-        const headerContainingTranscriptNode = this.documentStructureService.findFirstNodeMatchingHeading(doc, headerContainingTranscript);
-        if (!headerContainingTranscriptNode) {
-            throw new Error('No transcript header found');
-        }
-
-        const transcriptContent = this.getTranscriptContent(doc, headerContainingTranscript);
+        const transcriptContent = this.getTranscriptContent(doc.root, headerContainingTranscript);
         if (!transcriptContent) {
             throw new Error('No transcript content found');
         }
@@ -40,8 +40,8 @@ export class EditorAIReplacementSpecsCreationService {
         loadingModal.open();
 
         try {
-            const glossaryTerms = await this.glossarySearchService.findGlossaryTerms(transcriptContent, 10);
-            
+            const glossaryTerms = await this.glossarySearchService.findGlossaryTerms(transcriptContent, maxGlossaryIterations);
+
             if (isCancelled) {
                 new Notice('Operation cancelled');
                 return;
@@ -65,23 +65,23 @@ export class EditorAIReplacementSpecsCreationService {
                 new Notice('Opération annulée');
                 return;
             }
-            
+
             // Convertir en YAML et ajouter au document
             const yamlContent = this.yamlService.toYaml(specs);
-            this.documentModificationService.modifyDocumentWithReplacementHeader(doc, yamlContent, replacementsHeader);
+            this.documentModificationService.modifyDocumentWithReplacementHeader(doc.root, yamlContent, replacementsHeader);
 
             // Ajouter la section glossaire
             const contentStr = glossaryTerms.termes
-                .filter(({definition}) => definition.trim() !== '-')  
+                .filter(({definition}) => definition.trim() !== '-')
                 .map(({terme, definition}) => `- **${terme}** : ${definition.trim()}`)
                 .join('\n');
-            if (!this.documentModificationService.addGlossarySection(doc, contentStr)) {
+            if (!this.documentModificationService.addGlossarySection(doc.root, contentStr)) {
                 throw new Error('Failed to add glossary section');
             }
 
-            const newContent = this.documentStructureService.renderToMarkdown(doc);
-            await this.app.vault.modify(this.file, newContent);
-            
+            const newContent = this.documentStructureService.renderToMarkdown(doc.root);
+            await this.app.vault.modify(file, newContent);
+
             new Notice('Successfully added glossary replacements section');
         } finally {
             loadingModal.forceClose();

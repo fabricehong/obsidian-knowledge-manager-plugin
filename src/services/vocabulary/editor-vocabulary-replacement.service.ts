@@ -9,35 +9,25 @@ import { ReplacementReportModal } from "../replacement/apply-replacement/ui/repl
 import { VocabularyReplacementSummaryModal } from "./ui/vocabulary-replacement-summary.modal";
 import { DocumentStructureService } from "../document/document-structure.service";
 import { TaggedFilesService } from '../document/tagged-files.service';
+import { EditorReplacementSpecsStorageService } from "../replacement/editor-replacement-specs-storage.service";
+import { EditorVocabularySpecsStorageService } from "../replacement/editor-vocabulary-specs-storage.service";
 
 /**
  * Service responsible for managing vocabulary replacements in the Obsidian editor.
  */
 export class EditorVocabularyReplacementService {
-    private app: App;
-    private documentStructureService: DocumentStructureService;
-    private transcriptionReplacementService: TranscriptionReplacementService;
-    private yamlVocabularyService: YamlService<VocabularySpecs>;
-    private yamlReplacementService: YamlService<ReplacementSpecs>;
-    private textCorrector: TextCorrector;
-    private taggedFilesService: TaggedFilesService;
 
     constructor(
-        app: App,
-        documentStructureService: DocumentStructureService,
-        transcriptionReplacementService: TranscriptionReplacementService,
-        yamlVocabularyService: YamlService<VocabularySpecs>,
-        yamlReplacementService: YamlService<ReplacementSpecs>,
-        textCorrector: TextCorrector,
-        taggedFilesService: TaggedFilesService
+        private app: App,
+        private documentStructureService: DocumentStructureService,
+        private transcriptionReplacementService: TranscriptionReplacementService,
+        private yamlVocabularyService: YamlService<VocabularySpecs>,
+        private yamlReplacementService: YamlService<ReplacementSpecs>,
+        private textCorrector: TextCorrector,
+        private taggedFilesService: TaggedFilesService,
+        private editorVocabularySpecsStorageService: EditorVocabularySpecsStorageService,
+        private editorReplacementSpecsStorageService: EditorReplacementSpecsStorageService,
     ) {
-        this.app = app;
-        this.documentStructureService = documentStructureService;
-        this.transcriptionReplacementService = transcriptionReplacementService;
-        this.yamlVocabularyService = yamlVocabularyService;
-        this.yamlReplacementService = yamlReplacementService;
-        this.textCorrector = textCorrector;
-        this.taggedFilesService = taggedFilesService;
     }
 
     /**
@@ -63,20 +53,6 @@ export class EditorVocabularyReplacementService {
         }
 
         return allSpecs;
-    }
-
-    /**
-     * Collect vocabulary specs from the active file
-     */
-    private async collectActiveFileSpecsString(markdownView: MarkdownView, headerContainingVocabulary: string): Promise<{content: string, filePath: string}> {
-        const rootNode = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
-        const vocabularyHeader = this.documentStructureService.findFirstNodeMatchingHeading(
-            rootNode,
-            headerContainingVocabulary
-        );
-        if (!vocabularyHeader)
-            throw new Error(`Vocabulary header '${headerContainingVocabulary}' not found in file ${markdownView.file.path}`);
-        return {content: vocabularyHeader?.content, filePath: markdownView.file!.path};
     }
 
     private processVocabularySpecs(file: {content: string, filePath: string}): VocabularySpecs {
@@ -120,7 +96,7 @@ export class EditorVocabularyReplacementService {
                     let errorContent;
                     if (error instanceof YamlValidationError) {
                         errorContent = `Error in file ${filePath}: ${error.details}`;
-                        
+
                     } else {
                         new Notice(`Unexpected error in file ${filePath}`);
                         console.error(`Unexpected error in ${filePath}:`, error);
@@ -143,30 +119,23 @@ export class EditorVocabularyReplacementService {
         headerContainingTranscript: string,
         headerContainingReplacements: string
     ) {
+        const file: TFile = markdownView.file!;
         try {
-            // Collect all vocabulary specs
-            const taggedFilesSpecsStr = await this.collectTaggedVocabularySpecsStrings(vocabularySpecsTag);
-            const taggedFilesSpecs = this.yamlStringsToVocabularySpecs(taggedFilesSpecsStr);
 
-            const vocabularyTerms = taggedFilesSpecs.flatMap(spec => spec.vocabulary || []);
+            const vocabularySpecFiles = await this.editorVocabularySpecsStorageService.readSpecsFromTaggedFiles();
 
-            if (vocabularyTerms.length === 0) {
-                new Notice('No vocabulary terms found');
-                return;
-            }
+            const vocabularyTerms = vocabularySpecFiles.flatMap(spec => spec.voc.vocabulary || []);
 
-            // Collect replacements
-            const activeFileSpecsString = await this.collectActiveFileSpecsString(markdownView, headerContainingReplacements);
-            const activeFileSpecs = this.yamlStringsToReplacementSpecs([activeFileSpecsString]);
-            
+            const activeFileSpecs = await this.editorReplacementSpecsStorageService.readSpecsFromActiveFile(file);
+
 
             // Set vocabulary and get correction summary
             this.textCorrector.setVocabulary(vocabularyTerms);
 
             // Find transcription
-            const rootNode = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
+            const rootNode = await this.documentStructureService.buildHeaderTree(this.app, file);
             const transcriptHeader = this.documentStructureService.findFirstNodeMatchingHeading(
-                rootNode,
+                rootNode.root,
                 headerContainingTranscript
             );
 
@@ -176,18 +145,18 @@ export class EditorVocabularyReplacementService {
             }
 
             // simple replacements
-            const { reports: replacementReport, result: contentAfterReplacements } = this.transcriptionReplacementService.applyReplacements(transcriptHeader.content, activeFileSpecs);
+            const { reports: replacementReport, result: contentAfterReplacements } = this.transcriptionReplacementService.applyReplacements(transcriptHeader.content, [activeFileSpecs.specs]);
 
             if (replacementReport.length > 0) {
                 new ReplacementReportModal(this.app, replacementReport).open();
             }
 
             // Appl all replacements
-            
+
 
             // then vocabulary replacements
             const correctionResult = this.textCorrector.correctText(contentAfterReplacements);
-            
+
             // Create vocabulary replacements report
             const replacementMap = new Map<string, { corrected: string, count: number }>();
             correctionResult.corrections.forEach(correction => {
@@ -195,9 +164,9 @@ export class EditorVocabularyReplacementService {
                 if (existing) {
                     existing.count++;
                 } else {
-                    replacementMap.set(correction.original, { 
-                        corrected: correction.corrected, 
-                        count: 1 
+                    replacementMap.set(correction.original, {
+                        corrected: correction.corrected,
+                        count: 1
                     });
                 }
             });
@@ -211,8 +180,8 @@ export class EditorVocabularyReplacementService {
                 }))
             };
 
-            
-            
+
+
             new Notice('Transcription replaced');
 
             // user must confirm all replacements
@@ -222,9 +191,9 @@ export class EditorVocabularyReplacementService {
                 async () => {
                     // Update the content
                     transcriptHeader.content = correctionResult.correctedText;
-                    const finalContent = this.documentStructureService.renderToMarkdown(rootNode);
+                    const finalContent = this.documentStructureService.renderToMarkdown(rootNode.root);
                     await this.app.vault.modify(file, finalContent);
-                    
+
                     new Notice(`Applied ${summary.totalReplacements} replacements`);
                 }
             );

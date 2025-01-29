@@ -1,5 +1,5 @@
 import { CachedMetadata, HeadingCache } from 'obsidian';
-import { RootNode } from '../../models/interfaces';
+import { HeaderNode } from '../../models/interfaces';
 import { DocumentStructureService } from './document-structure.service';
 
 describe('DocumentStructureService', () => {
@@ -161,7 +161,7 @@ H3 content
 ## H2-2
 H2-2 content`;
 
-            const result = service.buildHeaderTree(cache, content);
+            const result = service.buildTree(cache, content);
 
             expect(result.children[0]).toEqual({
                 level: 1,
@@ -232,17 +232,21 @@ H2-2 content`;
 
     describe('renderToMarkdown', () => {
         it('should render a simple document with no headers', () => {
-            const root: RootNode = {
+            const node: HeaderNode = {
+                level: 0,
+                heading: '',
                 content: 'Just some content\nwith multiple lines',
                 children: []
             };
 
             const expected = 'Just some content\nwith multiple lines';
-            expect(service.renderToMarkdown(root)).toBe(expected);
+            expect(service.renderToMarkdown(node)).toBe(expected);
         });
 
         it('should render a document with one header', () => {
-            const root: RootNode = {
+            const node: HeaderNode = {
+                level: 0,
+                heading: '',
                 content: 'Initial content',
                 children: [
                     {
@@ -255,11 +259,13 @@ H2-2 content`;
             };
 
             const expected = 'Initial content\n\n# First Section\nSection content';
-            expect(service.renderToMarkdown(root)).toBe(expected);
+            expect(service.renderToMarkdown(node)).toBe(expected);
         });
 
         it('should render a document with nested headers', () => {
-            const root: RootNode = {
+            const node: HeaderNode = {
+                level: 0,
+                heading: '',
                 content: 'Initial content',
                 children: [
                     {
@@ -291,11 +297,13 @@ H2-2 content`;
                 'Subsection content\n\n' +
                 '# Second Section\n' +
                 'Second section content';
-            expect(service.renderToMarkdown(root)).toBe(expected);
+            expect(service.renderToMarkdown(node)).toBe(expected);
         });
 
         it('should handle empty content fields', () => {
-            const root: RootNode = {
+            const node: HeaderNode = {
+                level: 0,
+                heading: '',
                 content: '',
                 children: [
                     {
@@ -308,11 +316,13 @@ H2-2 content`;
             };
 
             const expected = '# Empty Section';
-            expect(service.renderToMarkdown(root)).toBe(expected);
+            expect(service.renderToMarkdown(node)).toBe(expected);
         });
 
         it('should preserve existing newlines in content', () => {
-            const root: RootNode = {
+            const node: HeaderNode = {
+                level: 0,
+                heading: '',
                 content: 'Line 1\n\nLine 2\nLine 3',
                 children: [
                     {
@@ -327,11 +337,13 @@ H2-2 content`;
             const expected = 'Line 1\n\nLine 2\nLine 3\n\n' +
                 '# Section\n' +
                 'Section line 1\n\nSection line 2';
-            expect(service.renderToMarkdown(root)).toBe(expected);
+            expect(service.renderToMarkdown(node)).toBe(expected);
         });
 
         it('should handle different header levels', () => {
-            const root: RootNode = {
+            const node: HeaderNode = {
+                level: 0,
+                heading: '',
                 content: '',
                 children: [
                     {
@@ -361,7 +373,7 @@ H2-2 content`;
                 'Level 2\n\n' +
                 '### H3\n' +
                 'Level 3';
-            expect(service.renderToMarkdown(root)).toBe(expected);
+            expect(service.renderToMarkdown(node)).toBe(expected);
         });
     });
 });

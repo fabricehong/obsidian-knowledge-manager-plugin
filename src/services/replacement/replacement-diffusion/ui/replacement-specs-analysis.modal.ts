@@ -1,8 +1,6 @@
 import { App, Modal, Setting } from 'obsidian';
 import { ReplacementSpec } from '../../../../models/schemas';
 import { ReplacementSpecsIntegrationSummary } from '../replacement-specs-integration.service';
-import { ExistingCategory } from '../editor-replacement-specs-integration.service';
-import { ReplacementSpecsFile } from '../../../../models/interfaces';
 
 export interface UserIntegrationChoices {
     integrations: {
@@ -13,10 +11,10 @@ export interface UserIntegrationChoices {
 
 export class ReplacementSpecsAnalysisModal extends Modal {
     private resolvePromise: ((value: UserIntegrationChoices) => void) | null = null;
-    
+
     // Map de spec.target -> boolean pour les specs intégrables
     private integrationChoices = new Map<string, boolean>();
-    
+
     // Map de spec.target -> category pour les specs sans catégorie
     private categoryChoices = new Map<string, string>();
 
@@ -70,7 +68,7 @@ export class ReplacementSpecsAnalysisModal extends Modal {
             const selectedSpecs = integration.specsToIntegrate.filter(
                 spec => this.integrationChoices.get(spec.target) ?? false
             );
-            
+
             if (selectedSpecs.length > 0) {
                 result.integrations.push({
                     targetCategory: integration.targetCategory,
@@ -87,7 +85,7 @@ export class ReplacementSpecsAnalysisModal extends Modal {
                 let integration = result.integrations.find(
                     i => i.targetCategory === chosenCategory
                 );
-                
+
                 if (!integration) {
                     integration = {
                         targetCategory: chosenCategory,
@@ -95,7 +93,7 @@ export class ReplacementSpecsAnalysisModal extends Modal {
                     };
                     result.integrations.push(integration);
                 }
-                
+
                 integration.specsToIntegrate.push(spec);
             }
         }
@@ -161,7 +159,7 @@ export class ReplacementSpecsAnalysisModal extends Modal {
                 .addDropdown(dropdown => {
                     // Ajouter une option vide par défaut
                     dropdown.addOption('', 'Choisir une catégorie');
-                    
+
                     // Ajouter toutes les catégories existantes
                     for (const category of this.existingCategories) {
                         dropdown.addOption(category, category);

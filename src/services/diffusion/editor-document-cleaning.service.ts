@@ -13,11 +13,11 @@ export class EditorDocumentCleaningService {
     async cleanReferenceContent(view: MarkdownView): Promise<void> {
         try {
             new Notice('Cleaning references content...');
-            
+
             const editor = view.editor;
             const content = editor.getValue();
             const file = view.file;
-            
+
             if (!file) {
                 new Notice('No file is currently open');
                 return;
@@ -31,16 +31,16 @@ export class EditorDocumentCleaningService {
 
             // Build the document tree using document structure service
             const rootNode = await this.documentStructureService.buildHeaderTree(this.app, file);
-            
+
             // Clean the content using document cleaning service
-            const cleanedRootNode = await this.documentCleaningService.cleanNode(rootNode) as RootNode;
-            
+            const cleanedRootNode = await this.documentCleaningService.cleanNode(rootNode.root) as RootNode;
+
             // Convert back to markdown
             const cleanedContent = this.documentStructureService.renderToMarkdown(cleanedRootNode);
-            
+
             // Update the editor with the cleaned content
             editor.setValue(cleanedContent);
-            
+
             new Notice('References content has been removed');
         } catch (error) {
             console.error('Error while removing references:', error);

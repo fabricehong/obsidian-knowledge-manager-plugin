@@ -135,10 +135,10 @@ export default class KnowledgeManagerPlugin extends Plugin {
             name: 'transcript-replacement:replacement-specs:create:from-ai',
             checkCallback: (checking: boolean) => {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
+                if (markdownView && markdownView.file) {
                     if (!checking) {
                         this.serviceContainer.editorAIReplacementSpecsCreationService.createReplacementSpecs(
-                            markdownView,
+                            markdownView.file,
                             this.settings.headerContainingTranscript,
                             this.settings.replacementsHeader,
                             this.settings.maxGlossaryIterations
@@ -293,8 +293,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
                         const file = activeView.file;
                         const cache = this.app.metadataCache.getFileCache(file);
                         if (cache) {
-                            const content = activeView.editor.getValue();
-                            const headerTree = this.serviceContainer.documentStructureService.buildHeaderTree(cache, content);
+                            const headerTree = this.serviceContainer.documentStructureService.buildHeaderTree(this.app, file);
                             console.log('Header tree for', file.path + ':', headerTree);
                             new Notice('Header tree printed to console');
                         } else {

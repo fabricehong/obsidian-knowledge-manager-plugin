@@ -6,7 +6,6 @@ describe('ValidationService', () => {
     describe('validateNodeReferences', () => {
         it('should pass when no references are present', () => {
             const root: RootNode = {
-                file: {} as TFile,
                 content: 'Root content',
                 children: [
                     {
@@ -30,7 +29,6 @@ describe('ValidationService', () => {
 
         it('should pass when references are in leaf nodes only', () => {
             const root: RootNode = {
-                file: {} as TFile,
                 content: 'Root content',
                 children: [
                     {
@@ -54,7 +52,6 @@ describe('ValidationService', () => {
 
         it('should pass when references are in root node', () => {
             const root: RootNode = {
-                file: {} as TFile,
                 content: 'Root content\n| ref: [[note1]]',
                 children: [
                     {
@@ -71,7 +68,6 @@ describe('ValidationService', () => {
 
         it('should throw when parent and child both have references', () => {
             const root: RootNode = {
-                file: {} as TFile,
                 content: 'Root content',
                 children: [
                     {
@@ -96,7 +92,6 @@ describe('ValidationService', () => {
 
         it('should throw when parent and multiple children have references', () => {
             const root: RootNode = {
-                file: {} as TFile,
                 content: 'Root content',
                 children: [
                     {
@@ -127,7 +122,6 @@ describe('ValidationService', () => {
 
         it('should throw when deeply nested child has reference under parent with reference', () => {
             const root: RootNode = {
-                file: {} as TFile,
                 content: 'Root content',
                 children: [
                     {
