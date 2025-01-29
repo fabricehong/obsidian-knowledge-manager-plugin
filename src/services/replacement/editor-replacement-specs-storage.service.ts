@@ -7,6 +7,21 @@ import { YamlValidationError } from "../../models/errors";
 import { TaggedFilesService } from "../document/tagged-files.service";
 import { DocumentStructureService } from "../document/document-structure.service";
 
+/**
+ * Service responsible for managing the storage and retrieval of replacement specifications.
+ * 
+ * This service handles two main sources of replacement specifications:
+ * 1. Tagged files: Specs are stored in the frontmatter YAML
+ * 2. Active file: Specs are stored in a dedicated section with YAML content
+ * 
+ * Main responsibilities:
+ * - Reading specs from tagged files
+ * - Reading specs from active file's dedicated section
+ * - Persisting specs in tagged files
+ * - Validating specs via YamlService
+ * 
+ * @since 1.0.0
+ */
 export class EditorReplacementSpecsStorageService {
     constructor(
         private app: App,
@@ -123,6 +138,4 @@ export class EditorReplacementSpecsStorageService {
             specs: currentSpecs
         };
     }
-
-
 }

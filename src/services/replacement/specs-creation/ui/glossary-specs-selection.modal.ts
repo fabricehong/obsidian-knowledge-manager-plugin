@@ -1,6 +1,19 @@
 import { App, Modal, Setting } from 'obsidian';
 import { ReplacementSpecs } from '../../../../models/schemas';
 
+/**
+ * Modal component for selecting glossary specifications.
+ * 
+ * Provides an interactive interface for users to:
+ * - View available glossary terms
+ * - Select specific terms for integration
+ * - Preview selected terms before confirmation
+ * 
+ * The modal maintains a map of selected specs and provides
+ * callbacks for handling the final selection.
+ * 
+ * @since 1.0.0
+ */
 export class GlossarySpecsSelectionModal extends Modal {
     private selectedSpecs: Map<string, boolean>;
     

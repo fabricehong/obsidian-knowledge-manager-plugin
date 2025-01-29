@@ -1,6 +1,21 @@
 import { App, Modal } from "obsidian";
 import { ReplacementReport } from "../../../../models/interfaces";
 
+/**
+ * Modal component for displaying detailed replacement reports.
+ * 
+ * This modal presents a comprehensive view of replacement operations,
+ * including:
+ * - Success/failure status for each replacement
+ * - Detailed error messages if applicable
+ * - Visual indicators for operation status
+ * - Custom styling for better readability
+ * 
+ * The modal handles both successful and failed replacements,
+ * providing appropriate feedback for each case.
+ * 
+ * @since 1.0.0
+ */
 export class ReplacementReportModal extends Modal {
     private reports: ReplacementReport[];
 

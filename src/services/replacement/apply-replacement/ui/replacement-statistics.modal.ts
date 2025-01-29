@@ -1,6 +1,14 @@
 import { App, Modal, ButtonComponent } from "obsidian";
 import { ReplacementStatistics } from "../../../../models/interfaces";
 
+/**
+ * Modal component for displaying replacement statistics.
+ * 
+ * Presents a detailed view of replacement operations performed,
+ * organized by categories and showing counts for each replacement.
+ * 
+ * @since 1.0.0
+ */
 export class ReplacementStatisticsModal extends Modal {
     constructor(app: App, private statistics: ReplacementStatistics[]) {
         super(app);
@@ -45,6 +53,14 @@ export class ReplacementStatisticsModal extends Modal {
     }
 }
 
+/**
+ * Simple modal for displaying informational messages.
+ * 
+ * Presents a message to the user in a modal dialog with
+ * minimal styling and a single close button.
+ * 
+ * @since 1.0.0
+ */
 export class InfoModal extends Modal {
     constructor(app: App, private message: string) {
         super(app);
@@ -67,6 +83,14 @@ export class InfoModal extends Modal {
     }
 }
 
+/**
+ * Modal component for displaying confirmation dialogs.
+ * 
+ * Presents a simple confirmation dialog with a message and
+ * two buttons: Continue and Cancel.
+ * 
+ * @since 1.0.0
+ */
 export class ReplacementConfirmationModal extends Modal {
     private resolvePromise: (value: boolean) => void;
 
@@ -104,6 +128,16 @@ export class ReplacementConfirmationModal extends Modal {
     }
 }
 
+/**
+ * Generic confirmation modal with customizable title and actions.
+ * 
+ * Provides a reusable confirmation dialog with:
+ * - Custom title and message
+ * - Confirm and cancel callbacks
+ * - Standard styling consistent with Obsidian
+ * 
+ * @since 1.0.0
+ */
 export class ConfirmationModal extends Modal {
     constructor(
         app: App,
