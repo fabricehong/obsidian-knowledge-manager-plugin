@@ -1,9 +1,11 @@
-export interface AICompletionService {
-    /**
-     * Initialise le service avec une clé API
-     */
-    initialize(apiKey: string): void;
+import { LLMConfiguration, LLMOrganization } from "../../settings/settings";
 
+export interface LLMContext {
+    organization: LLMOrganization;
+    configuration: LLMConfiguration;
+}
+
+export interface AICompletionService {
     /**
      * Génère une réponse structurée à partir d'un prompt
      * @param messages Liste des messages de contexte et prompt

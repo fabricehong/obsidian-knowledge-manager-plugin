@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownRenderer, MarkdownView, Modal, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import { ServiceContainer } from './services/service-container';
-import { DEFAULT_SETTINGS, PluginSettings } from './settings/settings';
+import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 
@@ -354,17 +354,42 @@ export default class KnowledgeManagerPlugin extends Plugin {
         });
 
         // Add the show transcript replacement help command
+        // Add the transcript copy command
+        this.addCommand({
+            id: 'transcript:copy',
+            name: 'transcript:copy',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.serviceContainer.editorTranscriptCopyService.copyTranscript(markdownView);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
     }
 
     async loadSettings() {
-        const data = await this.loadData();
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        // Met à jour les références si c'est une nouvelle installation
+        if (!this.settings.selectedLlmConfiguration) {
+            updateDefaultReferences(this.settings);
+            await this.saveSettings();
+        }
     }
 
     async saveSettings() {
         await this.saveData(this.settings);
-        // Recréer le service container avec les nouveaux settings
+        // Recréer le service container avec les nouveaux paramètres
         this.serviceContainer = new ServiceContainer(this.app, this.settings);
+    }
+
+    async resetSettings() {
+        this.settings = DEFAULT_SETTINGS;
+        await this.saveSettings();
     }
 
     private async summarizeNote(markdownView: MarkdownView) {

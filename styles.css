@@ -40,3 +40,14 @@ If your plugin does not need CSS, delete this file.
 .modal-container .modal {
     pointer-events: auto !important;
 }
+
+/* Ajout du CSS pour l'espacement des sections de paramètres */
+.setting-item-spacing {
+    padding: 18px 0;
+}
+
+/* Ajout d'un peu d'espace entre les paramètres dans une même section */
+.setting-item .setting-item {
+    padding-left: 18px;
+    border-left: 1px solid var(--background-modifier-border);
+}

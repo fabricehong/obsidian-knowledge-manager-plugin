@@ -2,6 +2,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { Notice } from "obsidian";
 
 export class OpenAIModelService {
+
     private model: ChatOpenAI | undefined;
     private apiKey: string | undefined;
 

@@ -22,7 +22,7 @@ import { ReplacementSpecs, ReplacementSpecsSchema, VocabularySpecSchema, Vocabul
 import { TranscriptFileService } from './transcription/transcript-file.service';
 import { NoteSummarizationService } from './others/note-summarization.service';
 import { DocumentStructureService } from './document/document-structure.service';
-import { OpenAICompletionService } from './llm/openai-completion.service';
+import { LLMCompletionService } from './llm/llm-completion.service';
 import { OpenAIModelService } from './llm/openai-model.service';
 import { ReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/replacement-specs-integration.service';
 import { TaggedFilesService } from './document/tagged-files.service';
@@ -35,6 +35,7 @@ import { DocumentModificationService } from './document/document-modification-ut
 import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
 import { EditorDocumentService } from './document/editor-document.service';
 import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
+import { EditorTranscriptCopyService } from './transcription/editor-transcript-copy.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -68,6 +69,7 @@ export class ServiceContainer {
     public readonly editorKnowledgeDiffusionService: EditorKnowledgeDiffusionService;
     public readonly documentModificationService: DocumentModificationService;
     public readonly editorVocabularySpecsStorageService: EditorVocabularySpecsStorageService;
+    public readonly editorTranscriptCopyService: EditorTranscriptCopyService;
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
 
@@ -100,12 +102,24 @@ export class ServiceContainer {
             this.yamlVocabularyService
         );
 
-        // Services avec OpenAI
-        this.openAIModelService = new OpenAIModelService();
-        this.openAIModelService.initialize(settings.openAIApiKey);
+        // Services avec LLM
+        const selectedConfig = settings.llmConfigurations.find(c => c.id === settings.selectedLlmConfiguration);
+        if (!selectedConfig) {
+            throw new Error('Selected LLM configuration not found');
+        }
         
-        this.aiCompletionService = new OpenAICompletionService(true);
-        this.aiCompletionService.initialize(settings.openAIApiKey);
+        const organization = settings.llmOrganizations.find(o => o.id === selectedConfig.organisationId);
+        if (!organization) {
+            throw new Error('Organization not found for selected configuration');
+        }
+
+        this.openAIModelService = new OpenAIModelService();
+        this.openAIModelService.initialize(organization.apiKey);
+
+        this.aiCompletionService = new LLMCompletionService({
+            organization,
+            configuration: selectedConfig
+        }, true);
 
         // Text corrector
         this.textCorrector = new TextCorrector(
@@ -207,6 +221,12 @@ export class ServiceContainer {
             this.app,
             this.documentStructureService,
             this.knowledgeDiffusionService
+        );
+
+        this.editorTranscriptCopyService = new EditorTranscriptCopyService(
+            this.app,
+            this.documentStructureService,
+            settings.headerContainingTranscript
         );
     }
 }
