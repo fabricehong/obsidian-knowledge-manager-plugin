@@ -51,3 +51,24 @@ If your plugin does not need CSS, delete this file.
     padding-left: 18px;
     border-left: 1px solid var(--background-modifier-border);
 }
+
+/* Styles pour la zone de drop de fichiers */
+.file-drop-zone {
+    border: 2px dashed var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+    margin: 20px 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-drop-zone:hover {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-modifier-form-field);
+}
+
+.file-drop-zone.drag-over {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-modifier-form-field);
+}

@@ -291,6 +291,17 @@ export class SettingsTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
+            .setName('Clé API AssemblyAI')
+            .setDesc('Clé API pour le service de transcription AssemblyAI')
+            .addText(text => text
+                .setPlaceholder('Entrez votre clé API AssemblyAI')
+                .setValue(this.plugin.settings.assemblyAiApiKey)
+                .onChange(async (value) => {
+                    this.plugin.settings.assemblyAiApiKey = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
             .setName('Translation Prompt Template')
             .setDesc('Template file to use for translation prompts')
             .addText(text => {

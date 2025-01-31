@@ -36,6 +36,7 @@ import { EditorReplacementSpecsStorageService } from './replacement/editor-repla
 import { EditorDocumentService } from './document/editor-document.service';
 import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
 import { EditorTranscriptCopyService } from './transcription/editor-transcript-copy.service';
+import { EditorTranscriptionService } from './transcription/editor-transcription.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -70,6 +71,7 @@ export class ServiceContainer {
     public readonly documentModificationService: DocumentModificationService;
     public readonly editorVocabularySpecsStorageService: EditorVocabularySpecsStorageService;
     public readonly editorTranscriptCopyService: EditorTranscriptCopyService;
+    public readonly editorTranscriptionService: EditorTranscriptionService;
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
 
@@ -92,6 +94,14 @@ export class ServiceContainer {
             this.taggedFilesService,
             this.documentStructureService,
             settings.replacementsHeader
+        );
+        this.editorDocumentService = new EditorDocumentService(
+            this.app,
+            this.documentStructureService
+        );
+        this.editorTranscriptionService = new EditorTranscriptionService(
+            settings.assemblyAiApiKey,
+            settings.headerContainingTranscript,
         );
 
         // Ajout du service de stockage pour le vocabulaire
@@ -185,11 +195,6 @@ export class ServiceContainer {
             this.documentStructureService,
             this.replacementSpecsIntegrationService,
             this.taggedFilesService
-        );
-
-        this.editorDocumentService = new EditorDocumentService(
-            this.app,
-            this.documentStructureService
         );
 
         this.editorReplacementSpecsCreationService = new EditorReplacementSpecsCreationService(

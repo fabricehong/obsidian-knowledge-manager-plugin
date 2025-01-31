@@ -3,6 +3,7 @@ import { ServiceContainer } from './services/service-container';
 import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
+import { TranscriptionModal } from './services/transcription/transcription-modal';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
@@ -72,10 +73,16 @@ class HelpModal extends Modal {
 export default class KnowledgeManagerPlugin extends Plugin {
     settings: PluginSettings;
     private serviceContainer: ServiceContainer;
+    private statusBarItem: HTMLElement;
 
     async onload() {
         await this.loadSettings();
         this.serviceContainer = new ServiceContainer(this.app, this.settings);
+        this.serviceContainer.editorTranscriptionService.setPlugin(this);
+
+        // Ajout de la barre de statut
+        this.statusBarItem = this.addStatusBarItem();
+        this.statusBarItem.style.display = 'none';
 
         // Register commands
         this.addCommand({
@@ -370,6 +377,15 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        // Commande de transcription
+        this.addCommand({
+            id: 'transcribe-audio',
+            name: 'Transcrire un fichier audio',
+            callback: () => {
+                new TranscriptionModal(this.app, this.serviceContainer.editorTranscriptionService).open();
+            }
+        });
+
     }
 
     async loadSettings() {
@@ -405,6 +421,15 @@ export default class KnowledgeManagerPlugin extends Plugin {
         } catch (error) {
             console.error('Error during summarization:', error);
             new Notice('Error during summarization. Check the console for details.');
+        }
+    }
+
+    setStatusBarText(text: string) {
+        if (text) {
+            this.statusBarItem.setText(text);
+            this.statusBarItem.style.display = 'block';
+        } else {
+            this.statusBarItem.style.display = 'none';
         }
     }
 }
