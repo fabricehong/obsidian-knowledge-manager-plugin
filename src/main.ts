@@ -386,6 +386,26 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        this.addCommand({
+            id: 'start-live-transcription',
+            name: 'Démarrer la transcription en direct',
+            editorCallback: async (editor) => {
+                await this.serviceContainer.editorLiveTranscriptionService.startTranscription(editor);
+            }
+        });
+
+        this.addCommand({
+            id: 'stop-live-transcription',
+            name: 'Arrêter la transcription en direct',
+            checkCallback: (checking) => {
+                const isTranscribing = this.serviceContainer.editorLiveTranscriptionService.isTranscribing();
+                if (checking) return isTranscribing;
+                
+                this.serviceContainer.editorLiveTranscriptionService.stopTranscription();
+                return true;
+            }
+        });
+
     }
 
     async loadSettings() {

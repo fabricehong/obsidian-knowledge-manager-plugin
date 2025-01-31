@@ -37,6 +37,7 @@ import { EditorDocumentService } from './document/editor-document.service';
 import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
 import { EditorTranscriptCopyService } from './transcription/editor-transcript-copy.service';
 import { EditorTranscriptionService } from './transcription/editor-transcription.service';
+import { EditorLiveTranscriptionService } from './transcription/editor-live-transcription.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -72,6 +73,7 @@ export class ServiceContainer {
     public readonly editorVocabularySpecsStorageService: EditorVocabularySpecsStorageService;
     public readonly editorTranscriptCopyService: EditorTranscriptCopyService;
     public readonly editorTranscriptionService: EditorTranscriptionService;
+    public readonly editorLiveTranscriptionService: EditorLiveTranscriptionService;
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
 
@@ -232,6 +234,10 @@ export class ServiceContainer {
             this.app,
             this.documentStructureService,
             settings.headerContainingTranscript
+        );
+
+        this.editorLiveTranscriptionService = new EditorLiveTranscriptionService(
+            settings.assemblyAiApiKey
         );
     }
 }
