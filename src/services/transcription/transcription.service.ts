@@ -42,7 +42,7 @@ export class TranscriptionService {
         return content;
     }
 
-    async transcribeFile(filePath: string, transcriptHeader: string): Promise<string> {
+    async uploadFile(filePath: string): Promise<string> {
         if (!this.client) {
             console.error('TranscriptionService: Clé API non configurée');
             throw new Error('La clé API AssemblyAI n\'est pas configurée.');
@@ -61,10 +61,24 @@ export class TranscriptionService {
                 throw new Error('Erreur lors de l\'upload du fichier');
             }
 
+            return uploadUrl;
+        } catch (error) {
+            console.error('TranscriptionService: Erreur lors de l\'upload:', error);
+            throw error;
+        }
+    }
+
+    async transcribeFromUrl(audioUrl: string, transcriptHeader: string): Promise<string> {
+        if (!this.client) {
+            console.error('TranscriptionService: Clé API non configurée');
+            throw new Error('La clé API AssemblyAI n\'est pas configurée.');
+        }
+
+        try {
             // Transcription
             console.log('TranscriptionService: Début de la transcription');
             const transcript = await this.client.transcripts.transcribe({
-                audio_url: uploadUrl,
+                audio_url: audioUrl,
                 speaker_labels: true,
                 language_detection: true
             });

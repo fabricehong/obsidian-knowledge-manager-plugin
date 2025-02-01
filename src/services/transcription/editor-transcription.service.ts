@@ -36,9 +36,6 @@ export class EditorTranscriptionService {
     async transcribeFile(file: File): Promise<string> {
         console.log('EditorTranscriptionService: Début de la transcription pour:', file.name);
         
-        // Mise à jour du statut
-        this.plugin?.setStatusBarText('Transcription en cours...');
-        
         try {
             // Créer un fichier temporaire pour le service de transcription
             const arrayBuffer = await this.readFileAsArrayBuffer(file);
@@ -46,8 +43,13 @@ export class EditorTranscriptionService {
             const tempPath = `${(adapter as any).basePath}/.temp_${file.name}`;
             await fsPromises.writeFile(tempPath, Buffer.from(arrayBuffer));
 
-            // Utiliser le service de transcription
-            const content = await this.transcriptionService.transcribeFile(tempPath, this.transcriptHeader);
+            // Upload du fichier
+            this.plugin?.setStatusBarText('Audio transcription: uploading file...');
+            const uploadUrl = await this.transcriptionService.uploadFile(tempPath);
+
+            // Transcription
+            this.plugin?.setStatusBarText('Audio transcription: transcribing...');
+            const content = await this.transcriptionService.transcribeFromUrl(uploadUrl, this.transcriptHeader);
 
             // Nettoyer le fichier temporaire
             await fsPromises.unlink(tempPath);
@@ -70,13 +72,13 @@ export class EditorTranscriptionService {
                 new TranscriptionSuccessModal(this.plugin.app, newFile.path).open();
             }
             
+            this.plugin?.setStatusBarText('');
             return newFile?.path;
         } catch (error) {
             console.error('EditorTranscriptionService: Erreur lors de la transcription:', error);
             new Notice('Erreur de transcription : ' + error.message);
-            throw error;
-        } finally {
             this.plugin?.setStatusBarText('');
+            throw error;
         }
     }
 }
