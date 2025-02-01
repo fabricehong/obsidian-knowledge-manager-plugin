@@ -3,6 +3,7 @@ import { PluginSettings } from '../../settings/settings';
 import { TranscriptionService } from './transcription.service';
 import KnowledgeManagerPlugin from '../../main';
 import { promises as fsPromises } from 'fs';
+import { TranscriptionSuccessModal } from './transcription-success-modal';
 
 export class EditorTranscriptionService {
     private transcriptHeader: string;
@@ -63,7 +64,12 @@ export class EditorTranscriptionService {
             );
 
             console.log('EditorTranscriptionService: Fichier créé:', filePath);
-            new Notice('Transcription terminée !');
+            
+            // Afficher le modal de succès avec le lien vers le fichier
+            if (newFile) {
+                new TranscriptionSuccessModal(this.plugin.app, newFile.path).open();
+            }
+            
             return newFile?.path;
         } catch (error) {
             console.error('EditorTranscriptionService: Erreur lors de la transcription:', error);
