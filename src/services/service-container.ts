@@ -36,8 +36,8 @@ import { EditorReplacementSpecsStorageService } from './replacement/editor-repla
 import { EditorDocumentService } from './document/editor-document.service';
 import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
 import { EditorTranscriptCopyService } from './transcription-section/editor-transcript-copy.service';
-import { EditorTranscriptionService } from './transcription-section/editor-transcription.service';
-import { EditorLiveTranscriptionService } from './transcription-section/editor-live-transcription.service';
+import { EditorTranscriptionService } from './transcription/editor-transcription.service';
+import { EditorLiveTranscriptionService } from './transcription/editor-live-transcription.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
