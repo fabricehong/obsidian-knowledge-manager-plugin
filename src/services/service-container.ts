@@ -19,7 +19,7 @@ import { EditorDocumentationService } from './documentation/editor-documentation
 import { ConversationTopicsService } from './conversation/conversation-topics.service';
 import { EditorConversationTopicsService } from './conversation/editor-conversation-topics.service';
 import { ReplacementSpecs, ReplacementSpecsSchema, VocabularySpecSchema, VocabularySpecs } from '../models/schemas';
-import { TranscriptFileService } from './transcription/transcript-file.service';
+import { TranscriptFileService } from './transcription-section/transcript-file.service';
 import { NoteSummarizationService } from './others/note-summarization.service';
 import { DocumentStructureService } from './document/document-structure.service';
 import { LLMCompletionService } from './llm/llm-completion.service';
@@ -35,9 +35,9 @@ import { DocumentModificationService } from './document/document-modification-ut
 import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
 import { EditorDocumentService } from './document/editor-document.service';
 import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
-import { EditorTranscriptCopyService } from './transcription/editor-transcript-copy.service';
-import { EditorTranscriptionService } from './transcription/editor-transcription.service';
-import { EditorLiveTranscriptionService } from './transcription/editor-live-transcription.service';
+import { EditorTranscriptCopyService } from './transcription-section/editor-transcript-copy.service';
+import { EditorTranscriptionService } from './transcription-section/editor-transcription.service';
+import { EditorLiveTranscriptionService } from './transcription-section/editor-live-transcription.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;

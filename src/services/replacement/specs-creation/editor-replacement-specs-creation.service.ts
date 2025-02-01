@@ -2,7 +2,7 @@ import { MarkdownView, Notice } from "obsidian";
 import { ReplacementSpecs } from "../../../models/schemas";
 import { YamlService } from "../../document/yaml.service";
 import { EditorDocumentService } from "../../document/editor-document.service";
-import { TranscriptFileService } from "../../transcription/transcript-file.service";
+import { TranscriptFileService } from "../../transcription-section/transcript-file.service";
 import { createReplacementSpecsFromSpeakers } from "./speakers-specs-creator";
 
 export class EditorReplacementSpecsCreationService {

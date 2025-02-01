@@ -3,7 +3,7 @@ import { ServiceContainer } from './services/service-container';
 import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
-import { TranscriptionModal } from './services/transcription/transcription-modal';
+import { TranscriptionModal } from './services/transcription-section/transcription-modal';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
