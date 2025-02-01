@@ -1,107 +1,57 @@
 import { App, Notice, TFile } from 'obsidian';
-import { AssemblyAI } from 'assemblyai';
-import KnowledgeManagerPlugin from '../../main';
 import { PluginSettings } from '../../settings/settings';
+import { TranscriptionService } from './transcription.service';
+import KnowledgeManagerPlugin from '../../main';
+import { promises as fsPromises } from 'fs';
 
 export class EditorTranscriptionService {
-    private client: AssemblyAI;
-    private plugin: KnowledgeManagerPlugin;
-    
-    constructor(private transcriptHeader: string, private assemblyAiApiKey: string) {
-        console.log('EditorTranscriptionService: Initialisation du service');
-        this.updateClient(assemblyAiApiKey);
+    private transcriptHeader: string;
+
+    constructor(
+        private plugin: KnowledgeManagerPlugin,
+        private transcriptionService: TranscriptionService
+    ) {
+        this.transcriptHeader = plugin.settings.headerContainingTranscript;
+        this.updateApiKey();
     }
 
-    private updateClient(assemblyAiApiKey: string) {
-        if (assemblyAiApiKey) {
-            console.log('EditorTranscriptionService: Configuration du client AssemblyAI');
-            this.client = new AssemblyAI({
-                apiKey: assemblyAiApiKey
-            });
+    updateApiKey() {
+        const apiKey = this.plugin.settings.assemblyAiApiKey;
+        if (apiKey) {
+            this.transcriptionService.setApiKey(apiKey);
         }
     }
 
     private async readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
-        console.log('EditorTranscriptionService: Lecture du fichier:', file.name);
-        
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            
-            reader.onload = () => {
-                const arrayBuffer = reader.result as ArrayBuffer;
-                resolve(arrayBuffer);
-            };
-            
-            reader.onerror = () => {
-                reject(new Error('Erreur lors de la lecture du fichier'));
-            };
-            
-            reader.readAsArrayBuffer(file);
-        });
+        return await file.arrayBuffer();
     }
 
-    private formatTranscriptContent(transcript: any): string {
-        let content = `# ${this.transcriptHeader}\n`;
-        
-        if (!transcript.utterances || transcript.utterances.length === 0) {
-            // Si pas de diarisation, retourner le texte brut
-            return content + transcript.text;
-        }
-
-        // Avec diarisation, formater chaque intervention
-        let currentSpeaker = '';
-        for (const utterance of transcript.utterances) {
-            if (utterance.speaker !== currentSpeaker) {
-                currentSpeaker = utterance.speaker;
-                content += `Speaker ${utterance.speaker}:\n`;
-            }
-            content += `${utterance.text}\n\n`;
-        }
-
-        return content;
+    private generateFileName(): string {
+        const date = new Date();
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} - ${date.getHours()}h${String(date.getMinutes()).padStart(2, '0')}.md`;
     }
 
     async transcribeFile(file: File): Promise<string> {
         console.log('EditorTranscriptionService: Début de la transcription pour:', file.name);
         
-        if (!this.client) {
-            console.error('EditorTranscriptionService: Clé API non configurée');
-            throw new Error('La clé API AssemblyAI n\'est pas configurée. Veuillez la configurer dans les paramètres du plugin.');
-        }
-
         // Mise à jour du statut
         this.plugin?.setStatusBarText('Transcription en cours...');
         
         try {
-            // Lire le fichier
-            const audioData = await this.readFileAsArrayBuffer(file);
-            console.log('EditorTranscriptionService: Fichier lu avec succès');
+            // Créer un fichier temporaire pour le service de transcription
+            const arrayBuffer = await this.readFileAsArrayBuffer(file);
+            const adapter = this.plugin.app.vault.adapter;
+            const tempPath = `${(adapter as any).basePath}/.temp_${file.name}`;
+            await fsPromises.writeFile(tempPath, Buffer.from(arrayBuffer));
 
-            // Upload du fichier
-            console.log('EditorTranscriptionService: Upload du fichier vers AssemblyAI');
-            const uploadUrl = await this.client.files.upload(new Uint8Array(audioData));
+            // Utiliser le service de transcription
+            const content = await this.transcriptionService.transcribeFile(tempPath, this.transcriptHeader);
 
-            if (!uploadUrl) {
-                throw new Error('Erreur lors de l\'upload du fichier');
-            }
+            // Nettoyer le fichier temporaire
+            await fsPromises.unlink(tempPath);
 
-            // Transcription
-            console.log('EditorTranscriptionService: Début de la transcription');
-            const transcript = await this.client.transcripts.transcribe({
-                audio_url: uploadUrl,
-                speaker_labels: true,
-                language_detection: true
-            });
-
-            if (!transcript.text) {
-                console.error('EditorTranscriptionService: Transcription vide');
-                throw new Error('La transcription est vide');
-            }
-
-            console.log('EditorTranscriptionService: Transcription reçue, création du fichier');
-            // Créer nouveau fichier avec date
+            // Créer le fichier dans Obsidian
             const fileName = this.generateFileName();
-            const content = this.formatTranscriptContent(transcript);
             const newFile = await this.plugin?.app.vault.create(
                 fileName,
                 content
@@ -117,14 +67,5 @@ export class EditorTranscriptionService {
         } finally {
             this.plugin?.setStatusBarText('');
         }
-    }
-
-    private generateFileName(): string {
-        const date = new Date();
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} - ${date.getHours()}h${String(date.getMinutes()).padStart(2, '0')}.md`;
-    }
-
-    setPlugin(plugin: KnowledgeManagerPlugin) {
-        this.plugin = plugin;
     }
 }

@@ -38,6 +38,8 @@ import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabu
 import { EditorTranscriptCopyService } from './transcription-section/editor-transcript-copy.service';
 import { EditorTranscriptionService } from './transcription/editor-transcription.service';
 import { EditorLiveTranscriptionService } from './transcription/editor-live-transcription.service';
+import { TranscriptionService } from './transcription/transcription.service';
+import KnowledgeManagerPlugin from '../main';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -72,12 +74,13 @@ export class ServiceContainer {
     public readonly documentModificationService: DocumentModificationService;
     public readonly editorVocabularySpecsStorageService: EditorVocabularySpecsStorageService;
     public readonly editorTranscriptCopyService: EditorTranscriptCopyService;
+    public readonly transcriptionService: TranscriptionService;
     public readonly editorTranscriptionService: EditorTranscriptionService;
     public readonly editorLiveTranscriptionService: EditorLiveTranscriptionService;
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
 
-    constructor(private app: App, settings: PluginSettings) {
+    constructor(private app: App, settings: PluginSettings, private plugin: KnowledgeManagerPlugin) {
         // Services sans dépendances
         this.documentStructureService = new DocumentStructureService();
         this.yamlReplacementService = new YamlService<ReplacementSpecs>(ReplacementSpecsSchema, 'Invalid replacement specs');
@@ -101,9 +104,14 @@ export class ServiceContainer {
             this.app,
             this.documentStructureService
         );
+        this.transcriptionService = new TranscriptionService();
+        if (settings.assemblyAiApiKey) {
+            this.transcriptionService.setApiKey(settings.assemblyAiApiKey);
+        }
+
         this.editorTranscriptionService = new EditorTranscriptionService(
-            settings.assemblyAiApiKey,
-            settings.headerContainingTranscript,
+            this.plugin,
+            this.transcriptionService
         );
 
         // Ajout du service de stockage pour le vocabulaire

@@ -77,9 +77,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
     async onload() {
         await this.loadSettings();
-        this.serviceContainer = new ServiceContainer(this.app, this.settings);
-        this.serviceContainer.editorTranscriptionService.setPlugin(this);
-
+        this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
+        
         // Ajout de la barre de statut
         this.statusBarItem = this.addStatusBarItem();
         this.statusBarItem.style.display = 'none';
@@ -420,7 +419,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
         // Recréer le service container avec les nouveaux paramètres
-        this.serviceContainer = new ServiceContainer(this.app, this.settings);
+        this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
     }
 
     async resetSettings() {
