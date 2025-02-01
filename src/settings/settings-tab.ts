@@ -302,6 +302,28 @@ export class SettingsTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
+            .setName('Dossier de transcription')
+            .setDesc('Dossier où seront sauvegardées les transcriptions')
+            .addText(text => {
+                text.setPlaceholder('Example: transcriptions')
+                    .setValue(this.plugin.settings.transcriptionFolder)
+                    .setDisabled(true);
+            })
+            .addButton(button => button
+                .setButtonText('Browse')
+                .onClick(() => {
+                    new FolderSuggestModal(
+                        this.app,
+                        async (folder: any) => {
+                            const folderPath = folder.path;
+                            this.plugin.settings.transcriptionFolder = folderPath;
+                            await this.plugin.saveSettings();
+                            this.display();
+                        }
+                    ).open();
+                }));
+
+        new Setting(containerEl)
             .setName('Translation Prompt Template')
             .setDesc('Template file to use for translation prompts')
             .addText(text => {

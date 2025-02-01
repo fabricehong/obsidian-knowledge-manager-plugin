@@ -111,7 +111,8 @@ export class ServiceContainer {
 
         this.editorTranscriptionService = new EditorTranscriptionService(
             this.plugin,
-            this.transcriptionService
+            this.transcriptionService,
+            settings.transcriptionFolder
         );
 
         // Ajout du service de stockage pour le vocabulaire

@@ -32,6 +32,7 @@ export interface PluginSettings {
     maxGlossaryIterations: number;
     replacementsHeader: string;
     assemblyAiApiKey: string;
+    transcriptionFolder: string;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -73,7 +74,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     vocabularySpecsTag: 'vocabulary',
     maxGlossaryIterations: 5,
     replacementsHeader: 'Replacements',
-    assemblyAiApiKey: ''
+    assemblyAiApiKey: '',
+    transcriptionFolder: ''
 };
 
 /**

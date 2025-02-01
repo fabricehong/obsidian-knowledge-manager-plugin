@@ -9,7 +9,8 @@ export class EditorTranscriptionService {
 
     constructor(
         private plugin: KnowledgeManagerPlugin,
-        private transcriptionService: TranscriptionService
+        private transcriptionService: TranscriptionService,
+        private transcriptionFolder: string
     ) {
         this.transcriptHeader = plugin.settings.headerContainingTranscript;
         this.updateApiKey();
@@ -52,12 +53,16 @@ export class EditorTranscriptionService {
 
             // Créer le fichier dans Obsidian
             const fileName = this.generateFileName();
+            const filePath = this.transcriptionFolder 
+                ? `${this.transcriptionFolder}/${fileName}`
+                : fileName;
+
             const newFile = await this.plugin?.app.vault.create(
-                fileName,
+                filePath,
                 content
             );
 
-            console.log('EditorTranscriptionService: Fichier créé:', fileName);
+            console.log('EditorTranscriptionService: Fichier créé:', filePath);
             new Notice('Transcription terminée !');
             return newFile?.path;
         } catch (error) {
