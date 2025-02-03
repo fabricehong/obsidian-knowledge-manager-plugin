@@ -38,7 +38,8 @@ export class EditorConversationTopicsService {
 
             try {
                 // Generate topics list
-                const topics = await this.conversationTopicsService.listTopics(transcriptContent);
+                const userPrompt = this.getTemporaryUserPrompt();
+                const topics = await this.conversationTopicsService.listTopics(transcriptContent, userPrompt);
 
                 if (isCancelled) {
                     new Notice('Operation cancelled');
@@ -48,7 +49,7 @@ export class EditorConversationTopicsService {
                 // Add topics as a new section
                 const header = {
                     level: 1,
-                    heading: "Sujets",
+                    heading: "Output",
                     content: topics,
                     children: []
                 };
@@ -78,5 +79,21 @@ export class EditorConversationTopicsService {
             return null;
         }
         return transcriptNode.content;
+    }
+
+    private getTemporaryUserPrompt(): string {
+        return `Liste tous les sujets de conversations abordés dans la conversation qui suit, et formatte les dans un mindmap tab indented (indentation par tabs et non par espaces, pas de tirets, pas de retours à la ligne inutiles). Le mindmap être très structuré (par opposition à une liste à plat). Réponds dans un bloc de code.
+Exemple:
+\`\`\`
+Réunion sur les systèmes de gestion des données et des ventes
+	Impact des changements de systèmes
+		Exemples de sacrifices adoptés par TPG
+		Complexité de la gestion des données
+		Optimisation et suppression de couches intermédiaires
+	Problèmes techniques et formation
+		Complexité technique des systèmes actuels
+		Formation des employés
+		Service après-vente et support client
+\`\`\``;
     }
 }

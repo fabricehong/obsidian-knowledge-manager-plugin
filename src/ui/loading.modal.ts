@@ -3,7 +3,7 @@ import { App, Modal, ButtonComponent } from 'obsidian';
 export class LoadingModal extends Modal {
     constructor(app: App, private onCancel: () => void) {
         super(app);
-        this.titleEl.setText('Processing Glossary Terms');
+        this.titleEl.setText('Working...');
         
         // Enlever le bouton de fermeture
         const closeButton = this.modalEl.querySelector('.modal-close-button');
