@@ -252,6 +252,25 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        // Add the describe speakers command
+        this.addCommand({
+            id: 'enrich:describe-speakers',
+            name: 'enrich:describe-speakers',
+            checkCallback: (checking: boolean) => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView) {
+                    if (!checking) {
+                        this.serviceContainer.editorSpeakerDescriptionService.describeSpeakers(
+                            markdownView,
+                            this.settings.headerContainingTranscript,
+                            "Speaker description"  // Valeur en dur comme demandé
+                        );
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
 
         // Add the summarize command
         this.addCommand({

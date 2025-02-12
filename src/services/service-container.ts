@@ -39,6 +39,8 @@ import { EditorTranscriptCopyService } from './transcription-section/editor-tran
 import { EditorTranscriptionService } from './transcription/editor-transcription.service';
 import { EditorLiveTranscriptionService } from './transcription/editor-live-transcription.service';
 import { TranscriptionService } from './transcription/transcription.service';
+import { SpeakerDescriptionService } from './speaker-description/speaker-description.service';
+import { EditorSpeakerDescriptionService } from './speaker-description/editor-speaker-description.service';
 import KnowledgeManagerPlugin from '../main';
 
 export class ServiceContainer {
@@ -77,6 +79,8 @@ export class ServiceContainer {
     public readonly transcriptionService: TranscriptionService;
     public readonly editorTranscriptionService: EditorTranscriptionService;
     public readonly editorLiveTranscriptionService: EditorLiveTranscriptionService;
+    public readonly speakerDescriptionService: SpeakerDescriptionService;
+    public readonly editorSpeakerDescriptionService: EditorSpeakerDescriptionService;
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
 
@@ -247,6 +251,13 @@ export class ServiceContainer {
 
         this.editorLiveTranscriptionService = new EditorLiveTranscriptionService(
             settings.assemblyAiApiKey
+        );
+
+        this.speakerDescriptionService = new SpeakerDescriptionService(this.aiCompletionService);
+        this.editorSpeakerDescriptionService = new EditorSpeakerDescriptionService(
+            this.app,
+            this.documentStructureService,
+            this.speakerDescriptionService
         );
     }
 }
