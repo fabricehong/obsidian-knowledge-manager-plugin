@@ -50,7 +50,21 @@ export const DEFAULT_SETTINGS: PluginSettings = {
             apiKey: '',
             baseUrl: 'https://api.deepseek.com',
             supportedModels: ['deepseek-chat', 'deepseek-reasoner']
-        }
+        },
+        {
+            id: generateId('org'),
+            name: 'Groq',
+            apiKey: '',
+            baseUrl: 'https://api.groq.com/openai/v1',
+            supportedModels: ['deepseek-r1-distill-llama-70b', 'llama-3.3-70b-versatile']
+        },
+        {
+            id: generateId('org'),
+            name: 'Google',
+            apiKey: '',
+            baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+            supportedModels: ['gemini-2.0-flash']
+        },
     ],
     llmConfigurations: [
         {

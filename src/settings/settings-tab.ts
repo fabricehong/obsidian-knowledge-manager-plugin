@@ -182,7 +182,7 @@ export class SettingsTab extends PluginSettingTab {
             .addDropdown(dropdown => {
                 this.plugin.settings.llmConfigurations.forEach(config => {
                     const org = this.plugin.settings.llmOrganizations.find(o => o.id === config.organisationId);
-                    const label = `${config.id} (${config.model} on ${org?.name || 'unknown'})`;
+                    const label = `${config.model} on ${org?.name || 'unknown'}`;
                     dropdown.addOption(config.id, label);
                 });
                 dropdown.setValue(this.plugin.settings.selectedLlmConfiguration);
