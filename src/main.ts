@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './set
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { TranscriptionModal } from './services/transcription/transcription-modal';
+import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
@@ -421,6 +422,15 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 
                 this.serviceContainer.editorLiveTranscriptionService.stopTranscription();
                 return true;
+            }
+        });
+
+        // Add quick LLM configuration switch command
+        this.addCommand({
+            id: 'llm:select-model',
+            name: 'llm:select-model',
+            callback: () => {
+                new QuickLLMConfigModal(this.app, this).open();
             }
         });
 
