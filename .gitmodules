@@ -1,0 +1,3 @@
+[submodule "src/libs/llm-utils"]
+	path = src/libs/llm-utils
+	url = https://github.com/fabricehong/llm-utils.git

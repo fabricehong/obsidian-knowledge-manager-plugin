@@ -1,4 +1,4 @@
-import { AICompletionService } from '../interfaces/ai-completion.interface';
+import { AICompletionService } from '@llm-utils/services/interfaces/ai-completion.interface';
 
 export class DocumentationService {
     constructor(private aiCompletionService: AICompletionService) {}

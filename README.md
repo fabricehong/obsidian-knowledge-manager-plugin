@@ -75,6 +75,102 @@ If you encounter any issues or have suggestions:
 - Check the existing issues first
 - Provide as much detail as possible
 
+## Developer Guide
+
+### Project Structure
+
+The project is organized into two main parts:
+1. The main plugin code in the root directory
+2. Shared libraries in the `src/libs/` directory, managed as git submodules:
+   - `llm-utils`: Shared LLM (Large Language Model) services and utilities
+
+### Getting Started
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   ```
+
+2. Initialize and install everything:
+   ```bash
+   npm run setup:dev
+   ```
+   This command will:
+   - Initialize and update all git submodules
+   - Install dependencies for the main plugin
+   - Install dependencies for the `llm-utils` library
+
+   If you only need the main plugin without developing the libraries:
+   ```bash
+   npm run setup
+   ```
+
+### Working with Submodules
+
+When working with submodules, keep these commands handy:
+
+1. Check for changes in submodules:
+   ```bash
+   git submodule foreach 'git status'
+   ```
+
+2. Update all submodules to their latest version:
+   ```bash
+   git submodule update --remote
+   ```
+
+3. After making changes in a submodule:
+   ```bash
+   # Inside the submodule directory
+   git add .
+   git commit -m "your changes"
+   git push
+
+   # Back in the main repository
+   git add src/libs/llm-utils  # Update the submodule reference
+   git commit -m "Update llm-utils submodule"
+   git push
+   ```
+
+4. Check submodule status:
+   ```bash
+   git submodule status
+   ```
+
+### Initial Submodule Setup
+
+If you need to set up the submodule for the first time:
+
+1. Create `.gitmodules` file:
+   ```
+   [submodule "src/libs/llm-utils"]
+       path = src/libs/llm-utils
+       url = https://github.com/fabricehong/llm-utils.git
+   ```
+
+2. Initialize and update the submodule:
+   ```bash
+   git submodule init
+   git submodule update
+   ```
+
+### Development Workflow
+
+1. Make sure you're on the right branch:
+   ```bash
+   git checkout main  # or your feature branch
+   ```
+
+2. Start development:
+   ```bash
+   npm run dev
+   ```
+
+3. Build for production:
+   ```bash
+   npm run build
+   ```
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

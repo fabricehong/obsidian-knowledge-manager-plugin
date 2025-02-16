@@ -7,7 +7,9 @@
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && node copy-templates.mjs",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
-		"test": "jest"
+		"test": "jest",
+		"setup": "git submodule update --init --recursive && npm install",
+		"setup:dev": "npm run setup && cd src/libs/llm-utils && npm install"
 	},
 	"keywords": [],
 	"author": "",

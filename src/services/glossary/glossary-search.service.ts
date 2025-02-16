@@ -1,6 +1,7 @@
 import { Glossary, Term } from "../../types/glossary";
-import { z } from "zod";
-import { AICompletionService } from "../interfaces/ai-completion.interface";
+import { z } from 'zod';
+import { Notice } from 'obsidian';
+import { AICompletionService } from '@llm-utils/services/interfaces/ai-completion.interface';
 import { zodSchemaToJsonExample } from "../llm/utils/zod-schema.utils";
 
 export class GlossarySearchService {

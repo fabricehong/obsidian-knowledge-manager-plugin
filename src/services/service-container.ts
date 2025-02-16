@@ -11,7 +11,7 @@ import { GlossaryReplacementService } from './replacement/specs-creation/glossar
 import { KnowledgeDiffusionService } from './diffusion/knowledge-diffusion.service';
 import { TextCorrector } from './vocabulary/textCorrector';
 import { DoubleMetaphoneAlgorithm } from './vocabulary/doubleMetaphone';
-import { AICompletionService } from './interfaces/ai-completion.interface';
+import { AICompletionService } from '@llm-utils/services/interfaces/ai-completion.interface';
 import { GlossarySearchService } from "./glossary/glossary-search.service";
 import { PluginSettings } from '../settings/settings';
 import { DocumentationService } from './documentation/documentation.service';
@@ -29,21 +29,21 @@ import { TaggedFilesService } from './document/tagged-files.service';
 import { EditorReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/editor-replacement-specs-integration.service';
 import { EditorReplacementSpecsCreationService } from './replacement/specs-creation/editor-replacement-specs-creation.service';
 import { EditorAIReplacementSpecsCreationService } from './replacement/specs-creation/editor-ai-replacement-specs-creation.service';
+import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
+import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
+import { EditorDocumentService } from './document/editor-document.service';
 import { EditorDocumentCleaningService } from './diffusion/editor-document-cleaning.service';
 import { EditorKnowledgeDiffusionService } from './diffusion/editor-knowledge-diffusion.service';
 import { DocumentModificationService } from './document/document-modification-utils';
-import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
-import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
 import { EditorTranscriptCopyService } from './transcription-section/editor-transcript-copy.service';
 import { TranscriptionService } from './transcription/transcription.service';
 import { EditorTranscriptionService } from './transcription/editor-transcription.service';
 import { EditorLiveTranscriptionService } from './transcription/editor-live-transcription.service';
 import { SpeakerDescriptionService } from './speaker-description/speaker-description.service';
 import { EditorSpeakerDescriptionService } from './speaker-description/editor-speaker-description.service';
-import { EditorDocumentService } from './document/editor-document.service';
-import KnowledgeManagerPlugin from '../main';
 import { LangChain2Service } from './others/LangChain2.service';
-import { LangChainCompletionService } from './llm/langchain-completion.service';
+import { LangChainCompletionService } from '@llm-utils/services/llm/langchain-completion.service';
+import KnowledgeManagerPlugin from '../main';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
