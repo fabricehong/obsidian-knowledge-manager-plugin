@@ -47,6 +47,33 @@ export class SettingsTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    // Utility methods for configuration management
+    private getConfigurationLabel(config: any): string {
+        const org = this.plugin.settings.llmOrganizations.find(o => o.id === config.organisationId);
+        return `${config.model} on ${org?.name || 'unknown'}`;
+    }
+
+    private validateConfiguration(config: any): void {
+        const org = this.plugin.settings.llmOrganizations.find(o => o.id === config.organisationId);
+        
+        // If organization doesn't exist, reset to first available
+        if (!org && this.plugin.settings.llmOrganizations.length > 0) {
+            config.organisationId = this.plugin.settings.llmOrganizations[0].id;
+        }
+        
+        // If model is not supported by organization, reset to first supported model
+        if (org && !org.supportedModels.includes(config.model)) {
+            config.model = org.supportedModels[0] || '';
+        }
+    }
+
+    private refreshConfigurationLabels(): void {
+        // Validate and update all configurations
+        this.plugin.settings.llmConfigurations.forEach(config => {
+            this.validateConfiguration(config);
+        });
+    }
+
     display(): void {
         const { containerEl } = this;
 
@@ -104,6 +131,8 @@ export class SettingsTab extends PluginSettingTab {
                     .onChange(async (value) => {
                         org.name = value;
                         await this.plugin.saveSettings();
+                        // Refresh display to update all configuration labels that use this organization
+                        this.display();
                     }));
 
             // API Key
@@ -142,7 +171,14 @@ export class SettingsTab extends PluginSettingTab {
                         org.supportedModels = value.split(',')
                             .map(model => model.trim())
                             .filter(model => model.length > 0);
+                        
+                        // Validate configurations using this organization's models
+                        this.plugin.settings.llmConfigurations
+                            .filter(cfg => cfg.organisationId === org.id)
+                            .forEach(cfg => this.validateConfiguration(cfg));
+                        
                         await this.plugin.saveSettings();
+                        this.display();
                     }));
 
             // Bouton de suppression
@@ -181,8 +217,7 @@ export class SettingsTab extends PluginSettingTab {
             .setDesc('Select the active LLM configuration')
             .addDropdown(dropdown => {
                 this.plugin.settings.llmConfigurations.forEach(config => {
-                    const org = this.plugin.settings.llmOrganizations.find(o => o.id === config.organisationId);
-                    const label = `${config.model} on ${org?.name || 'unknown'}`;
+                    const label = this.getConfigurationLabel(config);
                     dropdown.addOption(config.id, label);
                 });
                 dropdown.setValue(this.plugin.settings.selectedLlmConfiguration);
@@ -246,6 +281,7 @@ export class SettingsTab extends PluginSettingTab {
                     dropdown.onChange(async (value) => {
                         config.model = value;
                         await this.plugin.saveSettings();
+                        this.display(); // Refresh to update active configuration label
                     });
                 })
                 .addButton(button => button
