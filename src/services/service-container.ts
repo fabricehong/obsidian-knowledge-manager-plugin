@@ -32,16 +32,18 @@ import { EditorAIReplacementSpecsCreationService } from './replacement/specs-cre
 import { EditorDocumentCleaningService } from './diffusion/editor-document-cleaning.service';
 import { EditorKnowledgeDiffusionService } from './diffusion/editor-knowledge-diffusion.service';
 import { DocumentModificationService } from './document/document-modification-utils';
-import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
-import { EditorDocumentService } from './document/editor-document.service';
 import { EditorVocabularySpecsStorageService } from './replacement/editor-vocabulary-specs-storage.service';
+import { EditorReplacementSpecsStorageService } from './replacement/editor-replacement-specs-storage.service';
 import { EditorTranscriptCopyService } from './transcription-section/editor-transcript-copy.service';
+import { TranscriptionService } from './transcription/transcription.service';
 import { EditorTranscriptionService } from './transcription/editor-transcription.service';
 import { EditorLiveTranscriptionService } from './transcription/editor-live-transcription.service';
-import { TranscriptionService } from './transcription/transcription.service';
 import { SpeakerDescriptionService } from './speaker-description/speaker-description.service';
 import { EditorSpeakerDescriptionService } from './speaker-description/editor-speaker-description.service';
+import { EditorDocumentService } from './document/editor-document.service';
 import KnowledgeManagerPlugin from '../main';
+import { LangChain2Service } from './others/LangChain2.service';
+import { LangChainCompletionService } from './llm/langchain-completion.service';
 
 export class ServiceContainer {
     public readonly documentStructureService: DocumentStructureService;
@@ -83,6 +85,7 @@ export class ServiceContainer {
     public readonly editorSpeakerDescriptionService: EditorSpeakerDescriptionService;
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
+    public readonly langChain2Service: LangChain2Service;
 
     constructor(private app: App, settings: PluginSettings, private plugin: KnowledgeManagerPlugin) {
         // Services sans dépendances
@@ -141,7 +144,14 @@ export class ServiceContainer {
         this.openAIModelService = new OpenAIModelService();
         this.openAIModelService.initialize(organization.apiKey);
 
+        /*
         this.aiCompletionService = new LLMCompletionService({
+            organization,
+            configuration: selectedConfig
+        }, true);
+        */
+
+        this.aiCompletionService = new LangChainCompletionService({
             organization,
             configuration: selectedConfig
         }, true);
@@ -259,5 +269,6 @@ export class ServiceContainer {
             this.documentStructureService,
             this.speakerDescriptionService
         );
+        this.langChain2Service = new LangChain2Service();
     }
 }

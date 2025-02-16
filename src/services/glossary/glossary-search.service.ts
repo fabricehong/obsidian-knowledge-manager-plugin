@@ -68,9 +68,7 @@ Voici la transcription :
             let messages = [
                 {
                     role: 'system' as const,
-                    content: `${this.INITIAL_PROMPT_TEMPLATE.replace("{input}", content)}
-                    Réponds en JSON avec le format suivant:
-                    ${zodSchemaToJsonExample(glossarySchema)}`
+                    content: `${this.INITIAL_PROMPT_TEMPLATE.replace("{input}", content)}`
                 },
                 {
                     role: 'user' as const,
@@ -79,8 +77,9 @@ Voici la transcription :
             ];
 
             // Génération initiale
-            let response = await this.aiService.generateStructuredResponse<Glossary>(
+            let response = await this.aiService.generateStructuredResponseWithSchema<Glossary>(
                 messages,
+                glossarySchema,
             );
 
             // Initialiser le glossaire final avec la première réponse
@@ -98,12 +97,10 @@ Voici la transcription :
             while (tries < maxTry) {
                 // Ajouter le message système pour l'itération
                 messages.push({
-                    role: 'system' as const,
+                    role: 'user' as const,
                     content: `${this.ITERATION_PROMPT_TEMPLATE}
                     Glossaire précédent:
-                    ${JSON.stringify(finalGlossary, null, 2)}
-                    
-                    Réponds en JSON avec le même format que précédemment.`
+                    ${JSON.stringify(finalGlossary, null, 2)}`
                 });
 
                 // Ajouter le contenu utilisateur pour cette itération
@@ -112,8 +109,9 @@ Voici la transcription :
                     content: content
                 });
 
-                response = await this.aiService.generateStructuredResponse<Glossary>(
+                response = await this.aiService.generateStructuredResponseWithSchema<Glossary>(
                     messages,
+                    glossarySchema
                 );
 
                 this.log(`\n📝 Itération ${tries + 1}:`,

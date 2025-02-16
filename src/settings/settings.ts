@@ -38,28 +38,28 @@ export interface PluginSettings {
 export const DEFAULT_SETTINGS: PluginSettings = {
     llmOrganizations: [
         {
-            id: generateId('org'),
+            id: 'openai', // generateId('org'),
             name: 'OpenAI',
             apiKey: '',
             baseUrl: '',  // URL par défaut d'OpenAI
             supportedModels: ['gpt-4o', 'gpt-4o-mini']
         },
         {
-            id: generateId('org'),
+            id: 'deepseek', // generateId('org'),
             name: 'DeepSeek',
             apiKey: '',
             baseUrl: 'https://api.deepseek.com',
             supportedModels: ['deepseek-chat', 'deepseek-reasoner']
         },
         {
-            id: generateId('org'),
+            id: 'groq', // generateId('org'),
             name: 'Groq',
             apiKey: '',
             baseUrl: 'https://api.groq.com/openai/v1',
             supportedModels: ['deepseek-r1-distill-llama-70b', 'llama-3.3-70b-versatile']
         },
         {
-            id: generateId('org'),
+            id: 'google', // generateId('org'),
             name: 'Google',
             apiKey: '',
             baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',

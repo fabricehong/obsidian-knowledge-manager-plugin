@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { Notice } from "obsidian";
 import { AICompletionService, LLMContext } from "../interfaces/ai-completion.interface";
 import { LLMOrganization } from "../../settings/settings";
+import { ZodType } from "zod";
 
 export interface LLMConfig {
     organization: LLMOrganization;
@@ -74,6 +75,10 @@ export class LLMCompletionService implements AICompletionService {
         }
     }
 
+    generateStructuredResponseWithSchema<T extends Record<string, any>>(messages: Array<{ role: "system" | "user" | "assistant"; content: string; }>, schema: ZodType<T>): Promise<T> {
+        throw new Error("Method not implemented.");
+    }
+
     async generateTextResponse(
         messages: Array<{role: 'system' | 'user' | 'assistant', content: string}>
     ): Promise<string> {
@@ -99,4 +104,5 @@ export class LLMCompletionService implements AICompletionService {
             throw error;
         }
     }
+
 }

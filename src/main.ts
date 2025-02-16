@@ -5,6 +5,7 @@ import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from './ui/folder-suggest.modal';
 import { TranscriptionModal } from './services/transcription/transcription-modal';
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
+import { LangChain2Service } from './services/others/LangChain2.service';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
@@ -362,8 +363,41 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
-        // Add settings tab
+        this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
+
+        // This adds a settings tab so the user can configure various aspects of the plugin
         this.addSettingTab(new SettingsTab(this.app, this));
+
+        // Add a simple command to test LangChain2Service
+        this.addCommand({
+            id: 'test-langchain2-service',
+            name: 'Test LangChain2 Service',
+            editorCallback: async (editor: Editor, view: MarkdownView) => {
+                const selectedConfig = this.settings.llmConfigurations.find(c => c.id === this.settings.selectedLlmConfiguration);
+                if (!selectedConfig) {
+                    new Notice('No LLM configuration selected');
+                    return;
+                }
+                const organization = this.settings.llmOrganizations.find(o => o.id === selectedConfig.organisationId);
+                if (!organization) {
+                    new Notice('Organization not found for selected configuration');
+                    return;
+                }
+                const apiKey = organization.apiKey;
+                const modelName = selectedConfig.model;
+                const temperature = 0.7;
+                const promptTemplate = "You are a helpful assistant. Please respond to the following question: {text}";
+                const text = editor.getSelection() || "What is the capital of France?";
+
+                try {
+                    await this.serviceContainer.langChain2Service.initialize(apiKey, modelName, temperature, promptTemplate);
+                    const result = await this.serviceContainer.langChain2Service.run(text);
+                    new Notice(`LangChain2 Result: ${result}`);
+                } catch (error) {
+                    new Notice(`Error: ${error.message}`);
+                }
+            }
+        });
 
         // Add the help command
         this.addCommand({
@@ -433,7 +467,6 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 new QuickLLMConfigModal(this.app, this).open();
             }
         });
-
     }
 
     async loadSettings() {
