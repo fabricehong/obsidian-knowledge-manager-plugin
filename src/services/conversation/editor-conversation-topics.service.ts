@@ -82,7 +82,7 @@ export class EditorConversationTopicsService {
     }
 
     private getTemporaryUserPrompt(): string {
-        return `Liste tous les sujets de conversations abordés dans la conversation qui suit, et formatte les dans un mindmap tab indented (indentation par tabs et non par espaces, pas de tirets, pas de retours à la ligne inutiles). Le mindmap être très structuré (par opposition à une liste à plat). Réponds dans un bloc de code.
+        return `Liste tous les sujets de conversations abordés dans la conversation qui suit, et formatte les dans un mindmap tab indented (indentation par tabs et non par espaces, pas de tirets, pas de retours à la ligne inutiles). Le mindmap être très structuré (par opposition à une liste à plat). La structure du mindmap doit représenter la structure de la conversation en respectant sa chronologie au fil du temps. Si il y a plusieurs dois les mêmes sujets abordés dans la conversation, les branches seront répétées. Réponds dans un bloc de code.
 Exemple:
 \`\`\`
 Réunion sur les systèmes de gestion des données et des ventes
