@@ -2,7 +2,7 @@ import { App, Notice, PluginSettingTab, Setting, Modal } from 'obsidian';
 import KnowledgeManagerPlugin from '../main';
 import { PluginSettings, generateId } from './settings';
 import { FileSuggestModal } from '../ui/file-suggest-modal';
-import { FolderSuggestModal } from '../ui/folder-suggest-modal';
+import { FolderSuggestModal } from '@llm-utils/ui/folder-suggest-modal';
 import { TemplateManager } from '../services/template-manager';
 
 class ConfirmationModal extends Modal {
