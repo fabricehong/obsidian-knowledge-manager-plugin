@@ -2,7 +2,7 @@ import { App, Editor, MarkdownRenderer, MarkdownView, Modal, Notice, Plugin, TFi
 import { ServiceContainer } from './services/service-container';
 import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
-import { FolderSuggestModal } from '@llm-utils/ui/folder-suggest-modal'; // Import the FolderSuggestModal from '@llm-utils/ui/folder-suggest-modal'./ui/folder-suggest.modal';
+import { FolderSuggestModal } from '@obsidian-utils/ui/folder-suggest-modal';
 import { TranscriptionModal } from './services/transcription/transcription-modal';
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
 import { LangChain2Service } from './services/others/LangChain2.service';

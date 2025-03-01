@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { Notice } from "obsidian";
 import { LLMConfiguration, LLMOrganization } from "../../settings/settings";
-import { AICompletionService, LLMContext } from "@llm-utils/services/interfaces/ai-completion.interface";
+import { AICompletionService, LLMContext } from "@obsidian-utils/services/interfaces/ai-completion.interface";
 import { ZodType } from "zod";
 
 export interface LLMConfig {

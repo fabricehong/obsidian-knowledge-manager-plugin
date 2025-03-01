@@ -11,7 +11,7 @@ import { GlossaryReplacementService } from './replacement/specs-creation/glossar
 import { KnowledgeDiffusionService } from './diffusion/knowledge-diffusion.service';
 import { TextCorrector } from './vocabulary/textCorrector';
 import { DoubleMetaphoneAlgorithm } from './vocabulary/doubleMetaphone';
-import { AICompletionService } from '@llm-utils/services/interfaces/ai-completion.interface';
+import { AICompletionService } from '@obsidian-utils/services/interfaces/ai-completion.interface';
 import { GlossarySearchService } from "./glossary/glossary-search.service";
 import { PluginSettings } from '../settings/settings';
 import { DocumentationService } from './documentation/documentation.service';
@@ -42,7 +42,7 @@ import { EditorLiveTranscriptionService } from './transcription/editor-live-tran
 import { SpeakerDescriptionService } from './speaker-description/speaker-description.service';
 import { EditorSpeakerDescriptionService } from './speaker-description/editor-speaker-description.service';
 import { LangChain2Service } from './others/LangChain2.service';
-import { LangChainCompletionService } from '@llm-utils/services/llm/langchain-completion.service';
+import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
 import KnowledgeManagerPlugin from '../main';
 
 export class ServiceContainer {

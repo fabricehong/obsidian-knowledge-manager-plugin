@@ -1,4 +1,4 @@
-import { AICompletionService } from '@llm-utils/services/interfaces/ai-completion.interface';
+import { AICompletionService } from '@obsidian-utils/services/interfaces/ai-completion.interface';
 
 export class ConversationTopicsService {
     private readonly SYSTEM_PROMPT = `Tu vas recevoir deux éléments : 

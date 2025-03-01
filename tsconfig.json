@@ -19,7 +19,7 @@
       "ES7"
     ],
     "paths": {
-      "@llm-utils/*": ["libs/llm-utils/src/*"]
+      "@obsidian-utils/*": ["libs/obsidian-utils/src/*"]
     }
   },
   "include": [

@@ -1,4 +1,4 @@
-import { AICompletionService } from "@llm-utils/services/interfaces/ai-completion.interface";
+import { AICompletionService } from "@obsidian-utils/services/interfaces/ai-completion.interface";
 
 export class SpeakerDescriptionService {
     constructor(private llmService: AICompletionService) {}
