@@ -63,7 +63,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
             name: 'Google',
             apiKey: '',
             baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-            supportedModels: ['gemini-2.0-flash']
+            supportedModels: ['gemini-2.0-flash', 'gemini-2.0-pro-exp-02-05']
         },
     ],
     llmConfigurations: [
