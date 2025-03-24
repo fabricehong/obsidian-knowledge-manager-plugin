@@ -49,7 +49,7 @@ export class EditorConversationTopicsService {
                 // Add topics as a new section
                 const header = {
                     level: 1,
-                    heading: "Output",
+                    heading: "Sujets",
                     content: topics,
                     children: []
                 };
