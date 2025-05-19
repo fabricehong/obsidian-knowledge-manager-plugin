@@ -80,6 +80,32 @@ export default class KnowledgeManagerPlugin extends Plugin {
     async onload() {
         await this.loadSettings();
         this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
+
+        // --- Commande Create Chunks ---
+        this.addCommand({
+            id: 'create-chunks',
+            name: 'Create Chunks',
+            callback: async () => {
+                try {
+                    // Chargement dynamique pour éviter les problèmes de dépendance circulaire éventuels
+                    const { EditorChunkingService } = await import('./services/semantic/editor-chunking.service');
+                    const chunkingService = new EditorChunkingService(this.app);
+                    const configs = this.settings.chunkingFolders;
+                    if (!configs || configs.length === 0) {
+                        new Notice('Aucune configuration de dossiers pour Create Chunks.');
+                        return;
+                    }
+                    new Notice('Analyse des dossiers en cours...');
+                    await chunkingService.insertChunksInActiveFile(configs);
+                    
+                } catch (error) {
+                    console.error('Erreur lors de la création des chunks:', error);
+                    new Notice('Erreur lors de la création des chunks. Voir la console pour plus de détails.');
+                }
+            }
+        });
+        await this.loadSettings();
+        this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
         
         // Ajout de la barre de statut
         this.statusBarItem = this.addStatusBarItem();

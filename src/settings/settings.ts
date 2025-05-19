@@ -20,6 +20,11 @@ export interface RootNode {
     children: HeaderNode[];
 }
 
+export interface ChunkingFolderConfig {
+    folder: string; // chemin du dossier obsidian
+    headings: string[]; // liste de headings à extraire
+}
+
 export interface PluginSettings {
     llmOrganizations: LLMOrganization[];
     llmConfigurations: LLMConfiguration[];
@@ -33,6 +38,12 @@ export interface PluginSettings {
     replacementsHeader: string;
     assemblyAiApiKey: string;
     transcriptionFolder: string;
+
+    /**
+     * Configuration pour la fonctionnalité "Create Chunks" :
+     * Liste de paires (dossier, headings)
+     */
+    chunkingFolders: ChunkingFolderConfig[];
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -89,7 +100,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     maxGlossaryIterations: 5,
     replacementsHeader: 'Replacements',
     assemblyAiApiKey: '',
-    transcriptionFolder: ''
+    transcriptionFolder: '',
+
+    // Valeur par défaut pour la fonctionnalité Create Chunks
+    chunkingFolders: []
 };
 
 /**
