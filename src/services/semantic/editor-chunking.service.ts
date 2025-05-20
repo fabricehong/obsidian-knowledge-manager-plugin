@@ -2,6 +2,8 @@ import { App, TFile, Notice, MarkdownView } from 'obsidian';
 import { ChunkingFolderConfig } from '../../settings/settings';
 import { DocumentStructureService } from '../document/document-structure.service';
 import { HeaderNode, RootNode } from '../../models/interfaces';
+import { Chunk } from '../../models/chunk';
+import { ChunkHierarchyService } from './chunk-hierarchy.service';
 
 /**
  * Service dédié à la commande "Create Chunks".
@@ -35,11 +37,22 @@ export class EditorChunkingService {
             return;
         }
 
-        // Génère le markdown formaté pour chaque chunk
-        const mdChunks = results.map(({ file, root }) => {
-            const fileBlock = `\n---\n\n\`\`\`fichier\n${file.path}\n\`\`\`\n`;
-            const chunkMarkdown = this.docStructureService.renderToMarkdown(root);
-            return fileBlock + chunkMarkdown;
+        // Filtre les chunks selon les headings explicitement demandés dans la config
+        const chunkHierarchyService = new ChunkHierarchyService();
+        let chunks: Chunk[] = [];
+        for (const { file, root, heading } of results) {
+            const chunk = chunkHierarchyService.buildChunkWithHierarchy(file.path, root, heading);
+            if (typeof chunk.markdown === 'string' && chunk.markdown.trim().length > 0) {
+                chunks.push(chunk);
+            }
+        }
+
+        // Génère le markdown pour chaque chunk avec hiérarchie
+        const mdChunks = chunks.map(chunk => {
+            // Format hiérarchie
+            const hierarchyStr = chunk.hierarchy.map(lvl => `${lvl.type}: ${lvl.name}`).join(' > ');
+            const fileBlock = `\n---\n\n\`\`\`fichier\n${hierarchyStr}\n\`\`\`\n`;
+            return fileBlock + chunk.markdown;
         });
         const finalContent = mdChunks.join('\n');
 
@@ -51,7 +64,7 @@ export class EditorChunkingService {
             editor.replaceRange(finalContent, { line: editor.lastLine(), ch: 0 });
         }
 
-        new Notice(`${results.length} chunks insérés dans la note active.`);
+        new Notice(`${chunks.length} chunks insérés dans la note active.`);
     }
 
 
@@ -76,16 +89,18 @@ export class EditorChunkingService {
                 for (const heading of config.headings) {
                     const node = this.docStructureService.findFirstNodeMatchingHeading(fileRoot.root, heading);
                     if (node) {
-                        // On place le contenu et les sous-headings du heading dans un RootNode
-                        const root: RootNode = {
-                            content: node.content,
-                            children: node.children
-                        };
-                        results.push({ file, heading, root });
+                        results.push({ file, heading, root: fileRoot.root });
                     }
                 }
             }
         }
         return results;
     }
+
+
+
+    /**
+     * Construit un Chunk avec hiérarchie complète à partir de file, root, heading
+     */
+
 }
