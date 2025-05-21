@@ -477,10 +477,11 @@ export class SettingsTab extends PluginSettingTab {
 
             // Headings (champ texte, headings séparés par des virgules)
             setting.addTextArea(text => {
-                text.setPlaceholder('Heading 1, Heading 2, ...')
-                    .setValue(chunkConfig.headings.join(', '))
+                text.setPlaceholder('(optionnel) : liste de heading séparés par des virgules')
+                    .setValue(Array.isArray(chunkConfig.headings) ? chunkConfig.headings.join(', ') : '')
                     .onChange(async (value) => {
-                        chunkConfig.headings = value.split(',').map(s => s.trim()).filter(Boolean);
+                        const trimmed = value.split(',').map(s => s.trim()).filter(Boolean);
+                        chunkConfig.headings = trimmed.length > 0 ? trimmed : undefined;
                         await this.plugin.saveSettings();
                     });
                 text.inputEl.rows = 2;
@@ -505,7 +506,7 @@ export class SettingsTab extends PluginSettingTab {
                 btn.setButtonText('Add Folder + Headings')
                     .setCta()
                     .onClick(async () => {
-                        this.plugin.settings.chunkingFolders.push({ folder: '', headings: [] });
+                        this.plugin.settings.chunkingFolders.push({ folder: '', headings: undefined });
                         await this.plugin.saveSettings();
                         this.display();
                     });

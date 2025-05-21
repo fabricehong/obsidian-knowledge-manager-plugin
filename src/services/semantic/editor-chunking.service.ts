@@ -84,15 +84,19 @@ export class EditorChunkingService {
             );
             for (const file of files) {
                 const fileRoot = await this.docStructureService.buildHeaderTree(this.app, file);
-                for (const heading of config.headings) {
-                    const node = this.docStructureService.findFirstNodeMatchingHeading(fileRoot.root, heading);
-                    if (node) {
-                        // Convertit le HeaderNode en RootNode
-                        const root: RootNode = {
-                            content: node.content,
-                            children: node.children
-                        };
-                        results.push({ file, root });
+                if (!config.headings) {
+                    results.push({ file, root: fileRoot.root });
+                } else {
+                    for (const heading of config.headings) {
+                        const node = this.docStructureService.findFirstNodeMatchingHeading(fileRoot.root, heading);
+                        if (node) {
+                            // Convertit le HeaderNode en RootNode
+                            const root: RootNode = {
+                                content: node.content,
+                                children: node.children
+                            };
+                            results.push({ file, root });
+                        }
                     }
                 }
             }

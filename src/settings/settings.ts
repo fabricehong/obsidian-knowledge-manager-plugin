@@ -22,7 +22,10 @@ export interface RootNode {
 
 export interface ChunkingFolderConfig {
     folder: string; // chemin du dossier obsidian
-    headings: string[]; // liste de headings à extraire
+    /**
+     * Liste de headings à extraire. Si non défini, tout le fichier est chunké.
+     */
+    headings?: string[];
 }
 
 export interface PluginSettings {
