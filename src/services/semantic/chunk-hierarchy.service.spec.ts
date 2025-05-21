@@ -29,13 +29,12 @@ describe('ChunkHierarchyService', () => {
                 }
             ]
         };
-        const chunk = service.buildChunkWithHierarchy(
-            'notes/projets/ProjetX.md',
-            root, // passer le RootNode racine
-            'Détail'
-        );
-        expect(chunk.markdown).toBe('Contenu du chunk');
-        expect(chunk.hierarchy).toEqual([
+        const chunks = service.buildChunksWithHierarchy('notes/projets/ProjetX.md', root);
+        // On cherche le chunk dont la hiérarchie se termine par 'Détail'
+        const chunkDetail = chunks.find(chunk => chunk.markdown === 'Contenu du chunk');
+        expect(chunkDetail).toBeDefined();
+        expect(chunkDetail!.markdown).toBe('Contenu du chunk');
+        expect(chunkDetail!.hierarchy).toEqual([
             { name: 'notes', type: ChunkHierarchyType.Directory },
             { name: 'projets', type: ChunkHierarchyType.Directory },
             { name: 'ProjetX', type: ChunkHierarchyType.File },
@@ -83,9 +82,19 @@ describe('ChunkHierarchyService', () => {
                 }
             ]
         };
-        const chunks = service.buildAllChunksWithHierarchy(root, 'truc/file.md');
-        expect(chunks).toHaveLength(2);
-        expect(chunks[0]).toEqual({
+        const chunks = service.buildChunksWithHierarchy('truc/file.md', root);
+        expect(chunks).toHaveLength(3);
+        // Le chunk intermédiaire
+        expect(chunks).toContainEqual({
+            markdown: 'Contenu INTERMEDIAIRE',
+            hierarchy: [
+                { name: 'truc', type: ChunkHierarchyType.Directory },
+                { name: 'file', type: ChunkHierarchyType.File },
+                { name: 'Header 1', type: ChunkHierarchyType.Header }
+            ]
+        });
+        // Le chunk feuille A
+        expect(chunks).toContainEqual({
             markdown: 'Contenu A',
             hierarchy: [
                 { name: 'truc', type: ChunkHierarchyType.Directory },
@@ -94,7 +103,8 @@ describe('ChunkHierarchyService', () => {
                 { name: 'Feuille A', type: ChunkHierarchyType.Header }
             ]
         });
-        expect(chunks[1]).toEqual({
+        // Le chunk feuille B
+        expect(chunks).toContainEqual({
             markdown: 'Contenu B',
             hierarchy: [
                 { name: 'truc', type: ChunkHierarchyType.Directory },
@@ -139,22 +149,9 @@ describe('ChunkHierarchyService', () => {
             ]
         };
         // Collecte toutes les feuilles finales avec contenu
-        function collectLeafHeaders(node: RootNode | HeaderNode): HeaderNode[] {
-            if ('children' in node && node.children.length > 0) {
-                return node.children.flatMap(collectLeafHeaders);
-            }
-            return node.content ? [node as HeaderNode] : [];
-        }
-        const leaves = collectLeafHeaders(root);
-        // Pour chaque feuille, construit le chunk
-        const chunks = leaves.map(header =>
-            service.buildChunkWithHierarchy(
-                'truc/file.md',
-                root,
-                header.heading
-            )
-        );
-        expect(chunks).toHaveLength(2);
+        // Teste le chunking sur tout l'arbre
+        const chunks = service.buildChunksWithHierarchy('truc/file.md', root);
+        // Chunk feuille A
         expect(chunks[0]).toEqual({
             markdown: 'Contenu A',
             hierarchy: [
@@ -164,6 +161,7 @@ describe('ChunkHierarchyService', () => {
                 { name: 'Feuille A', type: ChunkHierarchyType.Header }
             ]
         });
+        // Chunk feuille B
         expect(chunks[1]).toEqual({
             markdown: 'Contenu B',
             hierarchy: [
@@ -216,10 +214,8 @@ describe('ChunkHierarchyService', () => {
             ]
         };
         // On simule la sélection du heading "Résumé" dans la config
-        // On chunk toutes les feuilles atomiques SOUS ce heading
         const resumeNode = root.children.find(child => child.heading === 'Résumé');
-        const chunks = service.buildAllChunksWithHierarchy(resumeNode!, 'notes/fichier.md');
-    
+        const chunks = service.buildChunksWithHierarchy('notes/fichier.md', resumeNode!);
         expect(chunks).toHaveLength(2);
         expect(chunks[0]).toEqual({
             markdown: 'Texte résumé 1',

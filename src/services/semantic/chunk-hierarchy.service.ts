@@ -12,11 +12,10 @@ export class ChunkHierarchyService {
      * @param heading Le heading cible
      * @param renderToMarkdown Fonction pour transformer le RootNode en markdown
      */
-    buildChunkWithHierarchy(
+    buildChunksWithHierarchy(
         filePath: string,
-        root: RootNode,
-        heading: string
-    ): Chunk {
+        root: RootNode | HeaderNode
+    ): Chunk[] {
         // 1. Hiérarchie filesystem
         const pathParts = filePath.split('/');
         const fileNameWithExt = pathParts.pop()!;
@@ -24,67 +23,33 @@ export class ChunkHierarchyService {
         const directories = pathParts.map(name => ({ name, type: ChunkHierarchyType.Directory }));
         const fileLevel: ChunkHierarchyLevel = { name: fileName, type: ChunkHierarchyType.File };
 
-        // 2. Recherche du header cible et de son chemin (DFS)
-        function dfs(node: HeaderNode, path: string[]): { node: HeaderNode, path: string[] } | null {
-            const newPath = [...path, node.heading];
-            if (node.heading === heading) {
-                return { node, path: newPath };
+        // Parcours récursif de l'arbre : à chaque noeud avec du contenu (non vide), crée un chunk
+        function collectChunks(node: HeaderNode | RootNode, parentHeaders: string[]): Chunk[] {
+            let chunks: Chunk[] = [];
+            // Détection robuste d'un HeaderNode
+            const isHeaderNode = Object.prototype.hasOwnProperty.call(node, 'heading');
+            const currentHeaders = isHeaderNode
+                ? [...parentHeaders, (node as HeaderNode).heading]
+                : parentHeaders;
+            if (typeof node.content === 'string' && node.content.trim().length > 0) {
+                // Crée un chunk pour ce noeud avec toute la hiérarchie de headers parents + heading courant
+                const headerLevels = isHeaderNode
+                    ? [...parentHeaders, (node as HeaderNode).heading].map(h => ({ name: h, type: ChunkHierarchyType.Header }))
+                    : parentHeaders.map(h => ({ name: h, type: ChunkHierarchyType.Header }));
+                chunks.push({
+                    markdown: node.content,
+                    hierarchy: [...directories, fileLevel, ...headerLevels]
+                });
             }
-            for (const child of node.children) {
-                const found = dfs(child, newPath);
-                if (found) return found;
-            }
-            return null;
-        }
-        let found: { node: HeaderNode, path: string[] } | null = null;
-        for (const child of root.children) {
-            found = dfs(child, []);
-            if (found) break;
-        }
-        // 3. Si trouvé, construit la hiérarchie complète
-        let headerLevels: ChunkHierarchyLevel[] = [];
-        let markdown = '';
-        if (found) {
-            headerLevels = found.path.map(h => ({ name: h, type: ChunkHierarchyType.Header }));
-            markdown = found.node.content;
-        }
-        // 4. Retourne le chunk
-        return {
-            markdown,
-            hierarchy: [...directories, fileLevel, ...headerLevels]
-        };
-    }
-
-    /**
-     * Retourne le chemin des headings parents (du root jusqu'au heading cible) dans un RootNode
-     */
-    /**
-     * Retourne tous les chunks atomiques du document, avec leur hiérarchie complète.
-     */
-    buildAllChunksWithHierarchy(root: RootNode, filePath: string): Chunk[] {
-        // Collecte toutes les feuilles finales avec contenu
-        function collectLeafHeaders(node: RootNode | HeaderNode): HeaderNode[] {
-            // On ne retient que les feuilles (pas d'enfants) ET qui ont du contenu
             if ('children' in node && node.children.length > 0) {
-                return node.children.flatMap(collectLeafHeaders);
+                for (const child of node.children) {
+                    chunks = chunks.concat(collectChunks(child, currentHeaders));
+                }
             }
-            if (typeof node.content === 'string' && node.content.trim().length > 0 && (!('children' in node) || node.children.length === 0)) {
-                return [node as HeaderNode];
-            }
-            return [];
+            return chunks;
         }
-        const leaves = collectLeafHeaders(root);
-        console.warn('[buildAllChunksWithHierarchy] feuilles collectées:', leaves.length);
-        leaves.forEach((leaf, i) => {
-            console.warn(`[buildAllChunksWithHierarchy] feuille[${i}] heading="${leaf.heading}" content="${(leaf.content ?? '').replace(/\n/g, '\\n')}" content.trim="${(leaf.content ?? '').trim().replace(/\n/g, '\\n')}"`);
-        });
-        const chunks = leaves
-            .map(header => this.buildChunkWithHierarchy(filePath, root, header.heading))
-            .filter(chunk => typeof chunk.markdown === 'string' && chunk.markdown.trim().length > 0);
-        console.log('[buildAllChunksWithHierarchy] chunks retenus:', chunks.length);
-        chunks.forEach((chunk, i) => {
-            console.log(`[buildAllChunksWithHierarchy] chunk[${i}] markdown="${chunk.markdown.replace(/\n/g, '\\n')}" hierarchy=`, chunk.hierarchy);
-        });
+        const path: string[] = [];
+        const chunks = collectChunks(root, path);
         return chunks;
 
     }

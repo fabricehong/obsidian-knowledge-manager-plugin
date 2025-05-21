@@ -1,7 +1,7 @@
 import { App, TFile, Notice, MarkdownView } from 'obsidian';
 import { ChunkingFolderConfig } from '../../settings/settings';
 import { DocumentStructureService } from '../document/document-structure.service';
-import { HeaderNode, RootNode } from '../../models/interfaces';
+import { HeaderNode, RootNode, FileRootNode } from '../../models/interfaces';
 import { Chunk } from '../../models/chunk';
 import { ChunkHierarchyService } from './chunk-hierarchy.service';
 
@@ -37,14 +37,12 @@ export class EditorChunkingService {
             return;
         }
 
-        // Filtre les chunks selon les headings explicitement demandés dans la config
+        // Construit tous les chunks à partir de chaque node trouvé
         const chunkHierarchyService = new ChunkHierarchyService();
         let chunks: Chunk[] = [];
-        for (const { file, root, heading } of results) {
-            const chunk = chunkHierarchyService.buildChunkWithHierarchy(file.path, root, heading);
-            if (typeof chunk.markdown === 'string' && chunk.markdown.trim().length > 0) {
-                chunks.push(chunk);
-            }
+        for (const { file, root } of results) {
+            const fileChunks = chunkHierarchyService.buildChunksWithHierarchy(file.path, root);
+            chunks = chunks.concat(fileChunks);
         }
 
         // Génère le markdown pour chaque chunk avec hiérarchie
@@ -73,11 +71,11 @@ export class EditorChunkingService {
      * et extrait les headings demandés.
      *
      * @param configs Configuration chunkingFolders
-     * @returns Tableau d'objets { file, heading, node }
+     * @returns Tableau d'objets { file, root }
      */
-    async collectChunksFromFolders(configs: ChunkingFolderConfig[]): Promise<Array<{ file: TFile, heading: string, root: RootNode }>> {
+    async collectChunksFromFolders(configs: ChunkingFolderConfig[]): Promise<FileRootNode[]> {
         const vault = this.app.vault;
-        const results: Array<{ file: TFile, heading: string, root: RootNode }> = [];
+        const results: { file: TFile, root: RootNode }[] = [];
 
         for (const config of configs) {
             // Récupère tous les fichiers markdown du dossier
@@ -89,7 +87,12 @@ export class EditorChunkingService {
                 for (const heading of config.headings) {
                     const node = this.docStructureService.findFirstNodeMatchingHeading(fileRoot.root, heading);
                     if (node) {
-                        results.push({ file, heading, root: fileRoot.root });
+                        // Convertit le HeaderNode en RootNode
+                        const root: RootNode = {
+                            content: node.content,
+                            children: node.children
+                        };
+                        results.push({ file, root });
                     }
                 }
             }
