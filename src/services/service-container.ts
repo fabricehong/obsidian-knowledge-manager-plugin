@@ -44,8 +44,12 @@ import { EditorSpeakerDescriptionService } from './speaker-description/editor-sp
 import { LangChain2Service } from './others/LangChain2.service';
 import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
 import KnowledgeManagerPlugin from '../main';
+import { EditorChunkingService } from './semantic/editor-chunking.service';
+import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
 
 export class ServiceContainer {
+    public readonly editorChunkingService: EditorChunkingService;
+    public readonly editorChunkInsertionService: EditorChunkInsertionService;
     public readonly documentStructureService: DocumentStructureService;
     public readonly yamlReplacementService: YamlService<ReplacementSpecs>;
     public readonly yamlVocabularyService: YamlService<VocabularySpecs>;
@@ -270,5 +274,9 @@ export class ServiceContainer {
             this.speakerDescriptionService
         );
         this.langChain2Service = new LangChain2Service();
+
+        // Ajout des services de chunking et d'insertion de chunk
+        this.editorChunkingService = new EditorChunkingService(this.app);
+        this.editorChunkInsertionService = new EditorChunkInsertionService(this.app);
     }
 }

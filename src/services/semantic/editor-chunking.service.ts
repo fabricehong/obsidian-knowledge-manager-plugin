@@ -20,49 +20,20 @@ export class EditorChunkingService {
     }
 
     /**
-     * Insère dans le fichier actif les chunks parsés depuis la config.
-     * Chaque chunk est converti en markdown puis inséré à la position du curseur (ou à la fin).
+     * Retourne les chunks parsés depuis la config, sans insertion ni génération markdown.
      */
-    async insertChunksInActiveFile(configs: ChunkingFolderConfig[]): Promise<void> {
-        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        const editor = markdownView?.editor;
-        if (!editor) {
-            new Notice('Aucun fichier markdown actif pour insérer les chunks.');
-            return;
-        }
-
+    async getChunksFromConfigs(configs: ChunkingFolderConfig[]): Promise<Chunk[]> {
         const results = await this.collectChunksFromFolders(configs);
         if (!results.length) {
-            new Notice('Aucun chunk à insérer.');
-            return;
+            return [];
         }
-
-        // Construit tous les chunks à partir de chaque node trouvé
         const chunkHierarchyService = new ChunkHierarchyService();
         let chunks: Chunk[] = [];
         for (const { file, root } of results) {
             const fileChunks = chunkHierarchyService.buildChunksWithHierarchy(file.path, root);
             chunks = chunks.concat(fileChunks);
         }
-
-        // Génère le markdown pour chaque chunk avec hiérarchie
-        const mdChunks = chunks.map(chunk => {
-            // Format hiérarchie
-            const hierarchyStr = chunk.hierarchy.map(lvl => `${lvl.type}: ${lvl.name}`).join(' > ');
-            const fileBlock = `\n---\n\n\`\`\`fichier\n${hierarchyStr}\n\`\`\`\n`;
-            return fileBlock + chunk.markdown;
-        });
-        const finalContent = mdChunks.join('\n');
-
-        // Insère à la position du curseur (ou à la fin)
-        const pos = editor.getCursor ? editor.getCursor() : undefined;
-        if (pos) {
-            editor.replaceRange(finalContent, pos);
-        } else {
-            editor.replaceRange(finalContent, { line: editor.lastLine(), ch: 0 });
-        }
-
-        new Notice(`${chunks.length} chunks insérés dans la note active.`);
+        return chunks;
     }
 
 
