@@ -1,7 +1,7 @@
 /**
  * Service de multi-recherche sémantique (comparaison de résultats sur plusieurs combinaisons).
  */
-import { ChunkTransformTechnique } from "../chunk-transform/ChunkTransformTechnique";
+import { ChunkTransformTechnique } from "../indexing/ChunkTransformTechnique";
 import { VectorStoreType } from "../vector-store/VectorStoreType";
 import { SearchResult } from "./SemanticSearchService";
 

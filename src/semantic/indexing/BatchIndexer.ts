@@ -3,7 +3,7 @@
  * Travaille via les interfaces abstraites.
  */
 import { Chunk } from "../../models/chunk";
-import { ChunkTransformService } from "../chunk-transform/ChunkTransformService";
+import { ChunkTransformService } from "./ChunkTransformService";
 import { VectorStore } from "../vector-store/VectorStore";
 
 export interface BatchIndexer {
