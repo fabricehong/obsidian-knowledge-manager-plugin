@@ -7,7 +7,8 @@ import { VectorStoreType } from "./VectorStoreType";
 
 export interface IndexableChunk {
   chunk: Chunk;
-  text: string;
+  pageContent: string;
+  technique: any; // à typer selon le projet
 }
 
 export interface VectorStore {
@@ -18,4 +19,9 @@ export interface VectorStore {
    * @param collection nom de la collection/namespace
    */
   indexBatch(items: IndexableChunk[], collection: string): Promise<void>;
+
+  /**
+   * Recherche sémantique dans le vector store/collection
+   */
+  search(query: string, topK: number, collection: string): Promise<any[]>;
 }

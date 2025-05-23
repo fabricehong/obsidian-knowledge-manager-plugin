@@ -22,8 +22,6 @@ import { ReplacementSpecs, ReplacementSpecsSchema, VocabularySpecSchema, Vocabul
 import { TranscriptFileService } from './transcription-section/transcript-file.service';
 import { NoteSummarizationService } from './others/note-summarization.service';
 import { DocumentStructureService } from './document/document-structure.service';
-import { LLMCompletionService } from './llm/llm-completion.service';
-import { OpenAIModelService } from './llm/openai-model.service';
 import { ReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/replacement-specs-integration.service';
 import { TaggedFilesService } from './document/tagged-files.service';
 import { EditorReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/editor-replacement-specs-integration.service';
@@ -44,8 +42,13 @@ import { EditorSpeakerDescriptionService } from './speaker-description/editor-sp
 import { LangChain2Service } from './others/LangChain2.service';
 import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
 import KnowledgeManagerPlugin from '../main';
+import { MultiTechniqueIndexerImpl } from '../semantic/indexing/MultiTechniqueIndexerImpl';
+import { Papa } from 'papa-ts';
+import { LangChainMemoryVectorStore } from '../semantic/vector-store/LangChainMemoryVectorStore';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
 import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
+import { OpenAIModelService } from './llm/openai-model.service';
+import { OpenAIEmbeddings } from '@langchain/openai';
 
 export class ServiceContainer {
     public readonly editorChunkingService: EditorChunkingService;
@@ -90,6 +93,11 @@ export class ServiceContainer {
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
     public readonly langChain2Service: LangChain2Service;
+    public readonly multiTechniqueIndexer: MultiTechniqueIndexerImpl;
+    public readonly papa: Papa;
+    public readonly langChainMemoryVectorStore: LangChainMemoryVectorStore;
+    // Ajouter d'autres VectorStore mémoire ici si besoin
+
 
     constructor(private app: App, settings: PluginSettings, private plugin: KnowledgeManagerPlugin) {
         // Services sans dépendances
@@ -147,6 +155,10 @@ export class ServiceContainer {
 
         this.openAIModelService = new OpenAIModelService();
         this.openAIModelService.initialize(organization.apiKey);
+        // Pour LangChain (OpenAIEmbeddings), on définit l'API key globalement
+        if (organization.apiKey) {
+            process.env.OPENAI_API_KEY = organization.apiKey;
+        }
 
         /*
         this.aiCompletionService = new LLMCompletionService({
@@ -274,6 +286,23 @@ export class ServiceContainer {
             this.speakerDescriptionService
         );
         this.langChain2Service = new LangChain2Service();
+        this.multiTechniqueIndexer = new MultiTechniqueIndexerImpl();
+
+        
+        // Instanciation unique de Papa (partagée)
+        this.papa = new Papa();
+        // Initialisation de Papa avec les bons modèles
+
+        // Initialisation synchrone (à adapter si besoin d'async)
+        // Exemple : VectorStore mémoire OpenAI (ne reçoit QUE l'instance papa déjà initialisée)
+        const embeddings = new OpenAIEmbeddings({ openAIApiKey: organization.apiKey });
+        this.langChainMemoryVectorStore = new LangChainMemoryVectorStore(embeddings);
+        // Pour Ollama :
+        // this.papaMemoryVectorStoreOllama = new PapaMemoryVectorStore(
+        //     this.papa,
+        //     OllamaEmbedModel.NOMIC_EMBED_TEXT,
+        //     OllamaGenModel.LLAMA2
+        // );
 
         // Ajout des services de chunking et d'insertion de chunk
         this.editorChunkingService = new EditorChunkingService(this.app);

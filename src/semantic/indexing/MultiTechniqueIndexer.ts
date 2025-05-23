@@ -9,7 +9,7 @@ export interface MultiTechniqueEvaluator {
   /**
    * Orchestration de l'indexation multi-techniques/multi-stores.
    */
-  evaluate(
+  indexBatch(
     chunks: Chunk[],
     techniques: ChunkTransformService[],
     vectorStores: VectorStore[]

@@ -94,6 +94,19 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 }
             }
         });
+
+        // --- Commande Index Chunks ---
+        this.addCommand({
+            id: 'index-chunks',
+            name: 'Index Chunks (Semantic)',
+            callback: async () => {
+                try {
+                    await this.indexChunks();
+                } catch (error) {
+                    console.error('Erreur lors de l\'indexation des chunks:', error);
+                }
+            }
+        });
         await this.loadSettings();
         this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
         
@@ -542,6 +555,19 @@ export default class KnowledgeManagerPlugin extends Plugin {
         new Notice('Analyse des dossiers en cours...');
         const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
         this.serviceContainer.editorChunkInsertionService.insertChunksInActiveFile(chunks);
+    }
+
+    /**
+     * Indexe les chunks issus de la config, sans insertion ni feedback UI.
+     */
+    private async indexChunks() {
+        const configs = this.settings.chunkingFolders;
+        if (!configs || configs.length === 0) {
+            return;
+        }
+        const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
+        // TODO: Récupérer les vraies techniques et vectorStores selon la config utilisateur
+        await this.serviceContainer.multiTechniqueIndexer.indexBatch(chunks, [], []);
     }
 }
 
