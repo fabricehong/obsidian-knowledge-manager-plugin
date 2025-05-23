@@ -29,8 +29,8 @@ export class EditorChunkingService {
         }
         const chunkHierarchyService = new ChunkHierarchyService();
         let chunks: Chunk[] = [];
-        for (const { file, root } of results) {
-            const fileChunks = chunkHierarchyService.buildChunksWithHierarchy(file.path, root);
+        for (const { path, root } of results) {
+            const fileChunks = chunkHierarchyService.buildChunksWithHierarchy(path, root);
             chunks = chunks.concat(fileChunks);
         }
         return chunks;
@@ -40,13 +40,11 @@ export class EditorChunkingService {
     /**
      * Pour chaque dossier de la config, parcourt les fichiers markdown
      * et extrait les headings demandés.
-     *
-     * @param configs Configuration chunkingFolders
-     * @returns Tableau d'objets { file, root }
+     * Retourne un tableau d'objets { path, root }, où path est relatif à config.folder
      */
-    async collectChunksFromFolders(configs: ChunkingFolderConfig[]): Promise<FileRootNode[]> {
+    async collectChunksFromFolders(configs: ChunkingFolderConfig[]): Promise<{ path: string, root: RootNode }[]> {
         const vault = this.app.vault;
-        const results: { file: TFile, root: RootNode }[] = [];
+        const results: { path: string, root: RootNode }[] = [];
 
         for (const config of configs) {
             // Récupère tous les fichiers markdown du dossier
@@ -55,8 +53,12 @@ export class EditorChunkingService {
             );
             for (const file of files) {
                 const fileRoot = await this.docStructureService.buildHeaderTree(this.app, file);
+                // Calcule le chemin relatif au dossier de config
+                const relativePath = file.path.startsWith(config.folder)
+                    ? file.path.substring(config.folder.length).replace(/^\/+/, '')
+                    : file.path;
                 if (!config.headings) {
-                    results.push({ file, root: fileRoot.root });
+                    results.push({ path: relativePath, root: fileRoot.root });
                 } else {
                     for (const heading of config.headings) {
                         const node = this.docStructureService.findFirstNodeMatchingHeading(fileRoot.root, heading);
@@ -66,7 +68,7 @@ export class EditorChunkingService {
                                 content: node.content,
                                 children: node.children
                             };
-                            results.push({ file, root });
+                            results.push({ path: relativePath, root });
                         }
                     }
                 }
