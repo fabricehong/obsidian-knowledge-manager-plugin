@@ -6,6 +6,8 @@ import { FolderSuggestModal } from '@obsidian-utils/ui/folder-suggest-modal';
 import { TranscriptionModal } from './services/transcription/transcription-modal';
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
 import { LangChain2Service } from './services/others/LangChain2.service';
+import { ContextualizedChunkTransformService } from './semantic/indexing/ContextualizedChunkTransformService';
+import { IndexableChunk } from './semantic/indexing/IndexableChunk';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
@@ -554,7 +556,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
         new Notice('Analyse des dossiers en cours...');
         const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
-        this.serviceContainer.editorChunkInsertionService.insertChunksInActiveFile(chunks);
+        const contextualizedChunks: IndexableChunk[] = chunks.map(chunk => new ContextualizedChunkTransformService().transform(chunk));
+        this.serviceContainer.editorChunkInsertionService.insertChunksInActiveFile(contextualizedChunks);
     }
 
     /**

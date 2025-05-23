@@ -1,6 +1,7 @@
 import { Chunk } from "../../models/chunk";
 import { ChunkTransformService } from "./ChunkTransformService";
 import { ChunkTransformTechnique } from "./ChunkTransformTechnique";
+import { IndexableChunk } from "./IndexableChunk";
 
 /**
  * Transformation qui enrichit le markdown du chunk avec son contexte hiérarchique lisible.
@@ -12,7 +13,7 @@ import { ChunkTransformTechnique } from "./ChunkTransformTechnique";
 export class ContextualizedChunkTransformService implements ChunkTransformService {
   readonly technique = ChunkTransformTechnique.WITH_METADATA;
 
-  transform(chunk: Chunk) {
+  transform(chunk: Chunk): IndexableChunk {
     const path = chunk.hierarchy
       .map((level, i) => {
         switch (level.type) {
