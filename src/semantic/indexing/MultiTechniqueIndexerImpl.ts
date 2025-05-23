@@ -3,6 +3,10 @@ import { ChunkTransformService } from './ChunkTransformService';
 import { VectorStore } from '../vector-store/VectorStore';
 import { MultiTechniqueEvaluator } from './MultiTechniqueIndexer';
 import { BatchIndexerImpl } from './BatchIndexerImpl';
+import { IndexableChunk } from './IndexableChunk';
+
+// Nouveau type pour le mapping multi-technique
+export type BatchChunkTransformResult = Record<string, IndexableChunk[]>;
 
 /**
  * Implémentation concrète de MultiTechniqueEvaluator pour indexer toutes les combinaisons
@@ -10,20 +14,16 @@ import { BatchIndexerImpl } from './BatchIndexerImpl';
 export class MultiTechniqueIndexerImpl implements MultiTechniqueEvaluator {
   private batchIndexer = new BatchIndexerImpl();
 
-  async indexBatch(
+  async transformAllTechniques(
     chunks: Chunk[],
-    techniques: ChunkTransformService[],
-    vectorStores: VectorStore[]
-  ): Promise<void> {
-    // Pour chaque combinaison technique/store, indexer en parallèle
-    const tasks: Promise<void>[] = [];
+    techniques: ChunkTransformService[]
+  ): Promise<BatchChunkTransformResult> {
+    const result: BatchChunkTransformResult = {};
     for (const technique of techniques) {
-      for (const vectorStore of vectorStores) {
-        tasks.push(
-          this.batchIndexer.indexBatch(chunks, technique, vectorStore)
-        );
-      }
+      result[technique.technique] = await this.batchIndexer.transformBatch(chunks, technique);
     }
-    await Promise.all(tasks);
+    return result;
   }
+
+  // L'indexation batch multi-vector store sera déléguée à un nouveau service dans l'étape suivante.
 }

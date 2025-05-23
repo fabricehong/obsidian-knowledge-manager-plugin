@@ -7,6 +7,8 @@ import { TranscriptionModal } from './services/transcription/transcription-modal
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
 import { LangChain2Service } from './services/others/LangChain2.service';
 import { ContextualizedChunkTransformService } from './semantic/indexing/ContextualizedChunkTransformService';
+import { SelectChunkTransformTechniqueModal } from './semantic/SelectChunkTransformTechniqueModal';
+import { ChunkTransformService } from './semantic/indexing/ChunkTransformService';
 import { IndexableChunk } from './semantic/indexing/IndexableChunk';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
@@ -85,11 +87,11 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
         // --- Commande Create Chunks ---
         this.addCommand({
-            id: 'create-chunks',
-            name: 'Create Chunks',
+            id: 'print-indexable-chunks',
+            name: 'Print Indexable Chunks',
             callback: async () => {
                 try {
-                    await this.createChunksInActiveFile();
+                    await this.printIndexableChunksInActiveFile();
                 } catch (error) {
                     console.error('Erreur lors de la création des chunks:', error);
                     new Notice('Erreur lors de la création des chunks. Voir la console pour plus de détails.');
@@ -548,7 +550,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
     /**
      * Crée les chunks à partir de la config et les insère dans le fichier actif.
      */
-    async createChunksInActiveFile() {
+    async printIndexableChunksInActiveFile() {
         const configs = this.settings.chunkingFolders;
         if (!configs || configs.length === 0) {
             new Notice('Aucune configuration de dossiers pour Create Chunks.');
@@ -556,8 +558,16 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
         new Notice('Analyse des dossiers en cours...');
         const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
-        const contextualizedChunks: IndexableChunk[] = chunks.map(chunk => new ContextualizedChunkTransformService().transform(chunk));
-        this.serviceContainer.editorChunkInsertionService.insertChunksInActiveFile(contextualizedChunks);
+        
+        // Sélection de la technique via une modale
+        const techniques = this.serviceContainer.chunkTransformServices;
+        await new Promise<void>((resolve) => {
+            new SelectChunkTransformTechniqueModal(this.app, techniques, (selectedTechnique: ChunkTransformService) => {
+                const indexableChunks: IndexableChunk[] = chunks.map(chunk => selectedTechnique.transform(chunk));
+                this.serviceContainer.editorChunkInsertionService.insertChunksInActiveFile(indexableChunks);
+                resolve();
+            }).open();
+        });
     }
 
     /**
@@ -570,7 +580,11 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
         const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
         // TODO: Récupérer les vraies techniques et vectorStores selon la config utilisateur
-        await this.serviceContainer.multiTechniqueIndexer.indexBatch(chunks, [], []);
+        // TODO: Récupérer les vraies techniques et vectorStores selon la config utilisateur
+        const techniques = this.serviceContainer.chunkTransformServices;
+        const vectorStores = this.serviceContainer.vectorStores;
+        const transformed = await this.serviceContainer.multiTechniqueIndexer.transformAllTechniques(chunks, techniques);
+        await this.serviceContainer.batchIndexableChunkIndexer.indexTransformedChunks(transformed, vectorStores);
     }
 }
 

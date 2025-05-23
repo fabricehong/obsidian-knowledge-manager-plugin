@@ -6,13 +6,15 @@ import { Chunk } from "../../models/chunk";
 import { ChunkTransformService } from "./ChunkTransformService";
 import { VectorStore } from "../vector-store/VectorStore";
 
+import { IndexableChunk } from './IndexableChunk';
+
 export interface BatchIndexer {
   /**
-   * Transforme et indexe un batch de chunks via une technique et un vector store donnés.
+   * Transforme un batch de chunks via une technique donnée.
    */
-  indexBatch(
+  transformBatch(
     chunks: Chunk[],
-    technique: ChunkTransformService,
-    vectorStore: VectorStore
-  ): Promise<void>;
+    technique: ChunkTransformService
+  ): Promise<IndexableChunk[]>;
 }
+

@@ -4,14 +4,16 @@
 import { Chunk } from "../../models/chunk";
 import { ChunkTransformService } from "./ChunkTransformService";
 import { VectorStore } from "../vector-store/VectorStore";
+import { IndexableChunk } from './IndexableChunk';
+
+export type BatchChunkTransformResult = Record<string, IndexableChunk[]>;
 
 export interface MultiTechniqueEvaluator {
   /**
    * Orchestration de l'indexation multi-techniques/multi-stores.
    */
-  indexBatch(
+  transformAllTechniques(
     chunks: Chunk[],
-    techniques: ChunkTransformService[],
-    vectorStores: VectorStore[]
-  ): Promise<void>;
+    techniques: ChunkTransformService[]
+  ): Promise<BatchChunkTransformResult>;
 }

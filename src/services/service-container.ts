@@ -43,6 +43,10 @@ import { LangChain2Service } from './others/LangChain2.service';
 import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
 import KnowledgeManagerPlugin from '../main';
 import { MultiTechniqueIndexerImpl } from '../semantic/indexing/MultiTechniqueIndexerImpl';
+import { BatchIndexableChunkIndexerImpl } from '../semantic/indexing/BatchIndexableChunkIndexerImpl';
+import { ChunkTransformService } from '../semantic/indexing/ChunkTransformService';
+import { VectorStore } from '../semantic/vector-store/VectorStore';
+import { ContextualizedChunkTransformService } from '../semantic/indexing/ContextualizedChunkTransformService';
 import { Papa } from 'papa-ts';
 import { LangChainMemoryVectorStore } from '../semantic/vector-store/LangChainMemoryVectorStore';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
@@ -94,6 +98,9 @@ export class ServiceContainer {
     private readonly textCorrector: TextCorrector;
     public readonly langChain2Service: LangChain2Service;
     public readonly multiTechniqueIndexer: MultiTechniqueIndexerImpl;
+    public readonly batchIndexableChunkIndexer: BatchIndexableChunkIndexerImpl;
+    public readonly chunkTransformServices: ChunkTransformService[];
+    public readonly vectorStores: VectorStore[];
     public readonly papa: Papa;
     public readonly langChainMemoryVectorStore: LangChainMemoryVectorStore;
     // Ajouter d'autres VectorStore mémoire ici si besoin
@@ -287,7 +294,17 @@ export class ServiceContainer {
         );
         this.langChain2Service = new LangChain2Service();
         this.multiTechniqueIndexer = new MultiTechniqueIndexerImpl();
-
+        this.batchIndexableChunkIndexer = new BatchIndexableChunkIndexerImpl();
+        // Liste des techniques de transformation disponibles (à enrichir selon besoins)
+        this.chunkTransformServices = [
+            new ContextualizedChunkTransformService(),
+            // Ajouter d'autres implémentations ici
+        ];
+        // Liste des vector stores disponibles (à enrichir selon besoins)
+        this.vectorStores = [
+            this.langChainMemoryVectorStore,
+            // Ajouter d'autres VectorStore ici
+        ];
         
         // Instanciation unique de Papa (partagée)
         this.papa = new Papa();

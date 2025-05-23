@@ -7,12 +7,14 @@ import { BatchIndexer } from './BatchIndexer';
 /**
  * Implémentation concrète de BatchIndexer pour orchestrer la transformation et l'indexation
  */
+// Pour la prochaine étape :
+// export type BatchChunkTransformResult = Record<ChunkTransformTechnique, IndexableChunk[]>;
+
 export class BatchIndexerImpl implements BatchIndexer {
-  async indexBatch(
+  async transformBatch(
     chunks: Chunk[],
-    technique: ChunkTransformService,
-    vectorStore: VectorStore
-  ): Promise<void> {
+    technique: ChunkTransformService
+  ): Promise<IndexableChunk[]> {
     // Transforme les chunks en texte indexable
     const indexableChunks: IndexableChunk[] = await Promise.all(
       chunks.map(async (chunk) => {
@@ -20,8 +22,7 @@ export class BatchIndexerImpl implements BatchIndexer {
         return transformed;
       })
     );
-    // Indexe le batch dans le vector store
-    const collection = technique.technique; // ou nommage explicite si besoin
-    await vectorStore.indexBatch(indexableChunks, collection);
+    return indexableChunks;
   }
 }
+
