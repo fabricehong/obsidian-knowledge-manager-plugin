@@ -37,4 +37,34 @@ export class EditorChunkInsertionService {
         }
         new Notice(`${chunks.length} chunks insérés dans la note active.`);
     }
+
+    /**
+     * Insère dans le fichier actif un tableau d'objets JSON (ex : documents vector store).
+     * Chaque objet est cloné, la propriété 'embedding' est supprimée, puis inséré sous forme de bloc de code JSON, séparé par '---'.
+     */
+    insertJsonObjectsInActiveFile(objects: any[]): void {
+        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        const editor = markdownView?.editor;
+        if (!editor) {
+            new Notice('Aucun fichier markdown actif pour insérer les documents.');
+            return;
+        }
+        if (!objects.length) {
+            new Notice('Aucun document à insérer.');
+            return;
+        }
+        const mdBlocks = objects.map(obj => {
+            // Clone l'objet pour ne pas modifier l'original
+            const clone = JSON.parse(JSON.stringify(obj));
+            delete clone.embedding;
+            return '```json\n' + JSON.stringify(clone, null, 2) + '\n```';
+        });
+        const finalContent = mdBlocks.join('\n\n---\n\n');
+        const pos = editor.getCursor ? editor.getCursor() : undefined;
+        if (pos) {
+            editor.replaceRange(finalContent, pos);
+        } else {
+            editor.replaceRange(finalContent, { line: editor.lastLine(), ch: 0 });
+        }
+    }
 }

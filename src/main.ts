@@ -492,6 +492,23 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
+        // Commande pour afficher tous les documents du vector store mémoire
+        this.addCommand({
+            id: 'vector-store:print-all-documents',
+            name: 'Afficher tous les documents du vector store mémoire',
+            callback: () => {
+                // On prend le premier vector store mémoire disponible
+                const memoryStore = this.serviceContainer.vectorStores.find(vs => typeof (vs as any).getAllDocuments === 'function');
+                if (!memoryStore) {
+                    new Notice('Aucun vector store mémoire trouvé.');
+                    return;
+                }
+                const docs = (memoryStore as any).getAllDocuments();
+                new Notice(`Insertion de ${docs.length} document(s) dans la note active...`);
+                this.serviceContainer.editorChunkInsertionService.insertJsonObjectsInActiveFile(docs);
+            }
+        });
+
         // Add quick LLM configuration switch command
         this.addCommand({
             id: 'llm:select-model',
@@ -579,12 +596,22 @@ export default class KnowledgeManagerPlugin extends Plugin {
             return;
         }
         const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
-        // TODO: Récupérer les vraies techniques et vectorStores selon la config utilisateur
-        // TODO: Récupérer les vraies techniques et vectorStores selon la config utilisateur
         const techniques = this.serviceContainer.chunkTransformServices;
         const vectorStores = this.serviceContainer.vectorStores;
         const transformed = await this.serviceContainer.multiTechniqueIndexer.transformAllTechniques(chunks, techniques);
-        await this.serviceContainer.batchIndexableChunkIndexer.indexTransformedChunks(transformed, vectorStores);
+        try {
+            await this.serviceContainer.batchIndexableChunkIndexer.indexTransformedChunks(transformed, vectorStores);
+            new Notice("Indexation terminée avec succès !");
+        } catch (error: any) {
+            console.error("Erreur lors de l'indexation des chunks :", error);
+            new Notice("Erreur lors de l'indexation (voir la console pour le détail).");
+        }
     }
 }
+
+// Suppression des méthodes dupliquées hors classe. Les méthodes suivantes doivent exister UNE SEULE FOIS dans la classe KnowledgeManagerPlugin :
+// - setStatusBarText
+// - printIndexableChunksInActiveFile
+// - indexChunks
+// Fin du nettoyage hors classe.
 

@@ -300,12 +300,6 @@ export class ServiceContainer {
             new ContextualizedChunkTransformService(),
             // Ajouter d'autres implémentations ici
         ];
-        // Liste des vector stores disponibles (à enrichir selon besoins)
-        this.vectorStores = [
-            this.langChainMemoryVectorStore,
-            // Ajouter d'autres VectorStore ici
-        ];
-        
         // Instanciation unique de Papa (partagée)
         this.papa = new Papa();
         // Initialisation de Papa avec les bons modèles
@@ -320,6 +314,12 @@ export class ServiceContainer {
         //     OllamaEmbedModel.NOMIC_EMBED_TEXT,
         //     OllamaGenModel.LLAMA2
         // );
+
+        // Liste des vector stores disponibles (à enrichir selon besoins)
+        this.vectorStores = [
+            this.langChainMemoryVectorStore,
+            // Ajouter d'autres VectorStore ici
+        ];
 
         // Ajout des services de chunking et d'insertion de chunk
         this.editorChunkingService = new EditorChunkingService(this.app);

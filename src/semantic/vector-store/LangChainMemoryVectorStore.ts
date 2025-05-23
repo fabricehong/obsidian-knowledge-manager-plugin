@@ -30,4 +30,18 @@ export class LangChainMemoryVectorStore implements VectorStore {
       score: r.score || 1 // Adapter si LangChain fournit un score
     }));
   }
+
+  /**
+   * Retourne tous les documents enregistrés dans le vector store mémoire.
+   */
+  public getAllDocuments(): any[] {
+    // Selon la version de LangChain, la propriété peut s'appeler memoryVectors ou documents
+    if ((this.store as any).memoryVectors) {
+      return (this.store as any).memoryVectors;
+    }
+    if ((this.store as any).documents) {
+      return (this.store as any).documents;
+    }
+    return [];
+  }
 }
