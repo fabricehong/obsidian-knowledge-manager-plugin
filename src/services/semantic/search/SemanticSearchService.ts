@@ -1,7 +1,7 @@
 /**
  * Interface pour la recherche sémantique dans un vector store donné et une technique donnée.
  */
-import { Chunk } from "../../models/chunk";
+import { Chunk } from "../../../models/chunk";
 
 export interface SearchResult {
   chunk: Chunk;

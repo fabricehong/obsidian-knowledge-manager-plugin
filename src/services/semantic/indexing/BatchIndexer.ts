@@ -2,7 +2,7 @@
  * Service d'orchestration de l'indexation batch.
  * Travaille via les interfaces abstraites.
  */
-import { Chunk } from "../../models/chunk";
+import { Chunk } from "../../../models/chunk";
 import { ChunkTransformService } from "./ChunkTransformService";
 import { VectorStore } from "../vector-store/VectorStore";
 

@@ -1,5 +1,5 @@
 import { App, Modal, Setting } from 'obsidian';
-import { ChunkTransformService } from './indexing/ChunkTransformService';
+import { ChunkTransformService } from '../indexing/ChunkTransformService';
 
 export class SelectChunkTransformTechniqueModal extends Modal {
   private techniques: ChunkTransformService[];

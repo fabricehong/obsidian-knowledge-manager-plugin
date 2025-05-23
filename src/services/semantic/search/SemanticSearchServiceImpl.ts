@@ -1,6 +1,6 @@
 import { SemanticSearchService, SearchResult } from './SemanticSearchService';
 import { VectorStore } from '../vector-store/VectorStore';
-import { Chunk } from '../../models/chunk';
+import { Chunk } from '../../../models/chunk';
 
 /**
  * Implémentation concrète du service de recherche sémantique via un VectorStore

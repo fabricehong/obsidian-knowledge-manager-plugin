@@ -2,7 +2,7 @@
  * Interface pour un backend vectoriel (Vector Store).
  * Permet d'indexer des objets (chunk + texte indexable) par batch.
  */
-import { Chunk } from "../../models/chunk";
+import { Chunk } from "../../../models/chunk";
 import { VectorStoreType } from "./VectorStoreType";
 
 export interface IndexableChunk {

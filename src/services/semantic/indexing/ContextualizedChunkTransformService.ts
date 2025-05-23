@@ -1,4 +1,4 @@
-import { Chunk } from "../../models/chunk";
+import { Chunk } from "../../../models/chunk";
 import { ChunkTransformService } from "./ChunkTransformService";
 import { ChunkTransformTechnique } from "./ChunkTransformTechnique";
 import { IndexableChunk } from "./IndexableChunk";

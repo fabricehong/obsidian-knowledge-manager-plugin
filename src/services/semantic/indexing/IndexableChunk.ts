@@ -1,4 +1,4 @@
-import { Chunk } from '../../models/chunk';
+import { Chunk } from '../../../models/chunk';
 import { ChunkTransformTechnique } from './ChunkTransformTechnique';
 
 /**

@@ -1,5 +1,5 @@
 import { App, Notice, MarkdownView } from 'obsidian';
-import { IndexableChunk } from '../../semantic/indexing/IndexableChunk';
+import { IndexableChunk } from './indexing/IndexableChunk';
 
 export class EditorChunkInsertionService {
     private app: App;

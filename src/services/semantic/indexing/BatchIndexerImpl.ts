@@ -1,4 +1,4 @@
-import { Chunk } from '../../models/chunk';
+import { Chunk } from '../../../models/chunk';
 import { ChunkTransformService } from './ChunkTransformService';
 import { VectorStore } from '../vector-store/VectorStore';
 import { IndexableChunk } from './IndexableChunk';

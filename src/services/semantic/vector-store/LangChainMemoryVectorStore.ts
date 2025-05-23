@@ -1,7 +1,7 @@
 import { VectorStore, IndexableChunk } from './VectorStore';
 import { VectorStoreType } from './VectorStoreType';
 import { SearchResult } from '../search/SemanticSearchService';
-import { Chunk } from '../../models/chunk';
+import { Chunk } from '../../../models/chunk';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import { OpenAIEmbeddings } from '@langchain/openai';
 

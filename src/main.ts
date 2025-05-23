@@ -6,10 +6,10 @@ import { FolderSuggestModal } from '@obsidian-utils/ui/folder-suggest-modal';
 import { TranscriptionModal } from './services/transcription/transcription-modal';
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
 import { LangChain2Service } from './services/others/LangChain2.service';
-import { ContextualizedChunkTransformService } from './semantic/indexing/ContextualizedChunkTransformService';
-import { SelectChunkTransformTechniqueModal } from './semantic/SelectChunkTransformTechniqueModal';
-import { ChunkTransformService } from './semantic/indexing/ChunkTransformService';
-import { IndexableChunk } from './semantic/indexing/IndexableChunk';
+import { ContextualizedChunkTransformService } from './services/semantic/indexing/ContextualizedChunkTransformService';
+import { SelectChunkTransformTechniqueModal } from './services/semantic/ui/SelectChunkTransformTechniqueModal';
+import { ChunkTransformService } from './services/semantic/indexing/ChunkTransformService';
+import { IndexableChunk } from './services/semantic/indexing/IndexableChunk';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 

@@ -1,5 +1,5 @@
 import { ContextualizedChunkTransformService } from './ContextualizedChunkTransformService';
-import { Chunk, ChunkHierarchyType } from '../../models/chunk';
+import { Chunk, ChunkHierarchyType } from '../../../models/chunk';
 
 describe('ContextualizedChunkTransformService', () => {
   const service = new ContextualizedChunkTransformService();
