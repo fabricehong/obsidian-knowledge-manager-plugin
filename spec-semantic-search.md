@@ -39,7 +39,7 @@ Le système doit permettre de :
 L’ensemble des composants est regroupé sous le dossier :
 
 ```ts
-src/semantic/
+src/services/semantic/
 ```
 
 Organisé ainsi :
@@ -47,6 +47,26 @@ Organisé ainsi :
 * `vector-store/` : Abstractions et types pour les backends vectoriels (utilisés pour l’indexation et la recherche).
 * `indexing/` : Tout ce qui concerne la transformation, l’indexation batch, l’orchestration multi-techniques.
 * `search/` : Tous les services de recherche sémantique (mono ou multi-combinaisons).
+
+Principaux fichiers/interfaces :
+- `indexing/ChunkTransformTechnique.ts` (enum des techniques)
+- `indexing/ChunkTransformService.ts` (interface service de transformation)
+- `vector-store/VectorStoreType.ts` (enum des stores)
+- `vector-store/VectorStore.ts` (interface store)
+- `indexing/BatchIndexer.ts` (interface batch)
+- `indexing/MultiTechniqueIndexer.ts` (interface multi-technique)
+- `search/SemanticSearchService.ts` (interface recherche)
+- `search/MultiSemanticSearchService.ts` (multi-recherche)
+- `indexing/IndexableChunk.ts` (modèle chunk transformé)
+- `src/models/chunk.ts` (modèle chunk de base)
+
+> **Sélection et instanciation concrètes**
+>
+> - **Types disponibles** : Les types de vector stores (`VectorStoreType`) et de techniques d’indexation (`ChunkTransformTechnique`) sont listés dans leurs enums respectifs.
+> - **Instances réellement utilisées** : La sélection et la création concrète des instances (vector stores et techniques) se font dans :
+>   - `src/services/service-container.ts` (classe `ServiceContainer`)
+>   - Propriétés : `vectorStores` (liste des vector stores actifs) et `chunkTransformServices` (liste des techniques actives)
+>   - C’est ici que l’on ajoute ou retire dynamiquement les implémentations réellement disponibles pour le plugin.
 
 ---
 
@@ -180,18 +200,17 @@ Organisé ainsi :
 
 ### Indexation
 
-1. L’utilisateur sélectionne un lot de chunks :
+1. Les chunks sont extraits selon la configuration utilisateur (via `editorChunkingService`).
+2. Pour chaque technique de transformation (`ChunkTransformTechnique`), tous les chunks sont transformés en `IndexableChunk[]` via `multiTechniqueIndexer.transformAllTechniques`.
+3. Pour chaque combinaison (technique, vector store), les `IndexableChunk[]` sont indexés dans la collection correspondante via `batchIndexableChunkIndexer.indexTransformedChunks`.
 
-   ```ts
-   Chunk[]
-   ```
+Chaque étape est orchestrée par des services dédiés :
+- `MultiTechniqueIndexer` pour la transformation multi-techniques
+- `BatchIndexableChunkIndexer` pour l’indexation batch dans chaque vector store
 
-2. Pour chaque technique de transformation :
+Le nom de la collection/namespace est toujours dérivé de la technique utilisée.
 
-   * Les chunks sont transformés en texte indexable.
-   * Pour chaque vector store :
-
-     * Les textes sont indexés en batch dans une collection dédiée à la technique.
+**NB : Cette architecture permet d’ajouter dynamiquement des techniques ou des vector stores, et garantit que chaque couple (technique, vector store) a sa propre collection.**
 
 ### Recherche
 
