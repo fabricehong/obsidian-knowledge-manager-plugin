@@ -15,9 +15,13 @@ import { SearchTarget } from './services/semantic/search/MultiSemanticSearchServ
 import { PromptModal } from './services/semantic/ui/PromptModal';
 import { IndexableChunk } from './services/semantic/indexing/IndexableChunk';
 
+// Génère un header markdown détaillé pour tout vector store (type, modèle, etc)
+import { getVectorStoreLabel } from './services/semantic/vector-store/vectorStoreLabel';
+import { getVectorStoreKey } from './services/semantic/vector-store/vectorStoreKey';
+
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
-## Vue d'ensemble
+## Vue d'overview
 Les commandes de remplacement de transcript permettent de standardiser les noms et termes utilisés dans vos transcriptions de réunions.
 
 ## Commandes disponibles
@@ -535,38 +539,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         });
     }
 
-    async printAllVectorStoreDocumentsInActiveFile() {
-    const vectorStores = this.serviceContainer.vectorStores.filter(vs => typeof (vs as any).getAllDocuments === 'function');
-    if (!vectorStores.length) {
-        new Notice('Aucun vector store mémoire trouvé.');
-        return;
-    }
-    const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const editor = markdownView?.editor;
-    if (!editor) {
-        new Notice('Aucun fichier markdown actif pour insérer les documents.');
-        return;
-    }
-    // Prépare tous les exports (header + documents) pour tous les vector stores
-    const exports = vectorStores.map(vs => {
-        let storeLabel = vs.type ? vs.type : vs.constructor?.name || 'VectorStore';
-        let header = '';
-        const docs = (vs as any).getAllDocuments();
-        // Si c'est un Ollama, ajoute le nom du modèle dans le header
-        if (storeLabel === 'OLLAMA' && typeof (vs as any).getModelName === 'function') {
-            const modelName = (vs as any).getModelName();
-            header = `# Documents du vector store Ollama (${modelName})`;
-        } else {
-            header = `# Documents du vector store : ${storeLabel}`;
-        }
-        return {
-            header,
-            documents: docs,
-        };
-    });
-    this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
-    new Notice(`Insertion de tous les documents (${exports.reduce((acc: number, e: any) => acc + e.documents.length, 0)}) dans la note active.`);
-}
+
 
 
     async loadSettings() {
@@ -658,6 +631,32 @@ export default class KnowledgeManagerPlugin extends Plugin {
         }
     }
 
+    async printAllVectorStoreDocumentsInActiveFile() {
+        const vectorStores = this.serviceContainer.vectorStores.filter(vs => typeof (vs as any).getAllDocuments === 'function');
+        if (!vectorStores.length) {
+            new Notice('Aucun vector store mémoire trouvé.');
+            return;
+        }
+        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        const editor = markdownView?.editor;
+        if (!editor) {
+            new Notice('Aucun fichier markdown actif pour insérer les documents.');
+            return;
+        }
+        // Prépare tous les exports (header + documents) pour tous les vector stores
+        const exports = vectorStores.map(vs => {
+            const vectorStoreKey = getVectorStoreKey(vs);
+            const header = `# Documents du vector store ${vectorStoreKey}`;
+            const docs = (vs as any).getAllDocuments();
+            return {
+                header,
+                documents: docs,
+            };
+        });
+        this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
+        new Notice(`Insertion de tous les documents (${exports.reduce((acc: number, e: any) => acc + e.documents.length, 0)}) dans la note active.`);
+    }
+
     /**
      * Lance une recherche sémantique sur tous les vector stores et techniques,
      * puis insère les résultats dans la note active, structurés par vector store et technique.
@@ -668,18 +667,18 @@ export default class KnowledgeManagerPlugin extends Plugin {
             const techniques = (this.serviceContainer.chunkTransformServices || [])
                 .map((svc: any) => svc.technique as ChunkTransformTechnique)
                 .filter(Boolean);
-            const vectorStores = (this.serviceContainer.vectorStores || [])
-                .map((vs: any) => vs.type as VectorStoreType)
-                .filter(Boolean);
+            const vectorStores = (this.serviceContainer.vectorStores || []);
+
             if (!techniques.length || !vectorStores.length) {
                 new Notice('Aucune technique ou vector store disponible.');
                 return;
             }
             // Génère toutes les combinaisons
-            const targets: SearchTarget[] = [];
+            const targets: any[] = [];
             for (const technique of techniques) {
                 for (const vectorStore of vectorStores) {
-                    targets.push({ technique, vectorStore });
+                    const vectorStoreKey = getVectorStoreKey(vectorStore);
+                    targets.push({ technique, vectorStoreKey, vectorStoreInstance: vectorStore });
                 }
             }
             // Appel du service multi-recherche
@@ -697,8 +696,9 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 return;
             }
             // Préparation des exports pour l'insertion
-            const exports = Object.entries(resultsByCombination).map(([combinaison, results]: [string, any[]]) => {
-                const header = `# Résultats pour ${combinaison}`;
+            const exports = Object.entries(resultsByCombination).map(([vectorStoreKey, results]: [string, any[]]) => {
+                const vs = this.serviceContainer.vectorStoresByKey[vectorStoreKey];
+                const header = `# Documents du vector store ${vectorStoreKey}`;
                 const documents = results.map(r => ({ ...r }));
                 return { header, documents };
             });

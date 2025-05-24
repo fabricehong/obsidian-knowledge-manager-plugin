@@ -4,9 +4,12 @@
 import { ChunkTransformTechnique } from "../indexing/ChunkTransformTechnique";
 import { VectorStoreType } from "../vector-store/VectorStoreType";
 import { SearchResult } from "./SemanticSearchService";
+import { VectorStore } from '../vector-store/VectorStore';
 
 export interface SearchTarget {
   technique: ChunkTransformTechnique;
+  vectorStoreKey: string;
+  vectorStoreInstance: VectorStore;
   vectorStore: VectorStoreType;
 }
 

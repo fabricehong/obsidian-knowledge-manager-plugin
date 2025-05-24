@@ -56,7 +56,11 @@ import { MultiSemanticSearchServiceImpl } from './semantic/search/MultiSemanticS
 import { OpenAIModelService } from './llm/openai-model.service';
 import { OpenAIEmbeddings } from '@langchain/openai';
 
+import { getVectorStoreKey } from './semantic/vector-store/vectorStoreKey';
+
 export class ServiceContainer {
+  public vectorStoresByKey: Record<string, VectorStore>;
+
     public readonly editorChunkingService: EditorChunkingService;
     public readonly editorChunkInsertionService: EditorChunkInsertionService;
     public readonly documentStructureService: DocumentStructureService;
@@ -344,6 +348,12 @@ export class ServiceContainer {
             ...ollamaVectorStores,
             // Ajouter d'autres VectorStore ici
         ];
+
+        // Mapping clé unique → instance vector store (doit être fait après l'init de this.vectorStores)
+        this.vectorStoresByKey = {};
+        for (const vs of this.vectorStores) {
+            this.vectorStoresByKey[getVectorStoreKey(vs)] = vs;
+        }
 
         // Ajout des services de chunking et d'insertion de chunk
         this.editorChunkingService = new EditorChunkingService(this.app);
