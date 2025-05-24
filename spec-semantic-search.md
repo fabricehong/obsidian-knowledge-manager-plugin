@@ -53,8 +53,10 @@ Principaux fichiers/interfaces :
 - `indexing/ChunkTransformService.ts` (interface service de transformation)
 - `vector-store/VectorStoreType.ts` (enum des stores)
 - `vector-store/VectorStore.ts` (interface store)
-- `indexing/BatchIndexer.ts` (interface batch)
-- `indexing/MultiTechniqueIndexer.ts` (interface multi-technique)
+- `indexing/BatchChunkTransformer.ts` (interface batch)
+- `indexing/BatchChunkTransformerImpl.ts` (implémentation batch)
+- `indexing/MultiTechniqueChunkTransformer.ts` (interface multi-technique)
+- `indexing/MultiTechniqueChunkTransformerImpl.ts` (implémentation multi-technique)
 - `search/SemanticSearchService.ts` (interface recherche)
 - `search/MultiSemanticSearchService.ts` (multi-recherche)
 - `indexing/IndexableChunk.ts` (modèle chunk transformé)
@@ -116,31 +118,27 @@ Principaux fichiers/interfaces :
   (`IndexableChunk`) dans un backend vectoriel, par batch.
   Supporte la notion de collection/namespace, dérivée explicitement de la technique utilisée.
 
-### 4.3. Indexation batch
+### 4.3. Transformation batch (pré-indexation)
 
 * **Service** :
 
   ```ts
-  BatchIndexer
+  BatchChunkTransformer
   ```
 
-  Orchestration de la transformation d’un batch de chunks via une technique donnée, puis indexation dans un vector store cible.
-  Travaille uniquement via les interfaces abstraites, sans connaître les implémentations concrètes.
+  Orchestration de la transformation d’un batch de chunks via une technique donnée, produisant des `IndexableChunk[]` prêts à être indexés dans un vector store. Ce service ne fait que la transformation, pas l’indexation. Travaille uniquement via les interfaces abstraites, sans connaître les implémentations concrètes.
 
-### 4.4. Indexation multi-techniques
+### 4.4. Transformation multi-techniques (pré-indexation)
 
 * **Service** :
 
   ```ts
-  MultiTechniqueIndexer
+  MultiTechniqueChunkTransformer
   ```
 
-  Permet d’indexer en parallèle toutes les combinaisons :
+  Orchestration de la transformation multi-techniques : applique toutes les techniques de transformation à un batch de chunks, retourne un mapping technique → IndexableChunk[].
 
-  * techniques de transformation,
-  * vector stores disponibles.
-
-  Chaque indexation utilise une collection dédiée, nommée explicitement selon la technique employée.
+  Ce service ne fait que la transformation, pas l’indexation. Chaque technique utilise une collection dédiée, nommée explicitement selon la technique employée.
 
 ### 4.5. Recherche sémantique
 
@@ -201,11 +199,11 @@ Principaux fichiers/interfaces :
 ### Indexation
 
 1. Les chunks sont extraits selon la configuration utilisateur (via `editorChunkingService`).
-2. Pour chaque technique de transformation (`ChunkTransformTechnique`), tous les chunks sont transformés en `IndexableChunk[]` via `multiTechniqueIndexer.transformAllTechniques`.
+2. Pour chaque technique de transformation (`ChunkTransformTechnique`), tous les chunks sont transformés en `IndexableChunk[]` via `multiTechniqueChunkTransformer.transformAllTechniquesToIndexableChunks`.
 3. Pour chaque combinaison (technique, vector store), les `IndexableChunk[]` sont indexés dans la collection correspondante via `batchIndexableChunkIndexer.indexTransformedChunks`.
 
 Chaque étape est orchestrée par des services dédiés :
-- `MultiTechniqueIndexer` pour la transformation multi-techniques
+- `MultiTechniqueChunkTransformer` pour la transformation multi-techniques
 - `BatchIndexableChunkIndexer` pour l’indexation batch dans chaque vector store
 
 Le nom de la collection/namespace est toujours dérivé de la technique utilisée.

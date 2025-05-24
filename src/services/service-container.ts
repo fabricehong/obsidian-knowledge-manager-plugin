@@ -42,7 +42,7 @@ import { EditorSpeakerDescriptionService } from './speaker-description/editor-sp
 import { LangChain2Service } from './others/LangChain2.service';
 import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
 import KnowledgeManagerPlugin from '../main';
-import { MultiTechniqueIndexerImpl } from './semantic/indexing/MultiTechniqueIndexerImpl';
+import { MultiTechniqueChunkTransformerImpl } from './semantic/indexing/MultiTechniqueChunkTransformerImpl';
 import { BatchIndexableChunkIndexerImpl } from './semantic/indexing/BatchIndexableChunkIndexerImpl';
 import { ChunkTransformService } from './semantic/indexing/ChunkTransformService';
 import { VectorStore } from './semantic/vector-store/VectorStore';
@@ -97,7 +97,7 @@ export class ServiceContainer {
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
     public readonly langChain2Service: LangChain2Service;
-    public readonly multiTechniqueIndexer: MultiTechniqueIndexerImpl;
+    public readonly multiTechniqueChunkTransformer: MultiTechniqueChunkTransformerImpl;
     public readonly batchIndexableChunkIndexer: BatchIndexableChunkIndexerImpl;
     public readonly chunkTransformServices: ChunkTransformService[];
     public readonly vectorStores: VectorStore[];
@@ -293,7 +293,7 @@ export class ServiceContainer {
             this.speakerDescriptionService
         );
         this.langChain2Service = new LangChain2Service();
-        this.multiTechniqueIndexer = new MultiTechniqueIndexerImpl();
+        this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformerImpl();
         this.batchIndexableChunkIndexer = new BatchIndexableChunkIndexerImpl();
         // Liste des techniques de transformation disponibles (à enrichir selon besoins)
         this.chunkTransformServices = [

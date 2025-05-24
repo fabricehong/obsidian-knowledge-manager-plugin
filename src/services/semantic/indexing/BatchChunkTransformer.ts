@@ -8,11 +8,11 @@ import { VectorStore } from "../vector-store/VectorStore";
 
 import { IndexableChunk } from './IndexableChunk';
 
-export interface BatchIndexer {
+export interface BatchChunkTransformer {
   /**
-   * Transforme un batch de chunks via une technique donnée.
+   * Transforme un batch de chunks en IndexableChunk[] via une technique donnée.
    */
-  transformBatch(
+  transformBatchToIndexableChunks(
     chunks: Chunk[],
     technique: ChunkTransformService
   ): Promise<IndexableChunk[]>;

@@ -598,7 +598,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
         const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
         const techniques = this.serviceContainer.chunkTransformServices;
         const vectorStores = this.serviceContainer.vectorStores;
-        const transformed = await this.serviceContainer.multiTechniqueIndexer.transformAllTechniques(chunks, techniques);
+        const transformed = await this.serviceContainer.multiTechniqueChunkTransformer.transformAllTechniquesToIndexableChunks(chunks, techniques);
         try {
             await this.serviceContainer.batchIndexableChunkIndexer.indexTransformedChunks(transformed, vectorStores);
             new Notice("Indexation terminée avec succès !");

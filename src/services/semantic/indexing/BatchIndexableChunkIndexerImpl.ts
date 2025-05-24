@@ -1,6 +1,6 @@
 import { VectorStore } from '../vector-store/VectorStore';
 import { BatchIndexableChunkIndexer } from './BatchIndexableChunkIndexer';
-import { BatchChunkTransformResult } from './MultiTechniqueIndexerImpl';
+import { BatchChunkTransformResult } from './MultiTechniqueChunkTransformerImpl';
 
 export class BatchIndexableChunkIndexerImpl implements BatchIndexableChunkIndexer {
   async indexTransformedChunks(

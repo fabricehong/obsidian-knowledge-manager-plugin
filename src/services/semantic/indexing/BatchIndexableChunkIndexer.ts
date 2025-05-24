@@ -1,5 +1,5 @@
 import { VectorStore } from '../vector-store/VectorStore';
-import { BatchChunkTransformResult } from './MultiTechniqueIndexerImpl';
+import { BatchChunkTransformResult } from './MultiTechniqueChunkTransformerImpl';
 
 export interface BatchIndexableChunkIndexer {
   /**

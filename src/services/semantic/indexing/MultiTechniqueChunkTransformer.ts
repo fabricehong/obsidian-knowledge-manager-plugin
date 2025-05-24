@@ -8,11 +8,11 @@ import { IndexableChunk } from './IndexableChunk';
 
 export type BatchChunkTransformResult = Record<string, IndexableChunk[]>;
 
-export interface MultiTechniqueEvaluator {
+export interface MultiTechniqueChunkTransformer {
   /**
-   * Orchestration de l'indexation multi-techniques/multi-stores.
+   * Orchestration de la transformation multi-techniques (mapping technique → IndexableChunk[]).
    */
-  transformAllTechniques(
+  transformAllTechniquesToIndexableChunks(
     chunks: Chunk[],
     techniques: ChunkTransformService[]
   ): Promise<BatchChunkTransformResult>;

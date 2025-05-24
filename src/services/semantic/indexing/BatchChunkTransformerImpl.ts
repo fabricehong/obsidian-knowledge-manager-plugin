@@ -2,16 +2,16 @@ import { Chunk } from '../../../models/chunk';
 import { ChunkTransformService } from './ChunkTransformService';
 import { VectorStore } from '../vector-store/VectorStore';
 import { IndexableChunk } from './IndexableChunk';
-import { BatchIndexer } from './BatchIndexer';
+import { BatchChunkTransformer } from './BatchChunkTransformer';
 
 /**
- * Implémentation concrète de BatchIndexer pour orchestrer la transformation et l'indexation
+ * Implémentation concrète de BatchChunkTransformer pour orchestrer la transformation de batch de chunks en IndexableChunk[]
  */
 // Pour la prochaine étape :
 // export type BatchChunkTransformResult = Record<ChunkTransformTechnique, IndexableChunk[]>;
 
-export class BatchIndexerImpl implements BatchIndexer {
-  async transformBatch(
+export class BatchChunkTransformerImpl implements BatchChunkTransformer {
+  async transformBatchToIndexableChunks(
     chunks: Chunk[],
     technique: ChunkTransformService
   ): Promise<IndexableChunk[]> {
