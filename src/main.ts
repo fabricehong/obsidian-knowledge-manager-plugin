@@ -8,7 +8,11 @@ import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
 import { LangChain2Service } from './services/others/LangChain2.service';
 import { ContextualizedChunkTransformService } from './services/semantic/indexing/ContextualizedChunkTransformService';
 import { SelectChunkTransformTechniqueModal } from './services/semantic/ui/SelectChunkTransformTechniqueModal';
+import { ChunkTransformTechnique } from './services/semantic/indexing/ChunkTransformTechnique';
 import { ChunkTransformService } from './services/semantic/indexing/ChunkTransformService';
+import { VectorStoreType } from './services/semantic/vector-store/VectorStoreType';
+import { SearchTarget } from './services/semantic/search/MultiSemanticSearchService';
+import { PromptModal } from './services/semantic/ui/PromptModal';
 import { IndexableChunk } from './services/semantic/indexing/IndexableChunk';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
@@ -515,41 +519,55 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 new QuickLLMConfigModal(this.app, this).open();
             }
         });
+
+        // Commande pour la recherche sémantique multi-vector store
+        this.addCommand({
+            id: 'semantic-search-all-vectorstores',
+            name: 'Recherche sémantique (tous vector stores)',
+            callback: async () => {
+                try {
+                    await this.searchInAllVectorStoresAndPrintResults();
+                } catch (e) {
+                    console.error('Erreur lors de la recherche sémantique multi-vector store:', e);
+                    new Notice('Erreur lors de la recherche sémantique. Voir la console.');
+                }
+            }
+        });
     }
 
     async printAllVectorStoreDocumentsInActiveFile() {
-        const vectorStores = this.serviceContainer.vectorStores.filter(vs => typeof (vs as any).getAllDocuments === 'function');
-        if (!vectorStores.length) {
-            new Notice('Aucun vector store mémoire trouvé.');
-            return;
-        }
-        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        const editor = markdownView?.editor;
-        if (!editor) {
-            new Notice('Aucun fichier markdown actif pour insérer les documents.');
-            return;
-        }
-        // Prépare tous les exports (header + documents) pour tous les vector stores
-        const exports = vectorStores.map(vs => {
-            let storeLabel = vs.type ? vs.type : vs.constructor?.name || 'VectorStore';
-            let header = '';
-            const docs = (vs as any).getAllDocuments();
-            // Si c'est un Ollama, ajoute le nom du modèle dans le header
-            if (storeLabel === 'OLLAMA' && typeof (vs as any).getModelName === 'function') {
-                const modelName = (vs as any).getModelName();
-                header = `# Documents du vector store Ollama (${modelName})`;
-            } else {
-                header = `# Documents du vector store : ${storeLabel}`;
-            }
-            return {
-                header,
-                documents: docs,
-            };
-        });
-        this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
-        new Notice(`Insertion de tous les documents (${exports.reduce((acc, e) => acc + e.documents.length, 0)}) dans la note active.`);
-
+    const vectorStores = this.serviceContainer.vectorStores.filter(vs => typeof (vs as any).getAllDocuments === 'function');
+    if (!vectorStores.length) {
+        new Notice('Aucun vector store mémoire trouvé.');
+        return;
     }
+    const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const editor = markdownView?.editor;
+    if (!editor) {
+        new Notice('Aucun fichier markdown actif pour insérer les documents.');
+        return;
+    }
+    // Prépare tous les exports (header + documents) pour tous les vector stores
+    const exports = vectorStores.map(vs => {
+        let storeLabel = vs.type ? vs.type : vs.constructor?.name || 'VectorStore';
+        let header = '';
+        const docs = (vs as any).getAllDocuments();
+        // Si c'est un Ollama, ajoute le nom du modèle dans le header
+        if (storeLabel === 'OLLAMA' && typeof (vs as any).getModelName === 'function') {
+            const modelName = (vs as any).getModelName();
+            header = `# Documents du vector store Ollama (${modelName})`;
+        } else {
+            header = `# Documents du vector store : ${storeLabel}`;
+        }
+        return {
+            header,
+            documents: docs,
+        };
+    });
+    this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
+    new Notice(`Insertion de tous les documents (${exports.reduce((acc: number, e: any) => acc + e.documents.length, 0)}) dans la note active.`);
+}
+
 
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -639,11 +657,53 @@ export default class KnowledgeManagerPlugin extends Plugin {
             new Notice("Erreur lors de l'indexation (voir la console pour le détail).");
         }
     }
+
+    /**
+     * Lance une recherche sémantique sur tous les vector stores et techniques,
+     * puis insère les résultats dans la note active, structurés par vector store et technique.
+     */
+    async searchInAllVectorStoresAndPrintResults() {
+        new PromptModal(this.app, async (query: string, topK: number) => {
+            // Récupération des techniques et vector stores actifs
+            const techniques = (this.serviceContainer.chunkTransformServices || [])
+                .map((svc: any) => svc.technique as ChunkTransformTechnique)
+                .filter(Boolean);
+            const vectorStores = (this.serviceContainer.vectorStores || [])
+                .map((vs: any) => vs.type as VectorStoreType)
+                .filter(Boolean);
+            if (!techniques.length || !vectorStores.length) {
+                new Notice('Aucune technique ou vector store disponible.');
+                return;
+            }
+            // Génère toutes les combinaisons
+            const targets: SearchTarget[] = [];
+            for (const technique of techniques) {
+                for (const vectorStore of vectorStores) {
+                    targets.push({ technique, vectorStore });
+                }
+            }
+            // Appel du service multi-recherche
+            const multiSemanticSearchService = this.serviceContainer.multiSemanticSearchService;
+            if (!multiSemanticSearchService) {
+                new Notice('Service multi-recherche indisponible.');
+                return;
+            }
+            let resultsByCombination;
+            try {
+                resultsByCombination = await multiSemanticSearchService.multiSearch(query, topK, targets);
+            } catch (e) {
+                console.error('Erreur lors de la recherche sémantique multi-vector store:', e);
+                new Notice('Erreur lors de la recherche sémantique. Voir la console.');
+                return;
+            }
+            // Préparation des exports pour l'insertion
+            const exports = Object.entries(resultsByCombination).map(([combinaison, results]: [string, any[]]) => {
+                const header = `# Résultats pour ${combinaison}`;
+                const documents = results.map(r => ({ ...r }));
+                return { header, documents };
+            });
+            this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
+            new Notice('Résultats de la recherche insérés dans la note active.');
+        }).open();
+    }
 }
-
-// Suppression des méthodes dupliquées hors classe. Les méthodes suivantes doivent exister UNE SEULE FOIS dans la classe KnowledgeManagerPlugin :
-// - setStatusBarText
-// - printIndexableChunksInActiveFile
-// - indexChunks
-// Fin du nettoyage hors classe.
-

@@ -52,6 +52,7 @@ import { ContextualizedChunkTransformService } from './semantic/indexing/Context
 import { LangChainMemoryVectorStore } from './semantic/vector-store/LangChainMemoryVectorStore';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
 import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
+import { MultiSemanticSearchServiceImpl } from './semantic/search/MultiSemanticSearchServiceImpl';
 import { OpenAIModelService } from './llm/openai-model.service';
 import { OpenAIEmbeddings } from '@langchain/openai';
 
@@ -105,6 +106,8 @@ export class ServiceContainer {
 
     public readonly langChainMemoryVectorStore: LangChainMemoryVectorStore;
     // Ajouter d'autres VectorStore mémoire ici si besoin
+
+    public readonly multiSemanticSearchService: MultiSemanticSearchServiceImpl;
 
 
     constructor(private app: App, settings: PluginSettings, private plugin: KnowledgeManagerPlugin) {
@@ -345,5 +348,15 @@ export class ServiceContainer {
         // Ajout des services de chunking et d'insertion de chunk
         this.editorChunkingService = new EditorChunkingService(this.app);
         this.editorChunkInsertionService = new EditorChunkInsertionService(this.app);
+        // Initialisation du service multi-recherche sémantique
+        this.multiSemanticSearchService = new MultiSemanticSearchServiceImpl(
+            Object.fromEntries(
+                this.vectorStores.map(vs => [
+                    // Clef: `${technique}_${vectorStore}` (voir MultiSemanticSearchServiceImpl)
+                    (vs.type ? vs.type : vs.constructor?.name || 'VectorStore'),
+                    vs
+                ])
+            )
+        );
     }
 }
