@@ -41,8 +41,9 @@ export class EditorChunkInsertionService {
     /**
      * Insère dans le fichier actif un tableau d'objets JSON (ex : documents vector store).
      * Chaque objet est cloné, la propriété 'embedding' est supprimée, puis inséré sous forme de bloc de code JSON, séparé par '---'.
+     * Un header (titre Markdown) peut être inséré avant les objets si fourni.
      */
-    insertJsonObjectsInActiveFile(objects: any[]): void {
+    insertJsonObjectsInActiveFile(objects: any[], header?: string): void {
         const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
         const editor = markdownView?.editor;
         if (!editor) {
@@ -59,12 +60,43 @@ export class EditorChunkInsertionService {
             delete clone.embedding;
             return '```json\n' + JSON.stringify(clone, null, 2) + '\n```';
         });
-        const finalContent = mdBlocks.join('\n\n---\n\n');
+        let finalContent = mdBlocks.join('\n\n---\n\n');
+        if (header) {
+            finalContent = `${header}\n\n` + finalContent;
+        }
         const pos = editor.getCursor ? editor.getCursor() : undefined;
         if (pos) {
             editor.replaceRange(finalContent, pos);
         } else {
             editor.replaceRange(finalContent, { line: editor.lastLine(), ch: 0 });
         }
+    }
+
+    /**
+     * Insère dans le fichier actif tous les documents de plusieurs vector stores, chacun précédé de son header.
+     * @param exports Tableau d'objets { header: string, documents: any[] }
+     */
+    insertAllVectorStoreJsonObjects(exports: { header: string, documents: any[] }[]): void {
+        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        const editor = markdownView?.editor;
+        if (!editor) {
+            new Notice('Aucun fichier markdown actif pour insérer les documents.');
+            return;
+        }
+        if (!exports.length) {
+            new Notice('Aucun document à insérer.');
+            return;
+        }
+        const allBlocks = exports.map(({ header, documents }) => {
+            if (!documents.length) return '';
+            const mdBlocks = documents.map(obj => {
+                const clone = JSON.parse(JSON.stringify(obj));
+                delete clone.embedding;
+                return '```json\n' + JSON.stringify(clone, null, 2) + '\n```';
+            });
+            return `${header}\n\n${mdBlocks.join('\n\n---\n\n')}`;
+        }).filter(Boolean);
+        const finalContent = allBlocks.join('\n\n\n');
+        editor.replaceRange(finalContent, { line: editor.lastLine(), ch: 0 });
     }
 }

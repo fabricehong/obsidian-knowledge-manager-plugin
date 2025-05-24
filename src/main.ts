@@ -111,6 +111,21 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 }
             }
         });
+
+        // Commande pour afficher tous les documents du vector store mémoire
+        this.addCommand({
+            id: 'vector-store:print-all-documents',
+            name: 'Afficher documents des vector',
+            callback: async () => {
+                try {
+                    await this.printAllVectorStoreDocumentsInActiveFile();
+                } catch (error) {
+                    console.error('Erreur lors de l\'insertion des documents vector store:', error);
+                    new Notice('Erreur lors de l\'insertion des documents vector store. Voir la console pour plus de détails.');
+                }
+            }
+        });
+
         await this.loadSettings();
         this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
         
@@ -492,23 +507,6 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
         });
 
-        // Commande pour afficher tous les documents du vector store mémoire
-        this.addCommand({
-            id: 'vector-store:print-all-documents',
-            name: 'Afficher tous les documents du vector store mémoire',
-            callback: () => {
-                // On prend le premier vector store mémoire disponible
-                const memoryStore = this.serviceContainer.vectorStores.find(vs => typeof (vs as any).getAllDocuments === 'function');
-                if (!memoryStore) {
-                    new Notice('Aucun vector store mémoire trouvé.');
-                    return;
-                }
-                const docs = (memoryStore as any).getAllDocuments();
-                new Notice(`Insertion de ${docs.length} document(s) dans la note active...`);
-                this.serviceContainer.editorChunkInsertionService.insertJsonObjectsInActiveFile(docs);
-            }
-        });
-
         // Add quick LLM configuration switch command
         this.addCommand({
             id: 'llm:select-model',
@@ -517,6 +515,40 @@ export default class KnowledgeManagerPlugin extends Plugin {
                 new QuickLLMConfigModal(this.app, this).open();
             }
         });
+    }
+
+    async printAllVectorStoreDocumentsInActiveFile() {
+        const vectorStores = this.serviceContainer.vectorStores.filter(vs => typeof (vs as any).getAllDocuments === 'function');
+        if (!vectorStores.length) {
+            new Notice('Aucun vector store mémoire trouvé.');
+            return;
+        }
+        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        const editor = markdownView?.editor;
+        if (!editor) {
+            new Notice('Aucun fichier markdown actif pour insérer les documents.');
+            return;
+        }
+        // Prépare tous les exports (header + documents) pour tous les vector stores
+        const exports = vectorStores.map(vs => {
+            let storeLabel = vs.type ? vs.type : vs.constructor?.name || 'VectorStore';
+            let header = '';
+            const docs = (vs as any).getAllDocuments();
+            // Si c'est un Ollama, ajoute le nom du modèle dans le header
+            if (storeLabel === 'OLLAMA' && typeof (vs as any).getModelName === 'function') {
+                const modelName = (vs as any).getModelName();
+                header = `# Documents du vector store Ollama (${modelName})`;
+            } else {
+                header = `# Documents du vector store : ${storeLabel}`;
+            }
+            return {
+                header,
+                documents: docs,
+            };
+        });
+        this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
+        new Notice(`Insertion de tous les documents (${exports.reduce((acc, e) => acc + e.documents.length, 0)}) dans la note active.`);
+
     }
 
     async loadSettings() {

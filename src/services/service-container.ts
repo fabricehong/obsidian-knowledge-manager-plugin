@@ -1,3 +1,4 @@
+import { OllamaMemoryVectorStore } from './semantic/vector-store/OllamaMemoryVectorStore';
 import { App } from 'obsidian';
 import { ContentFusionService } from './diffusion/content-fusion.service';
 import { VaultMapperService } from './vault-mapper.service';
@@ -311,11 +312,33 @@ export class ServiceContainer {
         //     this.papa,
         //     OllamaEmbedModel.NOMIC_EMBED_TEXT,
         //     OllamaGenModel.LLAMA2
-        // );
-
-        // Liste des vector stores disponibles (à enrichir selon besoins)
+        // --- Modèles Ollama utilisés ---
+        //
+        // 1. nomic-embed-text
+        //    - Polyvalent, open-source, rapide
+        //    - Très bon pour la recherche sémantique sur documents variés
+        //    - Multilingue (français inclus)
+        //    - Idéal pour la plupart des usages Obsidian
+        // 2. jeffh/intfloat-multilingual-e5-large-instruct:q8_0
+        //    - Modèle multilingue très réputé pour le retrieval et la recherche contextuelle
+        //    - Excellente robustesse pour le français et les langues européennes
+        //    - Version quantized (q8_0) : rapide, léger, très bon compromis qualité/ressources
+        // 3. bge-m3
+        //    - Modèle BAAI de dernière génération, multilingue
+        //    - Très performant pour la recherche sémantique, supporte bien le français
+        //    - Recommandé pour les tâches avancées de vectorisation et de similarité
+        const ollamaModels = [
+            'nomic-embed-text', // Voir description ci-dessus
+            'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
+            'bge-m3', // Voir description ci-dessus
+        ];
+        // Instanciation des vector stores Ollama à partir du tableau ci-dessus
+        const ollamaVectorStores = ollamaModels.map(
+            (model: string) => new OllamaMemoryVectorStore(model)
+        );
         this.vectorStores = [
             this.langChainMemoryVectorStore,
+            ...ollamaVectorStores,
             // Ajouter d'autres VectorStore ici
         ];
 

@@ -2,7 +2,8 @@
  * Enum des types de Vector Store supportés.
  */
 export enum VectorStoreType {
-  MEMORY = "memory",
+  MEMORY = 'MEMORY',
+  OLLAMA = 'OLLAMA',
   PINECONE = "pinecone",
   QDRANT = "qdrant",
   FAISS = "faiss"
