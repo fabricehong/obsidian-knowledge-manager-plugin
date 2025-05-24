@@ -47,7 +47,7 @@ import { BatchIndexableChunkIndexerImpl } from './semantic/indexing/BatchIndexab
 import { ChunkTransformService } from './semantic/indexing/ChunkTransformService';
 import { VectorStore } from './semantic/vector-store/VectorStore';
 import { ContextualizedChunkTransformService } from './semantic/indexing/ContextualizedChunkTransformService';
-import { Papa } from 'papa-ts';
+
 import { LangChainMemoryVectorStore } from './semantic/vector-store/LangChainMemoryVectorStore';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
 import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
@@ -101,7 +101,7 @@ export class ServiceContainer {
     public readonly batchIndexableChunkIndexer: BatchIndexableChunkIndexerImpl;
     public readonly chunkTransformServices: ChunkTransformService[];
     public readonly vectorStores: VectorStore[];
-    public readonly papa: Papa;
+
     public readonly langChainMemoryVectorStore: LangChainMemoryVectorStore;
     // Ajouter d'autres VectorStore mémoire ici si besoin
 
@@ -300,9 +300,7 @@ export class ServiceContainer {
             new ContextualizedChunkTransformService(),
             // Ajouter d'autres implémentations ici
         ];
-        // Instanciation unique de Papa (partagée)
-        this.papa = new Papa();
-        // Initialisation de Papa avec les bons modèles
+
 
         // Initialisation synchrone (à adapter si besoin d'async)
         // Exemple : VectorStore mémoire OpenAI (ne reçoit QUE l'instance papa déjà initialisée)

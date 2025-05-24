@@ -1,6 +1,5 @@
 import { Chunk } from '../../../models/chunk';
 import { ChunkTransformService } from './ChunkTransformService';
-import { VectorStore } from '../vector-store/VectorStore';
 import { MultiTechniqueChunkTransformer } from './MultiTechniqueChunkTransformer';
 import { BatchChunkTransformerImpl } from './BatchChunkTransformerImpl';
 import { IndexableChunk } from './IndexableChunk';

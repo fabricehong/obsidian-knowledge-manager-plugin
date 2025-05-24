@@ -9,7 +9,7 @@ export class SemanticSearchServiceImpl implements SemanticSearchService {
   constructor(private vectorStore: VectorStore) {}
 
   async search(query: string, topK: number, collection: string): Promise<SearchResult[]> {
-    // Recherche via le vector store (papa-ts)
+    // Recherche via le vector store
     const results: any[] = await this.vectorStore.search(query, topK, collection);
     // Adapter le format si nécessaire (si déjà SearchResult, retourne tel quel)
     if (results.length && results[0].chunk && typeof results[0].score === 'number') {
