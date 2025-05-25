@@ -80,7 +80,18 @@ export class EditorChunkingService {
 
 
     /**
-     * Construit un Chunk avec hiérarchie complète à partir de file, root, heading
+     * Retourne les chunks du fichier markdown actuellement ouvert (note active).
      */
+    async getChunksFromActiveFile(): Promise<Chunk[]> {
+        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        const file = markdownView?.file as TFile;
+        if (!file) {
+            new Notice('Aucun fichier markdown actif.');
+            return [];
+        }
+        const fileRoot = await this.docStructureService.buildHeaderTree(this.app, file);
+        const chunkHierarchyService = new ChunkHierarchyService();
+        return chunkHierarchyService.buildChunksWithHierarchy(file.path, fileRoot.root);
+    }
 
 }

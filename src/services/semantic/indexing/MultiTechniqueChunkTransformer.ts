@@ -14,6 +14,5 @@ export interface MultiTechniqueChunkTransformer {
    */
   transformAllTechniquesToIndexableChunks(
     chunks: Chunk[],
-    techniques: ChunkTransformService[]
   ): Promise<BatchChunkTransformResult>;
 }

@@ -53,12 +53,14 @@ import { PersistentOramaVectorStore } from './semantic/vector-store/PersistentOr
 import { join } from 'path';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
 import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
+import { EditorChunkIndexingService } from './semantic/editor-chunk-indexing.service';
 import { MultiSemanticSearchServiceImpl } from './semantic/search/MultiSemanticSearchServiceImpl';
 import { OpenAIModelService } from './llm/openai-model.service';
 
 import { OllamaEmbeddings } from '@langchain/ollama';
 import { Embeddings } from '@langchain/core/embeddings';
 import { randomUUID } from 'crypto';
+import { OpenAIEmbeddings } from '@langchain/openai';
 
 
 export class ServiceContainer {
@@ -118,6 +120,7 @@ export class ServiceContainer {
     // Ajouter d'autres VectorStore mémoire ici si besoin
 
     public readonly multiSemanticSearchService: MultiSemanticSearchServiceImpl;
+    public readonly editorChunkIndexingService: EditorChunkIndexingService;
 
 
     constructor(private app: App, settings: PluginSettings, private plugin: KnowledgeManagerPlugin) {
@@ -172,7 +175,7 @@ export class ServiceContainer {
         if (!selectedConfig) {
             throw new Error('Selected LLM configuration not found');
         }
-        
+
         const organization = settings.llmOrganizations.find(o => o.id === selectedConfig.organisationId);
         if (!organization) {
             throw new Error('Organization not found for selected configuration');
@@ -209,7 +212,7 @@ export class ServiceContainer {
         // Services dépendants
         this.noteSummarizationService = new NoteSummarizationService(this.openAIModelService);
         this.contentFusionService = new ContentFusionService(this.openAIModelService);
-        
+
         this.editorTranscriptionReplacementService = new EditorTranscriptionReplacementService(
             this.app,
             this.documentStructureService,
@@ -217,7 +220,7 @@ export class ServiceContainer {
             this.transcriptionReplacementService,
             this.taggedFilesService
         );
-        
+
         this.editorVocabularyReplacementService = new EditorVocabularyReplacementService(
             this.app,
             this.documentStructureService,
@@ -320,7 +323,7 @@ export class ServiceContainer {
 
         // Initialisation synchrone (à adapter si besoin d'async)
         // Exemple : VectorStore mémoire OpenAI (ne reçoit QUE l'instance papa déjà initialisée)
-        
+
         // Pour Ollama :
         // this.papaMemoryVectorStoreOllama = new PapaMemoryVectorStore(
         //     this.papa,
@@ -342,7 +345,7 @@ export class ServiceContainer {
         //    - Très performant pour la recherche sémantique, supporte bien le français
         //    - Recommandé pour les tâches avancées de vectorisation et de similarité
         const embeddingsModels: Embeddings[] = [];
-        
+
         [
             'nomic-embed-text', // Voir description ci-dessus
             // 'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
@@ -368,6 +371,12 @@ export class ServiceContainer {
         // Ajout des services de chunking et d'insertion de chunk
         this.editorChunkingService = new EditorChunkingService(this.app);
         this.editorChunkInsertionService = new EditorChunkInsertionService(this.app);
+        this.editorChunkIndexingService = new EditorChunkIndexingService(
+            this.app,
+            this.editorChunkingService,
+            this.multiTechniqueChunkTransformer,
+            this.vectorStores
+        );
         // Initialisation du service multi-recherche sémantique
 
         this.multiSemanticSearchService = new MultiSemanticSearchServiceImpl(

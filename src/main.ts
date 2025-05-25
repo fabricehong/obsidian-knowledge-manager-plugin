@@ -102,6 +102,20 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			}
 		});
 
+		// Commande pour indexer individuellement les chunks du fichier actif
+		this.addCommand({
+			id: 'index-active-file-chunks-individually',
+			name: 'Indexer les chunks du fichier actif (individuellement)',
+			callback: async () => {
+				try {
+					await this.serviceContainer.editorChunkIndexingService.indexActiveFileChunksIndividually();
+				} catch (error) {
+					console.error('Erreur lors de l\'indexation individuelle des chunks:', error);
+					new Notice('Erreur lors de l\'indexation individuelle des chunks. Voir la console.');
+				}
+			}
+		});
+
 		// --- Commande Index Chunks ---
 		this.addCommand({
 			id: 'index-chunks',
@@ -597,15 +611,17 @@ export default class KnowledgeManagerPlugin extends Plugin {
 		new Notice('Analyse des dossiers en cours...');
 		const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
 
-		// Sélection de la technique via une modale
-		const techniques = this.serviceContainer.chunkTransformServices;
-		await new Promise<void>((resolve) => {
-			new SelectChunkTransformTechniqueModal(this.app, techniques, (selectedTechnique: ChunkTransformService) => {
-				const indexableChunks: IndexableChunk[] = chunks.map(chunk => selectedTechnique.transform(chunk));
-				this.serviceContainer.editorChunkInsertionService.insertChunksInActiveFile(indexableChunks);
-				resolve();
-			}).open();
-		});
+		// Utilisation du multiTechniqueChunkTransformer comme dans indexChunks
+		const transformed = await this.serviceContainer.multiTechniqueChunkTransformer.transformAllTechniquesToIndexableChunks(chunks);
+
+		// Fusionne tous les indexableChunks de toutes les techniques
+		const allIndexableChunks = Object.values(transformed).flat();
+
+		this.serviceContainer.editorChunkInsertionService.insertChunksInActiveFile([
+			{ header: "# Chunks générés (toutes techniques)", chunks: allIndexableChunks }
+		]);
+
+		new Notice(`Chunks insérés (${allIndexableChunks.length}) pour toutes les techniques.`);
 	}
 
 	/**

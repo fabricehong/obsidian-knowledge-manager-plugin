@@ -131,7 +131,7 @@ export class OramaVectorStore extends VectorStore {
             vector: { value: query, property: 'embedding' },
             limit: k,
             similarity: this.similarity,
-            //where: filter,
+            where: filter,
         });
         // DEBUG : log le premier résultat brut
         if (results.hits.length > 0) {
