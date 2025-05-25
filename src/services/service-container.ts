@@ -58,13 +58,10 @@ import { OpenAIEmbeddings } from '@langchain/openai';
 
 import { getVectorStoreKey } from './semantic/vector-store/vectorStoreKey';
 import { RawTextChunkTransformService } from './semantic/indexing/RawTextChunkTransformService';
-import { OllamaEmbedModel } from './semantic/vector-store/PapaModelEnums';
 import { OllamaEmbeddings } from '@langchain/ollama';
 import { Embeddings } from '@langchain/core/embeddings';
 
 export class ServiceContainer {
-  public vectorStoresByKey: Record<string, VectorStore>;
-
     public readonly editorChunkingService: EditorChunkingService;
     public readonly editorChunkInsertionService: EditorChunkInsertionService;
     public readonly documentStructureService: DocumentStructureService;
@@ -349,12 +346,6 @@ export class ServiceContainer {
 
         this.batchIndexableChunkIndexer = new BatchIndexableChunkIndexerImpl(this.vectorStores);
 
-
-        // Mapping clé unique → instance vector store (doit être fait après l'init de this.vectorStores)
-        this.vectorStoresByKey = {};
-        for (const vs of this.vectorStores) {
-            this.vectorStoresByKey[getVectorStoreKey(vs)] = vs;
-        }
 
         // Ajout des services de chunking et d'insertion de chunk
         this.editorChunkingService = new EditorChunkingService(this.app);

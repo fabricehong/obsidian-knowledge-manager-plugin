@@ -671,7 +671,6 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
             // Préparation des exports pour l'insertion
             const exports = Object.entries(resultsByCombination).map(([vectorStoreKey, results]: [string, any[]]) => {
-                const vs = this.serviceContainer.vectorStoresByKey[vectorStoreKey];
                 const header = `# Documents du vector store ${vectorStoreKey}`;
                 const documents = results.map(r => ({ ...r }));
                 return { header, documents };
