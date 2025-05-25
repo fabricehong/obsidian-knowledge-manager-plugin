@@ -79,6 +79,19 @@ export class SettingsTab extends PluginSettingTab {
 
         containerEl.empty();
 
+        // Champ pour la clé OpenAI
+        new Setting(containerEl)
+          .setName('OpenAI API Key')
+          .setDesc('Clé API utilisée pour le chat IA et les embeddings OpenAI')
+          .addText(text => text
+            .setPlaceholder('sk-...')
+            .setValue(this.plugin.settings.openAIApiKey || '')
+            .onChange(async (value) => {
+              this.plugin.settings.openAIApiKey = value;
+              await this.plugin.saveSettings();
+            })
+          );
+
         containerEl.createEl('h2', { text: 'Knowledge Manager Settings' });
 
         // Section LLM Organizations

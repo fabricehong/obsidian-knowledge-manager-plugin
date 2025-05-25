@@ -29,6 +29,7 @@ export interface ChunkingFolderConfig {
 }
 
 export interface PluginSettings {
+    openAIApiKey: string; // Clé API OpenAI pour le chat et les embeddings
     llmOrganizations: LLMOrganization[];
     llmConfigurations: LLMConfiguration[];
     selectedLlmConfiguration: string;
@@ -50,6 +51,7 @@ export interface PluginSettings {
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
+  openAIApiKey: '',
     llmOrganizations: [
         {
             id: 'openai', // generateId('org'),

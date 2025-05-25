@@ -1,28 +1,41 @@
-import { App, Modal, Setting } from 'obsidian';
-import { EditorChatService, ChatResponse } from './editor-chat.service';
+import { ItemView, WorkspaceLeaf, Setting } from 'obsidian';
+import { ChatService, ChatResponse } from './chat.service';
 
-export class ChatModal extends Modal {
-  private chatService: EditorChatService;
+export const VIEW_TYPE_CHAT = 'chat-view';
+
+export class EditorChatPanel extends ItemView {
+  getIcon(): string {
+    return 'message-square'; // Icône native Obsidian pour le chat
+  }
+  private chatService: ChatService;
   private historyEl: HTMLElement;
   private inputEl: HTMLInputElement;
   private sendBtn: HTMLButtonElement;
   private chatHistory: ChatResponse[] = [];
 
-  constructor(app: App, chatService: EditorChatService) {
-    super(app);
+  constructor(leaf: WorkspaceLeaf, chatService: ChatService) {
+    super(leaf);
     this.chatService = chatService;
   }
 
-  onOpen() {
+  getViewType(): string {
+    return VIEW_TYPE_CHAT;
+  }
+
+  getDisplayText(): string {
+    return 'Chat IA';
+  }
+
+  async onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl('h2', { text: 'Chat' });
+    contentEl.createEl('h2', { text: 'Chat IA' });
 
-    // Zone historique
+    // Historique
     this.historyEl = contentEl.createDiv({ cls: 'chat-history' });
     this.renderHistory();
 
-    // Champ de saisie et bouton
+    // Saisie + bouton
     new Setting(contentEl)
       .addText((text) => {
         this.inputEl = text.inputEl;
@@ -39,7 +52,7 @@ export class ChatModal extends Modal {
       });
   }
 
-  private async handleSend() {
+  async handleSend() {
     const message = this.inputEl.value.trim();
     if (!message) return;
     this.inputEl.value = '';
@@ -51,7 +64,7 @@ export class ChatModal extends Modal {
     this.historyEl.scrollTop = this.historyEl.scrollHeight;
   }
 
-  private renderHistory() {
+  renderHistory() {
     this.historyEl.empty();
     for (const msg of this.chatHistory) {
       const msgDiv = this.historyEl.createDiv({ cls: `chat-msg chat-msg-${msg.role}` });
@@ -59,7 +72,7 @@ export class ChatModal extends Modal {
     }
   }
 
-  onClose() {
+  async onClose() {
     this.contentEl.empty();
   }
 }

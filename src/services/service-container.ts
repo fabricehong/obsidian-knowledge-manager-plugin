@@ -54,14 +54,20 @@ import { join } from 'path';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
 import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
 import { EditorChunkIndexingService } from './semantic/editor-chunk-indexing.service';
-import { MultiSemanticSearchServiceImpl } from './semantic/search/MultiSemanticSearchServiceImpl';
+import { MultiSemanticSearchService } from './semantic/search/MultiSemanticSearchService';
 import { OpenAIModelService } from './llm/openai-model.service';
 
 import { OllamaEmbeddings } from '@langchain/ollama';
-import { EditorChatService } from './chat/editor-chat.service';
+import { ChatService } from './chat/chat.service';
 import { Embeddings } from '@langchain/core/embeddings';
 import { randomUUID } from 'crypto';
 import { OpenAIEmbeddings } from '@langchain/openai';
+import { SemanticSearchService } from './semantic/search/SemanticSearchService';
+import { ChatSemanticSearchService } from './semantic/search/ChatSemanticSearchService';
+
+
+
+
 
 
 export class ServiceContainer {
@@ -69,7 +75,7 @@ export class ServiceContainer {
      * Identifiant unique pour chaque instance de ServiceContainer
      */
     public readonly serviceContainerId: string;
-    public readonly editorChatService: EditorChatService; // Service de chat éditeur
+    public readonly editorChatService: ChatService; // Service de chat éditeur
 
     public readonly editorChunkingService: EditorChunkingService;
     public readonly editorChunkInsertionService: EditorChunkInsertionService;
@@ -121,7 +127,8 @@ export class ServiceContainer {
 
     // Ajouter d'autres VectorStore mémoire ici si besoin
 
-    public readonly multiSemanticSearchService: MultiSemanticSearchServiceImpl;
+    public readonly multiSemanticSearchService: MultiSemanticSearchService;
+    public readonly chatSemanticSearchService: ChatSemanticSearchService;
     public readonly editorChunkIndexingService: EditorChunkIndexingService;
 
 
@@ -247,8 +254,16 @@ export class ServiceContainer {
             this.documentationService
         );
 
-        // Instanciation du service de chat éditeur
-        this.editorChatService = new EditorChatService();
+        try {
+            this.editorChatService = new ChatService(
+                this.chatSemanticSearchService,
+                settings.openAIApiKey
+            );
+        } catch (e) {
+            console.error('[ServiceContainer] Impossible d\'initialiser editorChatService:', e);
+            // Important : toujours initialiser la propriété
+            (this as any).editorChatService = null;
+        }
 
         this.conversationTopicsService = new ConversationTopicsService(this.aiCompletionService);
         this.editorConversationTopicsService = new EditorConversationTopicsService(
@@ -320,8 +335,9 @@ export class ServiceContainer {
         );
         this.langChain2Service = new LangChain2Service();
         // Liste des techniques de transformation disponibles (à enrichir selon besoins)
+        const bestChunkTransformTechnique = new ContextualizedChunkTransformService();
         this.chunkTransformServices = [
-            new ContextualizedChunkTransformService(),
+            bestChunkTransformTechnique,
             //new RawTextChunkTransformService(),
         ];
         this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformer(this.chunkTransformServices);
@@ -366,7 +382,7 @@ export class ServiceContainer {
             }));
         });
 
-        // embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: organization.apiKey }));
+        // embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: settings.openAIApiKey }));
 
         this.vectorStores = embeddingsModels.map(
             (model: Embeddings) => {
@@ -391,8 +407,16 @@ export class ServiceContainer {
         );
         // Initialisation du service multi-recherche sémantique
 
-        this.multiSemanticSearchService = new MultiSemanticSearchServiceImpl(
-            this.vectorStores,
+        // Prépare la liste alignée des SemanticSearchService pour chaque vectorStore
+        const semanticSearchServices = this.vectorStores.map(vs => new SemanticSearchService(vs));
+
+        this.chatSemanticSearchService = new ChatSemanticSearchService(
+            semanticSearchServices[0],
+            bestChunkTransformTechnique.technique,
+        );
+
+        this.multiSemanticSearchService = new MultiSemanticSearchService(
+            semanticSearchServices
         );
 
         this.initVectorStores();

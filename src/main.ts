@@ -1,17 +1,13 @@
 import { App, Editor, MarkdownRenderer, MarkdownView, Modal, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import { ServiceContainer } from './services/service-container';
-import { ChatModal } from './services/chat/chat-modal';
-import { ChatView, VIEW_TYPE_CHAT } from './services/chat/chat-view';
+import { EditorChatPanel, VIEW_TYPE_CHAT } from './services/chat/editor-chat-panel';
 import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from '@obsidian-utils/ui/folder-suggest-modal';
 import { TranscriptionModal } from './services/transcription/transcription-modal';
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
-import { SelectChunkTransformTechniqueModal } from './services/semantic/ui/SelectChunkTransformTechniqueModal';
-import { ChunkTransformService } from './services/semantic/indexing/ChunkTransformService';
 
 import { PromptModal } from './services/semantic/ui/PromptModal';
-import { IndexableChunk } from './services/semantic/indexing/IndexableChunk';
 
 // Génère un header markdown détaillé pour tout vector store (type, modèle, etc)
 
@@ -81,43 +77,48 @@ class HelpModal extends Modal {
 }
 
 export default class KnowledgeManagerPlugin extends Plugin {
-  async activateChatView() {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CHAT);
-    if (leaves.length > 0) {
-      this.app.workspace.revealLeaf(leaves[0]);
-      return;
-    }
-    const rightLeaf = this.app.workspace.getRightLeaf(false);
-    if (rightLeaf) {
-      await rightLeaf.setViewState({
-        type: VIEW_TYPE_CHAT,
-        active: true,
-      });
-    }
-  }
+	async activateChatView() {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CHAT);
+		if (leaves.length > 0) {
+			this.app.workspace.revealLeaf(leaves[0]);
+			return;
+		}
+		const rightLeaf = this.app.workspace.getRightLeaf(false);
+		if (rightLeaf) {
+			await rightLeaf.setViewState({
+				type: VIEW_TYPE_CHAT,
+				active: true,
+			});
+		}
+	}
 
 	settings: PluginSettings;
 	private serviceContainer: ServiceContainer;
 	private statusBarItem: HTMLElement;
 
 	async onload() {
-    // Enregistrement de la vue chat dans le panneau latéral
-    this.registerView(
-      VIEW_TYPE_CHAT,
-      (leaf) => new ChatView(leaf, this.serviceContainer.editorChatService)
-    );
-
-    // Ouvre automatiquement le panneau de chat IA à droite au chargement
-    this.activateChatView();
-
-
 		await this.loadSettings();
 		this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
 
+		// Enregistrement de la vue chat dans le panneau latéral
+		this.registerView(
+			VIEW_TYPE_CHAT,
+			(leaf) => new EditorChatPanel(leaf, this.serviceContainer.editorChatService)
+		);
+
+		// Commande pour ouvrir explicitement le panneau de chat IA
+		this.addCommand({
+			id: 'semantic:chat',
+			name: 'semantic:chat',
+			callback: () => {
+				this.activateChatView();
+			}
+		});
+
 		// --- Commande Create Chunks ---
 		this.addCommand({
-			id: 'semantic-:print-indexable-chunks',
-			name: 'semantic-:print-indexable-chunks',
+			id: 'semantic:print-indexable-chunks',
+			name: 'semantic:print-indexable-chunks',
 			callback: async () => {
 				try {
 					await this.printIndexableChunksInActiveFile();
@@ -708,7 +709,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
 	 */
 	async searchInAllVectorStoresAndPrintResults() {
 		new PromptModal(this.app, async (query: string, topK: number) => {
-            console.log('searchInAllVectorStoresAndPrintResults', this.serviceContainer.serviceContainerId);
+			console.log('searchInAllVectorStoresAndPrintResults', this.serviceContainer.serviceContainerId);
 			// Appel simplifié : le service multi-recherche gère tout lui-même
 			const multiSemanticSearchService = this.serviceContainer.multiSemanticSearchService;
 			if (!multiSemanticSearchService) {
