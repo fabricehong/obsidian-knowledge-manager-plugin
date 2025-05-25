@@ -59,7 +59,7 @@ import { OpenAIEmbeddings } from '@langchain/openai';
 import { getVectorStoreKey } from './semantic/vector-store/vectorStoreKey';
 import { RawTextChunkTransformService } from './semantic/indexing/RawTextChunkTransformService';
 import { OllamaEmbedModel } from './semantic/vector-store/PapaModelEnums';
-import { OllamaEmbeddings } from '@langchain/community/embeddings/ollama';
+import { OllamaEmbeddings } from '@langchain/ollama';
 import { Embeddings } from '@langchain/core/embeddings';
 
 export class ServiceContainer {
