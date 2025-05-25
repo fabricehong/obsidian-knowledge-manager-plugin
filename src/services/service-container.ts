@@ -43,7 +43,7 @@ import { EditorSpeakerDescriptionService } from './speaker-description/editor-sp
 import { LangChain2Service } from './others/LangChain2.service';
 import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
 import KnowledgeManagerPlugin from '../main';
-import { MultiTechniqueChunkTransformerImpl } from './semantic/indexing/MultiTechniqueChunkTransformerImpl';
+import { MultiTechniqueChunkTransformer } from './semantic/indexing/MultiTechniqueChunkTransformer';
 import { MultiVectorStoreIndexer } from './semantic/indexing/MultiVectorStoreIndexer';
 import { ChunkTransformService } from './semantic/indexing/ChunkTransformService';
 import { VectorStore } from './semantic/vector-store/VectorStore';
@@ -111,7 +111,7 @@ export class ServiceContainer {
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
     public readonly langChain2Service: LangChain2Service;
-    public readonly multiTechniqueChunkTransformer: MultiTechniqueChunkTransformerImpl;
+    public readonly multiTechniqueChunkTransformer: MultiTechniqueChunkTransformer;
     public readonly multiVectorStoreIndexer: MultiVectorStoreIndexer;
     public readonly chunkTransformServices: ChunkTransformService[];
     public readonly vectorStores: VectorStore[];
@@ -319,7 +319,7 @@ export class ServiceContainer {
             new ContextualizedChunkTransformService(),
             //new RawTextChunkTransformService(),
         ];
-        this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformerImpl(this.chunkTransformServices);
+        this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformer(this.chunkTransformServices);
 
         // Initialisation synchrone (à adapter si besoin d'async)
         // Exemple : VectorStore mémoire OpenAI (ne reçoit QUE l'instance papa déjà initialisée)
@@ -344,12 +344,13 @@ export class ServiceContainer {
         //    - Modèle BAAI de dernière génération, multilingue
         //    - Très performant pour la recherche sémantique, supporte bien le français
         //    - Recommandé pour les tâches avancées de vectorisation et de similarité
+        //    - Contexte plus grand que les autres
         const embeddingsModels: Embeddings[] = [];
 
         [
-            'nomic-embed-text', // Voir description ci-dessus
+            // 'nomic-embed-text', // Voir description ci-dessus
             // 'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
-            // 'bge-m3', // Voir description ci-dessus
+            'bge-m3', // Voir description ci-dessus
         ].forEach(element => {
             embeddingsModels.push(new OllamaEmbeddings({model: element}));
         });

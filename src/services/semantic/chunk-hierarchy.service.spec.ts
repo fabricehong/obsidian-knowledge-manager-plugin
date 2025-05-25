@@ -3,6 +3,29 @@ import { ChunkHierarchyType } from '../../models/chunk';
 import { RootNode, HeaderNode } from '../../models/interfaces';
 
 describe('ChunkHierarchyService', () => {
+    it('n\'inclut pas les chunks dont le contenu commence par #no-chunk', () => {
+        const service = new ChunkHierarchyService();
+        const root: RootNode = {
+            content: '',
+            children: [
+                {
+                    heading: 'Section ignorée',
+                    level: 1,
+                    content: '#no-chunk Ceci doit être ignoré',
+                    children: []
+                },
+                {
+                    heading: 'Section normale',
+                    level: 1,
+                    content: 'Texte normal',
+                    children: []
+                }
+            ]
+        };
+        const chunks = service.buildChunksWithHierarchy('notes/test.md', root);
+        expect(chunks).toHaveLength(1);
+        expect(chunks[0].markdown).toBe('Texte normal');
+    });
     const service = new ChunkHierarchyService();
 
     function fakeRenderToMarkdown(root: RootNode): string {

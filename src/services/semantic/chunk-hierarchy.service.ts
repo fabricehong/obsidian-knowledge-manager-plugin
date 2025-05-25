@@ -5,6 +5,10 @@ import { RootNode, HeaderNode } from '../../models/interfaces';
  * Service indépendant de la couche Obsidian pour construire des chunks hiérarchiques.
  */
 export class ChunkHierarchyService {
+    private readonly NO_CHUNK_TAG = '#no-chunk';
+    private shouldAddChunk(markdown: string): boolean {
+        return !(typeof markdown === 'string' && markdown.trimStart().startsWith(this.NO_CHUNK_TAG));
+    }
     /**
      * Construit un Chunk avec hiérarchie complète à partir de filePath, root, heading, et une fonction de rendu markdown.
      * @param filePath Chemin du fichier (ex : notes/projets/ProjetX.md)
@@ -24,6 +28,7 @@ export class ChunkHierarchyService {
         const fileLevel: ChunkHierarchyLevel = { name: fileName, type: ChunkHierarchyType.File };
 
         // Parcours récursif de l'arbre : à chaque noeud avec du contenu (non vide), crée un chunk
+        const self = this;
         function collectChunks(node: HeaderNode | RootNode, parentHeaders: string[]): Chunk[] {
             let chunks: Chunk[] = [];
             // Détection robuste d'un HeaderNode
@@ -36,10 +41,12 @@ export class ChunkHierarchyService {
                 const headerLevels = isHeaderNode
                     ? [...parentHeaders, (node as HeaderNode).heading].map(h => ({ name: h, type: ChunkHierarchyType.Header }))
                     : parentHeaders.map(h => ({ name: h, type: ChunkHierarchyType.Header }));
-                chunks.push({
-                    markdown: node.content,
-                    hierarchy: [...directories, fileLevel, ...headerLevels]
-                });
+                if (self.shouldAddChunk(node.content)) {
+                    chunks.push({
+                        markdown: node.content,
+                        hierarchy: [...directories, fileLevel, ...headerLevels]
+                    });
+                }
             }
             if ('children' in node && node.children.length > 0) {
                 for (const child of node.children) {

@@ -4,6 +4,7 @@ import { DocumentStructureService } from '../document/document-structure.service
 import { HeaderNode, RootNode, FileRootNode } from '../../models/interfaces';
 import { Chunk } from '../../models/chunk';
 import { ChunkHierarchyService } from './chunk-hierarchy.service';
+import { isFileInChunkingFolder } from './chunking-folder-matcher';
 
 /**
  * Service dédié à la commande "Create Chunks".
@@ -13,6 +14,7 @@ import { ChunkHierarchyService } from './chunk-hierarchy.service';
 export class EditorChunkingService {
     private app: App;
     private docStructureService: DocumentStructureService;
+
 
     constructor(app: App) {
         this.app = app;
@@ -49,12 +51,12 @@ export class EditorChunkingService {
         for (const config of configs) {
             // Récupère tous les fichiers markdown du dossier
             const files = vault.getFiles().filter(f =>
-                f.path.startsWith(config.folder) && f.extension === 'md'
+                isFileInChunkingFolder(f.path, config.folder) && f.extension === 'md'
             );
             for (const file of files) {
                 const fileRoot = await this.docStructureService.buildHeaderTree(this.app, file);
                 // Calcule le chemin relatif au dossier de config
-                const relativePath = file.path.startsWith(config.folder)
+                const relativePath = isFileInChunkingFolder(file.path, config.folder)
                     ? file.path.substring(config.folder.length).replace(/^\/+/, '')
                     : file.path;
                 if (!config.headings) {
@@ -93,5 +95,4 @@ export class EditorChunkingService {
         const chunkHierarchyService = new ChunkHierarchyService();
         return chunkHierarchyService.buildChunksWithHierarchy(file.path, fileRoot.root);
     }
-
 }

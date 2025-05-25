@@ -102,16 +102,16 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			}
 		});
 
-		// Commande pour indexer individuellement les chunks du fichier actif
+		// Commande pour tester les embeddings sur tous les vector stores du fichier actif
 		this.addCommand({
-			id: 'index-active-file-chunks-individually',
-			name: 'Indexer les chunks du fichier actif (individuellement)',
+			id: 'test-embeddings-active-file-chunks-all-stores',
+			name: 'Tester les embeddings du fichier actif (tous modèles)',
 			callback: async () => {
 				try {
-					await this.serviceContainer.editorChunkIndexingService.indexActiveFileChunksIndividually();
+					await this.serviceContainer.editorChunkIndexingService.testEmbeddingsForActiveFileChunksAllStores();
 				} catch (error) {
-					console.error('Erreur lors de l\'indexation individuelle des chunks:', error);
-					new Notice('Erreur lors de l\'indexation individuelle des chunks. Voir la console.');
+					console.error('Erreur lors du test des embeddings:', error);
+					new Notice('Erreur lors du test des embeddings. Voir la console.');
 				}
 			}
 		});
