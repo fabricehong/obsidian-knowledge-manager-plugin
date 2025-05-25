@@ -5,7 +5,7 @@ import { BatchChunkTransformerImpl } from './BatchChunkTransformerImpl';
 import { IndexableChunk } from './IndexableChunk';
 
 // Nouveau type pour le mapping multi-technique
-export type BatchChunkTransformResult = Record<string, IndexableChunk[]>;
+export type MultiTechniqueIndexableChunks = Record<string, IndexableChunk[]>;
 
 /**
  * Implémentation concrète de MultiTechniqueEvaluator pour indexer toutes les combinaisons
@@ -20,8 +20,8 @@ export class MultiTechniqueChunkTransformerImpl implements MultiTechniqueChunkTr
 
   async transformAllTechniquesToIndexableChunks(
     chunks: Chunk[]
-  ): Promise<BatchChunkTransformResult> {
-    const result: BatchChunkTransformResult = {};
+  ): Promise<MultiTechniqueIndexableChunks> {
+    const result: MultiTechniqueIndexableChunks = {};
     for (const technique of this.techniques) {
       result[technique.technique] = await this.batchChunkTransformer.transformBatchToIndexableChunks(chunks, technique);
     }

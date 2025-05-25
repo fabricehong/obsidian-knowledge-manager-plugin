@@ -12,6 +12,11 @@ export interface IndexableChunk {
 }
 
 export interface VectorStore {
+  init?(): Promise<void>;
+  /**
+   * Réinitialise complètement le vector store (supprime tous les documents).
+   */
+  reset(): Promise<void>;
   getAllCollections(): string[];
   readonly id: string;
   /**

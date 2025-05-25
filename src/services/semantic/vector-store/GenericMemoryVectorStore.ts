@@ -1,15 +1,22 @@
 import { VectorStore, IndexableChunk } from './VectorStore';
 
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
-import { EmbeddingsInterface } from '@langchain/core/embeddings';
+import { Embeddings } from '@langchain/core/embeddings';
 
 // Cette classe wrappe MemoryVectorStore de LangChain pour l'API du projet
 export class GenericMemoryVectorStore implements VectorStore {
+  /**
+   * Réinitialise complètement le vector store (supprime tous les documents).
+   */
+  async reset(): Promise<void> {
+    // MemoryVectorStore n'a pas de méthode clear, donc on réinstancie
+    this.store = new MemoryVectorStore(this.embeddingsProvider);
+  }
   public readonly id: string;
   private store: MemoryVectorStore;
-  private embeddingsProvider: EmbeddingsInterface;
+  private embeddingsProvider: Embeddings;
 
-  constructor(embeddingsProvider: EmbeddingsInterface) {
+  constructor(embeddingsProvider: Embeddings) {
     this.embeddingsProvider = embeddingsProvider;
     this.store = new MemoryVectorStore(embeddingsProvider);
     this.id = this.getModelName() || 'unknown-model';

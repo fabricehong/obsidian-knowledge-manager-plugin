@@ -5,7 +5,7 @@ import { VaultMapperService } from './vault-mapper.service';
 import { FilePathService } from './diffusion/file-path.service';
 import { DocumentCleaningService } from './diffusion/document-cleaning.service';
 import { TranscriptionReplacementService } from './replacement/apply-replacement/transcription-replacement.service';
-import { YamlService } from './document/yaml.service'; 
+import { YamlService } from './document/yaml.service';
 import { EditorTranscriptionReplacementService } from './replacement/apply-replacement/editor-transcription-replacement.service';
 import { EditorVocabularyReplacementService } from './vocabulary/editor-vocabulary-replacement.service';
 import { GlossaryReplacementService } from './replacement/specs-creation/glossary-replacement.service';
@@ -44,24 +44,29 @@ import { LangChain2Service } from './others/LangChain2.service';
 import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
 import KnowledgeManagerPlugin from '../main';
 import { MultiTechniqueChunkTransformerImpl } from './semantic/indexing/MultiTechniqueChunkTransformerImpl';
-import { BatchIndexableChunkIndexerImpl } from './semantic/indexing/BatchIndexableChunkIndexerImpl';
+import { MultiVectorStoreIndexer } from './semantic/indexing/MultiVectorStoreIndexer';
 import { ChunkTransformService } from './semantic/indexing/ChunkTransformService';
 import { VectorStore } from './semantic/vector-store/VectorStore';
 import { ContextualizedChunkTransformService } from './semantic/indexing/ContextualizedChunkTransformService';
 
-import { GenericMemoryVectorStore } from './semantic/vector-store/GenericMemoryVectorStore';
+import { PersistentOramaVectorStore } from './semantic/vector-store/PersistentOramaVectorStore';
+import { join } from 'path';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
 import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
 import { MultiSemanticSearchServiceImpl } from './semantic/search/MultiSemanticSearchServiceImpl';
 import { OpenAIModelService } from './llm/openai-model.service';
-import { OpenAIEmbeddings } from '@langchain/openai';
 
-import { getVectorStoreKey } from './semantic/vector-store/vectorStoreKey';
-import { RawTextChunkTransformService } from './semantic/indexing/RawTextChunkTransformService';
 import { OllamaEmbeddings } from '@langchain/ollama';
 import { Embeddings } from '@langchain/core/embeddings';
+import { randomUUID } from 'crypto';
+
 
 export class ServiceContainer {
+    /**
+     * Identifiant unique pour chaque instance de ServiceContainer
+     */
+    public readonly serviceContainerId: string;
+
     public readonly editorChunkingService: EditorChunkingService;
     public readonly editorChunkInsertionService: EditorChunkInsertionService;
     public readonly documentStructureService: DocumentStructureService;
@@ -105,17 +110,21 @@ export class ServiceContainer {
     private readonly textCorrector: TextCorrector;
     public readonly langChain2Service: LangChain2Service;
     public readonly multiTechniqueChunkTransformer: MultiTechniqueChunkTransformerImpl;
-    public readonly batchIndexableChunkIndexer: BatchIndexableChunkIndexerImpl;
+    public readonly multiVectorStoreIndexer: MultiVectorStoreIndexer;
     public readonly chunkTransformServices: ChunkTransformService[];
     public readonly vectorStores: VectorStore[];
 
-    public readonly langChainMemoryVectorStore: GenericMemoryVectorStore;
+
     // Ajouter d'autres VectorStore mémoire ici si besoin
 
     public readonly multiSemanticSearchService: MultiSemanticSearchServiceImpl;
 
 
     constructor(private app: App, settings: PluginSettings, private plugin: KnowledgeManagerPlugin) {
+        // Génère un UUID unique pour cette instance
+        this.serviceContainerId = randomUUID();
+        console.log('creation du service container', this.serviceContainerId);
+        console.log('[ServiceContainer.constructor] called', (new Error().stack));
         // Services sans dépendances
         this.documentStructureService = new DocumentStructureService();
         this.yamlReplacementService = new YamlService<ReplacementSpecs>(ReplacementSpecsSchema, 'Invalid replacement specs');
@@ -305,7 +314,7 @@ export class ServiceContainer {
         // Liste des techniques de transformation disponibles (à enrichir selon besoins)
         this.chunkTransformServices = [
             new ContextualizedChunkTransformService(),
-            new RawTextChunkTransformService(),
+            //new RawTextChunkTransformService(),
         ];
         this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformerImpl(this.chunkTransformServices);
 
@@ -332,27 +341,44 @@ export class ServiceContainer {
         //    - Modèle BAAI de dernière génération, multilingue
         //    - Très performant pour la recherche sémantique, supporte bien le français
         //    - Recommandé pour les tâches avancées de vectorisation et de similarité
-        const embeddingsModels: Embeddings[] = [
-            'nomic-embed-text', // Voir description ci-dessus
-            'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
-            'bge-m3', // Voir description ci-dessus
-        ].map(model => new OllamaEmbeddings({model: model}));
-
-        embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: organization.apiKey }));
+        const embeddingsModels: Embeddings[] = [];
         
+        [
+            'nomic-embed-text', // Voir description ci-dessus
+            // 'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
+            // 'bge-m3', // Voir description ci-dessus
+        ].forEach(element => {
+            embeddingsModels.push(new OllamaEmbeddings({model: element}));
+        });
+
+        // embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: organization.apiKey }));
+
         this.vectorStores = embeddingsModels.map(
-            (model: Embeddings) => new GenericMemoryVectorStore(model)
+            (model: Embeddings) => {
+                // On crée un fichier de persistence unique par modèle
+                const safeModelName = (model as any).model?.replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown';
+                const persistencePath = join((this.app.vault.adapter as any).basePath, `vectorstore-orama-${safeModelName}.json`);
+                return new PersistentOramaVectorStore(model, persistencePath);
+            }
         );
 
-        this.batchIndexableChunkIndexer = new BatchIndexableChunkIndexerImpl(this.vectorStores);
+        // Initialisation asynchrone déplacée dans une méthode dédiée
 
-
+        this.multiVectorStoreIndexer = new MultiVectorStoreIndexer(this.vectorStores);
         // Ajout des services de chunking et d'insertion de chunk
         this.editorChunkingService = new EditorChunkingService(this.app);
         this.editorChunkInsertionService = new EditorChunkInsertionService(this.app);
         // Initialisation du service multi-recherche sémantique
+
         this.multiSemanticSearchService = new MultiSemanticSearchServiceImpl(
             this.vectorStores,
         );
+
+        this.initVectorStores();
+    }
+
+    private async initVectorStores() {
+        console.log('initVectorStores', this.serviceContainerId);
+        await Promise.all(this.vectorStores.map(store => store.init?.()));
     }
 }

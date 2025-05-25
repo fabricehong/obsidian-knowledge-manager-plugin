@@ -1,8 +1,7 @@
 import { VectorStore } from '../vector-store/VectorStore';
-import { BatchIndexableChunkIndexer } from './BatchIndexableChunkIndexer';
-import { BatchChunkTransformResult } from './MultiTechniqueChunkTransformerImpl';
+import { MultiTechniqueIndexableChunks } from './MultiTechniqueChunkTransformerImpl';
 
-export class BatchIndexableChunkIndexerImpl implements BatchIndexableChunkIndexer {
+export class MultiVectorStoreIndexer {
   private readonly vectorStores: VectorStore[];
 
   constructor(vectorStores: VectorStore[]) {
@@ -10,14 +9,15 @@ export class BatchIndexableChunkIndexerImpl implements BatchIndexableChunkIndexe
   }
 
   async indexTransformedChunks(
-    transformedChunks: BatchChunkTransformResult
+    multiTechniqueIndexableChunks: MultiTechniqueIndexableChunks
   ): Promise<void> {
     // Pour chaque technique, pour chaque vector store, indexer le batch dans la collection dédiée
     const tasks: Promise<void>[] = [];
-    for (const technique in transformedChunks) {
-      const indexableChunks = transformedChunks[technique];
+    for (const technique in multiTechniqueIndexableChunks) {
+      const indexableChunks = multiTechniqueIndexableChunks[technique];
       for (const vectorStore of this.vectorStores) {
         // Le nom de la collection/namespace est dérivé de la technique
+        console.log(`indexing ${indexableChunks.length} chunks for technique ${technique}`);
         tasks.push(vectorStore.indexBatch(indexableChunks, technique));
       }
     }
