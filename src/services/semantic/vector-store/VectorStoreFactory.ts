@@ -1,14 +1,6 @@
-import { VectorStoreType } from './VectorStoreType';
-import { LangChainMemoryVectorStore } from './LangChainMemoryVectorStore';
-import { VectorStore } from './VectorStore';
+import { GenericMemoryVectorStore } from './GenericMemoryVectorStore';
+import { OpenAIEmbeddings } from '@langchain/openai';
 
-export function createVectorStore(type: VectorStoreType, embedModel: string): VectorStore {
-  switch (type) {
-    case VectorStoreType.MEMORY:
-      return new LangChainMemoryVectorStore(embedModel);
-    // case VectorStoreType.FAISS:
-    //   return new Pa''sVectorStore(embedModel);
-    default:
-      throw new Error('VectorStoreType not supported: ' + type);
-  }
+export function createVectorStore(embedModel: string): GenericMemoryVectorStore {
+  return new GenericMemoryVectorStore(new OpenAIEmbeddings({ model: embedModel }));
 }

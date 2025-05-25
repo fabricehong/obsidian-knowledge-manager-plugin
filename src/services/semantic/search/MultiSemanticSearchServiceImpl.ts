@@ -1,32 +1,54 @@
-import { MultiSemanticSearchService, MultiSearchResult, SearchTarget } from './MultiSemanticSearchService';
+import { MultiSemanticSearchService, MultiSearchResult } from './MultiSemanticSearchService';
+import { ChunkTransformTechnique } from '../indexing/ChunkTransformTechnique';
 import { SemanticSearchServiceImpl } from './SemanticSearchServiceImpl';
 import { VectorStore } from '../vector-store/VectorStore';
-import { getVectorStoreLabel } from '../vector-store/vectorStoreLabel';
 
 /**
- * Implémentation concrète pour la multi-recherche sémantique sur plusieurs couples technique/vector store
+ * Service permettant d'effectuer des recherches sémantiques sur plusieurs VectorStore simultanément.
+ * Orchestration de la recherche multi-technique pour différents backends vectoriels.
  */
 export class MultiSemanticSearchServiceImpl implements MultiSemanticSearchService {
-  constructor(private vectorStores: { [key: string]: VectorStore }) {}
+  /**
+   * @param vectorStores Dictionnaire des vector stores disponibles (clé = id, valeur = instance)
+   * @param chunkTransformServices Liste des services de transformation de chunk, chaque service doit avoir une propriété 'technique'
+   */
+  constructor(
+    private vectorStores: VectorStore[],
+  ) {}
 
-  async multiSearch(query: string, topK: number, targets: SearchTarget[]): Promise<MultiSearchResult> {
+  /**
+   * Recherche sur toutes les techniques et tous les vector stores disponibles
+   * @param query La requête utilisateur
+   * @param topK Nombre de résultats à retourner par combinaison
+   * @returns Résultats groupés par clé de vector store et technique
+   */
+  public async searchEverywhere(query: string, topK: number): Promise<MultiSearchResult> {
     const results: MultiSearchResult = {};
-    await Promise.all(targets.map(async target => {
-      const vectorStore = target.vectorStoreInstance;
-      const key = target.vectorStoreKey;
-      const label = getVectorStoreLabel(vectorStore);
-      if (typeof (vectorStore as any).getAllDocuments === 'function') {
-        const nbDocs = (vectorStore as any).getAllDocuments().length;
-        console.log(`[SemanticSearch] Recherche en cours sur vector store : ${label} [${key}]` + (nbDocs !== undefined ? ` | Documents présents : ${nbDocs}` : ''));
-      } else {
-        console.log(`[SemanticSearch] Recherche en cours sur vector store : ${label} [${key}]`);
+    for (const vectorStoreInstance of this.vectorStores) {
+      const vectorStoreKey = vectorStoreInstance.id;
+      const collections = vectorStoreInstance.getAllCollections();
+      for (const collection of collections) {
+        this.logSearchContext(vectorStoreInstance, vectorStoreKey, collection);
+        console.log(`[SemanticSearch] Recherche sur collection : ${collection}`);
+        const service = new SemanticSearchServiceImpl(vectorStoreInstance);
+        const searchResults = await service.search(query, topK, collection);
+        console.log(`[SemanticSearch] Résultats pour ${vectorStoreInstance.id} [${vectorStoreKey}] (collection ${collection}) :`, searchResults.length, searchResults);
+        results[`${vectorStoreKey}_${collection}`] = searchResults;
       }
-      console.log(`[SemanticSearch] Recherche sur collection : ${target.technique}`);
-      const service = new SemanticSearchServiceImpl(vectorStore);
-      const searchResults = await service.search(query, topK, target.technique);
-      console.log(`[SemanticSearch] Résultats pour ${label} [${key}] (collection ${target.technique}) :`, searchResults.length, searchResults);
-      results[key] = searchResults;
-    }));
+    }
     return results;
   }
+
+  /**
+   * Affiche les informations de contexte sur le vector store ciblé
+   */
+  private logSearchContext(vectorStore: VectorStore, label: string, key: string): void {
+    if (typeof (vectorStore as any).getAllDocuments === 'function') {
+      const nbDocs = (vectorStore as any).getAllDocuments().length;
+      console.log(`[SemanticSearch] Recherche en cours sur vector store : ${label} [${key}]` + (nbDocs !== undefined ? ` | Documents présents : ${nbDocs}` : ''));
+    } else {
+      console.log(`[SemanticSearch] Recherche en cours sur vector store : ${label} [${key}]`);
+    }
+  }
 }
+

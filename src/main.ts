@@ -5,19 +5,13 @@ import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from '@obsidian-utils/ui/folder-suggest-modal';
 import { TranscriptionModal } from './services/transcription/transcription-modal';
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
-import { LangChain2Service } from './services/others/LangChain2.service';
-import { ContextualizedChunkTransformService } from './services/semantic/indexing/ContextualizedChunkTransformService';
 import { SelectChunkTransformTechniqueModal } from './services/semantic/ui/SelectChunkTransformTechniqueModal';
-import { ChunkTransformTechnique } from './services/semantic/indexing/ChunkTransformTechnique';
 import { ChunkTransformService } from './services/semantic/indexing/ChunkTransformService';
-import { VectorStoreType } from './services/semantic/vector-store/VectorStoreType';
-import { SearchTarget } from './services/semantic/search/MultiSemanticSearchService';
+
 import { PromptModal } from './services/semantic/ui/PromptModal';
 import { IndexableChunk } from './services/semantic/indexing/IndexableChunk';
 
 // Génère un header markdown détaillé pour tout vector store (type, modèle, etc)
-import { getVectorStoreLabel } from './services/semantic/vector-store/vectorStoreLabel';
-import { getVectorStoreKey } from './services/semantic/vector-store/vectorStoreKey';
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
@@ -619,11 +613,9 @@ export default class KnowledgeManagerPlugin extends Plugin {
             return;
         }
         const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
-        const techniques = this.serviceContainer.chunkTransformServices;
-        const vectorStores = this.serviceContainer.vectorStores;
-        const transformed = await this.serviceContainer.multiTechniqueChunkTransformer.transformAllTechniquesToIndexableChunks(chunks, techniques);
+        const transformed = await this.serviceContainer.multiTechniqueChunkTransformer.transformAllTechniquesToIndexableChunks(chunks);
         try {
-            await this.serviceContainer.batchIndexableChunkIndexer.indexTransformedChunks(transformed, vectorStores);
+            await this.serviceContainer.batchIndexableChunkIndexer.indexTransformedChunks(transformed);
             new Notice("Indexation terminée avec succès !");
         } catch (error: any) {
             console.error("Erreur lors de l'indexation des chunks :", error);
@@ -632,7 +624,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
     }
 
     async printAllVectorStoreDocumentsInActiveFile() {
-        const vectorStores = this.serviceContainer.vectorStores.filter(vs => typeof (vs as any).getAllDocuments === 'function');
+        const vectorStores: import("./services/semantic/vector-store/VectorStore").VectorStore[] = this.serviceContainer.vectorStores;
         if (!vectorStores.length) {
             new Notice('Aucun vector store mémoire trouvé.');
             return;
@@ -643,18 +635,18 @@ export default class KnowledgeManagerPlugin extends Plugin {
             new Notice('Aucun fichier markdown actif pour insérer les documents.');
             return;
         }
-        // Prépare tous les exports (header + documents) pour tous les vector stores
-        const exports = vectorStores.map(vs => {
-            const vectorStoreKey = getVectorStoreKey(vs);
-            const header = `# Documents du vector store ${vectorStoreKey}`;
-            const docs = (vs as any).getAllDocuments();
-            return {
-                header,
-                documents: docs,
-            };
-        });
+        // Prépare tous les exports (header + documents) pour tous les vector stores et leurs collections
+        const exports: { header: string; documents: any[] }[] = [];
+        for (const vs of vectorStores) {
+            const collections = vs.getAllCollections();
+            for (const collection of collections) {
+                const docs = vs.getAllDocuments(collection);
+                const header = `# Documents du vector store ${vs.id} (collection: ${collection})`;
+                exports.push({ header, documents: docs });
+            }
+        }
         this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
-        new Notice(`Insertion de tous les documents (${exports.reduce((acc: number, e: any) => acc + e.documents.length, 0)}) dans la note active.`);
+        new Notice(`Insertion de tous les documents (${exports.reduce((acc, e) => acc + e.documents.length, 0)}) dans la note active.`);
     }
 
     /**
@@ -663,25 +655,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
      */
     async searchInAllVectorStoresAndPrintResults() {
         new PromptModal(this.app, async (query: string, topK: number) => {
-            // Récupération des techniques et vector stores actifs
-            const techniques = (this.serviceContainer.chunkTransformServices || [])
-                .map((svc: any) => svc.technique as ChunkTransformTechnique)
-                .filter(Boolean);
-            const vectorStores = (this.serviceContainer.vectorStores || []);
-
-            if (!techniques.length || !vectorStores.length) {
-                new Notice('Aucune technique ou vector store disponible.');
-                return;
-            }
-            // Génère toutes les combinaisons
-            const targets: any[] = [];
-            for (const technique of techniques) {
-                for (const vectorStore of vectorStores) {
-                    const vectorStoreKey = getVectorStoreKey(vectorStore);
-                    targets.push({ technique, vectorStoreKey, vectorStoreInstance: vectorStore });
-                }
-            }
-            // Appel du service multi-recherche
+            // Appel simplifié : le service multi-recherche gère tout lui-même
             const multiSemanticSearchService = this.serviceContainer.multiSemanticSearchService;
             if (!multiSemanticSearchService) {
                 new Notice('Service multi-recherche indisponible.');
@@ -689,7 +663,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
             }
             let resultsByCombination;
             try {
-                resultsByCombination = await multiSemanticSearchService.multiSearch(query, topK, targets);
+                resultsByCombination = await multiSemanticSearchService.searchEverywhere(query, topK);
             } catch (e) {
                 console.error('Erreur lors de la recherche sémantique multi-vector store:', e);
                 new Notice('Erreur lors de la recherche sémantique. Voir la console.');

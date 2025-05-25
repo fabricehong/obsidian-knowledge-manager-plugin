@@ -12,13 +12,17 @@ export type BatchChunkTransformResult = Record<string, IndexableChunk[]>;
  */
 export class MultiTechniqueChunkTransformerImpl implements MultiTechniqueChunkTransformer {
   private batchChunkTransformer = new BatchChunkTransformerImpl();
+  private readonly techniques: ChunkTransformService[];
+
+  constructor(techniques: ChunkTransformService[]) {
+    this.techniques = techniques;
+  }
 
   async transformAllTechniquesToIndexableChunks(
-    chunks: Chunk[],
-    techniques: ChunkTransformService[]
+    chunks: Chunk[]
   ): Promise<BatchChunkTransformResult> {
     const result: BatchChunkTransformResult = {};
-    for (const technique of techniques) {
+    for (const technique of this.techniques) {
       result[technique.technique] = await this.batchChunkTransformer.transformBatchToIndexableChunks(chunks, technique);
     }
     return result;

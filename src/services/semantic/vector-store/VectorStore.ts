@@ -3,7 +3,7 @@
  * Permet d'indexer des objets (chunk + texte indexable) par batch.
  */
 import { Chunk } from "../../../models/chunk";
-import { VectorStoreType } from "./VectorStoreType";
+
 
 export interface IndexableChunk {
   chunk: Chunk;
@@ -12,7 +12,8 @@ export interface IndexableChunk {
 }
 
 export interface VectorStore {
-  readonly type: VectorStoreType;
+  getAllCollections(): string[];
+  readonly id: string;
   /**
    * Indexe un batch d'objets dans une collection donnée.
    * @param items objets à indexer
@@ -24,4 +25,10 @@ export interface VectorStore {
    * Recherche sémantique dans le vector store/collection
    */
   search(query: string, topK: number, collection: string): Promise<any[]>;
+
+  /**
+   * Retourne tous les documents du vector store, ou uniquement ceux d'une collection si précisé.
+   * @param collection : nom de la collection à filtrer
+   */
+  getAllDocuments(collection: string): any[];
 }

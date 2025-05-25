@@ -1,4 +1,4 @@
-import { OllamaMemoryVectorStore } from './semantic/vector-store/OllamaMemoryVectorStore';
+
 import { App } from 'obsidian';
 import { ContentFusionService } from './diffusion/content-fusion.service';
 import { VaultMapperService } from './vault-mapper.service';
@@ -49,7 +49,7 @@ import { ChunkTransformService } from './semantic/indexing/ChunkTransformService
 import { VectorStore } from './semantic/vector-store/VectorStore';
 import { ContextualizedChunkTransformService } from './semantic/indexing/ContextualizedChunkTransformService';
 
-import { LangChainMemoryVectorStore } from './semantic/vector-store/LangChainMemoryVectorStore';
+import { GenericMemoryVectorStore } from './semantic/vector-store/GenericMemoryVectorStore';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
 import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
 import { MultiSemanticSearchServiceImpl } from './semantic/search/MultiSemanticSearchServiceImpl';
@@ -57,6 +57,10 @@ import { OpenAIModelService } from './llm/openai-model.service';
 import { OpenAIEmbeddings } from '@langchain/openai';
 
 import { getVectorStoreKey } from './semantic/vector-store/vectorStoreKey';
+import { RawTextChunkTransformService } from './semantic/indexing/RawTextChunkTransformService';
+import { OllamaEmbedModel } from './semantic/vector-store/PapaModelEnums';
+import { OllamaEmbeddings } from '@langchain/community/embeddings/ollama';
+import { Embeddings } from '@langchain/core/embeddings';
 
 export class ServiceContainer {
   public vectorStoresByKey: Record<string, VectorStore>;
@@ -108,7 +112,7 @@ export class ServiceContainer {
     public readonly chunkTransformServices: ChunkTransformService[];
     public readonly vectorStores: VectorStore[];
 
-    public readonly langChainMemoryVectorStore: LangChainMemoryVectorStore;
+    public readonly langChainMemoryVectorStore: GenericMemoryVectorStore;
     // Ajouter d'autres VectorStore mémoire ici si besoin
 
     public readonly multiSemanticSearchService: MultiSemanticSearchServiceImpl;
@@ -301,19 +305,16 @@ export class ServiceContainer {
             this.speakerDescriptionService
         );
         this.langChain2Service = new LangChain2Service();
-        this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformerImpl();
-        this.batchIndexableChunkIndexer = new BatchIndexableChunkIndexerImpl();
         // Liste des techniques de transformation disponibles (à enrichir selon besoins)
         this.chunkTransformServices = [
             new ContextualizedChunkTransformService(),
-            // Ajouter d'autres implémentations ici
+            new RawTextChunkTransformService(),
         ];
-
+        this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformerImpl(this.chunkTransformServices);
 
         // Initialisation synchrone (à adapter si besoin d'async)
         // Exemple : VectorStore mémoire OpenAI (ne reçoit QUE l'instance papa déjà initialisée)
-        const embeddings = new OpenAIEmbeddings({ openAIApiKey: organization.apiKey });
-        this.langChainMemoryVectorStore = new LangChainMemoryVectorStore(embeddings);
+        
         // Pour Ollama :
         // this.papaMemoryVectorStoreOllama = new PapaMemoryVectorStore(
         //     this.papa,
@@ -334,20 +335,20 @@ export class ServiceContainer {
         //    - Modèle BAAI de dernière génération, multilingue
         //    - Très performant pour la recherche sémantique, supporte bien le français
         //    - Recommandé pour les tâches avancées de vectorisation et de similarité
-        const ollamaModels = [
+        const embeddingsModels: Embeddings[] = [
             'nomic-embed-text', // Voir description ci-dessus
             'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
             'bge-m3', // Voir description ci-dessus
-        ];
-        // Instanciation des vector stores Ollama à partir du tableau ci-dessus
-        const ollamaVectorStores = ollamaModels.map(
-            (model: string) => new OllamaMemoryVectorStore(model)
+        ].map(model => new OllamaEmbeddings({model: model}));
+
+        embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: organization.apiKey }));
+        
+        this.vectorStores = embeddingsModels.map(
+            (model: Embeddings) => new GenericMemoryVectorStore(model)
         );
-        this.vectorStores = [
-            this.langChainMemoryVectorStore,
-            ...ollamaVectorStores,
-            // Ajouter d'autres VectorStore ici
-        ];
+
+        this.batchIndexableChunkIndexer = new BatchIndexableChunkIndexerImpl(this.vectorStores);
+
 
         // Mapping clé unique → instance vector store (doit être fait après l'init de this.vectorStores)
         this.vectorStoresByKey = {};
@@ -360,13 +361,7 @@ export class ServiceContainer {
         this.editorChunkInsertionService = new EditorChunkInsertionService(this.app);
         // Initialisation du service multi-recherche sémantique
         this.multiSemanticSearchService = new MultiSemanticSearchServiceImpl(
-            Object.fromEntries(
-                this.vectorStores.map(vs => [
-                    // Clef: `${technique}_${vectorStore}` (voir MultiSemanticSearchServiceImpl)
-                    (vs.type ? vs.type : vs.constructor?.name || 'VectorStore'),
-                    vs
-                ])
-            )
+            this.vectorStores,
         );
     }
 }

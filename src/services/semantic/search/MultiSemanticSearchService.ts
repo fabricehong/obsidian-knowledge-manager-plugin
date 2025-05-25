@@ -1,17 +1,9 @@
 /**
  * Service de multi-recherche sémantique (comparaison de résultats sur plusieurs combinaisons).
  */
-import { ChunkTransformTechnique } from "../indexing/ChunkTransformTechnique";
-import { VectorStoreType } from "../vector-store/VectorStoreType";
 import { SearchResult } from "./SemanticSearchService";
-import { VectorStore } from '../vector-store/VectorStore';
 
-export interface SearchTarget {
-  technique: ChunkTransformTechnique;
-  vectorStoreKey: string;
-  vectorStoreInstance: VectorStore;
-  vectorStore: VectorStoreType;
-}
+
 
 export interface MultiSearchResult {
   [targetKey: string]: SearchResult[];
@@ -19,11 +11,13 @@ export interface MultiSearchResult {
 
 export interface MultiSemanticSearchService {
   /**
-   * Lance la recherche sur plusieurs couples technique/vector store.
+   * Lance la recherche sur toutes les techniques et tous les vector stores disponibles
+   * et retourne les résultats groupés par combinaison.
    */
-  multiSearch(
+  searchEverywhere(
     query: string,
-    topK: number,
-    targets: SearchTarget[]
+    topK: number
   ): Promise<MultiSearchResult>;
 }
+
+
