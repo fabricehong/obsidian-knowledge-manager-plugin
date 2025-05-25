@@ -1,5 +1,7 @@
 import { App, Editor, MarkdownRenderer, MarkdownView, Modal, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import { ServiceContainer } from './services/service-container';
+import { ChatModal } from './services/chat/chat-modal';
+import { ChatView, VIEW_TYPE_CHAT } from './services/chat/chat-view';
 import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from '@obsidian-utils/ui/folder-suggest-modal';
@@ -79,19 +81,43 @@ class HelpModal extends Modal {
 }
 
 export default class KnowledgeManagerPlugin extends Plugin {
+  async activateChatView() {
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CHAT);
+    if (leaves.length > 0) {
+      this.app.workspace.revealLeaf(leaves[0]);
+      return;
+    }
+    const rightLeaf = this.app.workspace.getRightLeaf(false);
+    if (rightLeaf) {
+      await rightLeaf.setViewState({
+        type: VIEW_TYPE_CHAT,
+        active: true,
+      });
+    }
+  }
 
 	settings: PluginSettings;
 	private serviceContainer: ServiceContainer;
 	private statusBarItem: HTMLElement;
 
 	async onload() {
+    // Enregistrement de la vue chat dans le panneau latéral
+    this.registerView(
+      VIEW_TYPE_CHAT,
+      (leaf) => new ChatView(leaf, this.serviceContainer.editorChatService)
+    );
+
+    // Ouvre automatiquement le panneau de chat IA à droite au chargement
+    this.activateChatView();
+
+
 		await this.loadSettings();
 		this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
 
 		// --- Commande Create Chunks ---
 		this.addCommand({
-			id: 'print-indexable-chunks',
-			name: 'Print Indexable Chunks',
+			id: 'semantic-:print-indexable-chunks',
+			name: 'semantic-:print-indexable-chunks',
 			callback: async () => {
 				try {
 					await this.printIndexableChunksInActiveFile();
@@ -104,8 +130,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
 		// Commande pour tester les embeddings sur tous les vector stores du fichier actif
 		this.addCommand({
-			id: 'test-embeddings-active-file-chunks-all-stores',
-			name: 'Tester les embeddings du fichier actif (tous modèles)',
+			id: 'semantic-:test-embeddings-active-file',
+			name: 'semantic-:test-embeddings-active-file',
 			callback: async () => {
 				try {
 					await this.serviceContainer.editorChunkIndexingService.testEmbeddingsForActiveFileChunksAllStores();
@@ -118,8 +144,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
 		// --- Commande Index Chunks ---
 		this.addCommand({
-			id: 'index-chunks',
-			name: 'Index Chunks (Semantic)',
+			id: 'semantic:vector-store:index-all',
+			name: 'semantic:vector-store:index-all',
 			callback: async () => {
 				try {
 					await this.indexChunks();
@@ -131,8 +157,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
 		// Commande pour afficher tous les documents du vector store mémoire
 		this.addCommand({
-			id: 'vector-store:print-all-documents',
-			name: 'Afficher documents des vector',
+			id: 'semantic:vector-store:print-all-documents',
+			name: 'semantic:vector-store:print-all-documents',
 			callback: async () => {
 				try {
 					await this.printAllVectorStoreDocumentsInActiveFile();
@@ -145,8 +171,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
 		// Commande pour la recherche sémantique multi-vector store
 		this.addCommand({
-			id: 'semantic-search-all-vectorstores',
-			name: 'Recherche sémantique (tous vector stores)',
+			id: 'semantic:vector-store:search-all',
+			name: 'semantic:vector-store:search-all',
 			callback: async () => {
 				try {
 					await this.searchInAllVectorStoresAndPrintResults();
@@ -158,8 +184,8 @@ export default class KnowledgeManagerPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'reset-vector-stores',
-			name: 'Réinitialiser tous les Vector Stores',
+			id: 'semantic:vector-store:reset',
+			name: 'semantic:vector-store:reset',
 			callback: async () => {
 				await this.resetVectorStores();
 			},

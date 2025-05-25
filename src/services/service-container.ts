@@ -58,6 +58,7 @@ import { MultiSemanticSearchServiceImpl } from './semantic/search/MultiSemanticS
 import { OpenAIModelService } from './llm/openai-model.service';
 
 import { OllamaEmbeddings } from '@langchain/ollama';
+import { EditorChatService } from './chat/editor-chat.service';
 import { Embeddings } from '@langchain/core/embeddings';
 import { randomUUID } from 'crypto';
 import { OpenAIEmbeddings } from '@langchain/openai';
@@ -68,6 +69,7 @@ export class ServiceContainer {
      * Identifiant unique pour chaque instance de ServiceContainer
      */
     public readonly serviceContainerId: string;
+    public readonly editorChatService: EditorChatService; // Service de chat éditeur
 
     public readonly editorChunkingService: EditorChunkingService;
     public readonly editorChunkInsertionService: EditorChunkInsertionService;
@@ -245,6 +247,9 @@ export class ServiceContainer {
             this.documentationService
         );
 
+        // Instanciation du service de chat éditeur
+        this.editorChatService = new EditorChatService();
+
         this.conversationTopicsService = new ConversationTopicsService(this.aiCompletionService);
         this.editorConversationTopicsService = new EditorConversationTopicsService(
             this.app,
@@ -351,8 +356,14 @@ export class ServiceContainer {
             // 'nomic-embed-text', // Voir description ci-dessus
             // 'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
             'bge-m3', // Voir description ci-dessus
+            // 'bge-large',
         ].forEach(element => {
-            embeddingsModels.push(new OllamaEmbeddings({model: element}));
+            embeddingsModels.push(new OllamaEmbeddings({
+                model: element,
+                requestOptions: {
+                    num_ctx: 8192,
+                }
+            }));
         });
 
         // embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: organization.apiKey }));
