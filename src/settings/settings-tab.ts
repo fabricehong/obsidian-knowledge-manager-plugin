@@ -92,6 +92,19 @@ export class SettingsTab extends PluginSettingTab {
             })
           );
 
+        // Champ pour la clé LangSmith
+        new Setting(containerEl)
+          .setName('LangSmith API Key')
+          .setDesc('Clé API utilisée pour le tracing et le monitoring LangSmith (https://smith.langchain.com)')
+          .addText(text => text
+            .setPlaceholder('ls__...')
+            .setValue(this.plugin.settings.langSmithApiKey || '')
+            .onChange(async (value) => {
+              this.plugin.settings.langSmithApiKey = value;
+              await this.plugin.saveSettings();
+            })
+          );
+
         containerEl.createEl('h2', { text: 'Knowledge Manager Settings' });
 
         // Section LLM Organizations

@@ -6,6 +6,7 @@ export interface ChatResponse {
 }
 
 import { ChatOpenAI } from "@langchain/openai";
+
 import { createOpenAIFunctionsAgent, AgentExecutor } from "langchain/agents";
 import { pull } from "langchain/hub";
 import type { ChatPromptTemplate } from "@langchain/core/prompts";
@@ -17,7 +18,8 @@ export class ChatService {
 
   constructor(
     private readonly chatSemanticSearchService: ChatSemanticSearchService,
-    private readonly openAIApiKey: string
+    private readonly openAIApiKey: string,
+    private tracer?: any
   ) {}
 
   /**
@@ -28,7 +30,6 @@ export class ChatService {
     if (this.initializing) return this.initializing;
     this.initializing = (async () => {
       // 1. LLM
-      console.log('key', this.openAIApiKey);
       const llm = new ChatOpenAI({ model: "gpt-3.5-turbo", temperature: 0, openAIApiKey: this.openAIApiKey });
       // 2. Tool: recherche dans la vault (RAG)
       const searchVaultTool = new DynamicTool({
@@ -55,16 +56,24 @@ export class ChatService {
   /**
    * Utilise l'agent pour répondre à un message utilisateur (avec accès RAG)
    */
+  /**
+   * Utilise l'agent pour répondre à un message utilisateur (avec accès RAG et tracing automatique si configuré)
+   * @param message Message utilisateur
+   * @returns Réponse de l'agent
+   */
   async postMessage(message: string): Promise<ChatResponse> {
     await this.initAgent();
     if (!this.agentExecutor) {
       return { role: 'assistant', content: "Erreur d'initialisation de l'agent." };
     }
-    const result = await this.agentExecutor.invoke({ input: message });
+    const callbacks = this.tracer ? [this.tracer] : undefined;
+    console.log('[LangSmith] Callbacks utilisés', callbacks);
+    const result = await this.agentExecutor.invoke({ input: message }, callbacks ? { callbacks } : undefined);
     return {
       role: 'assistant',
       content: result.output ?? '',
     };
   }
 }
+
 

@@ -98,12 +98,12 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
+		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
 
 		// Enregistrement de la vue chat dans le panneau latéral
 		this.registerView(
 			VIEW_TYPE_CHAT,
-			(leaf) => new EditorChatPanel(leaf, this.serviceContainer.editorChatService)
+			(leaf) => new EditorChatPanel(leaf, this.serviceContainer.chatService)
 		);
 
 		// Commande pour ouvrir explicitement le panneau de chat IA
@@ -474,7 +474,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			}
 		});
 
-		this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
+		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SettingsTab(this.app, this));
@@ -593,7 +593,7 @@ export default class KnowledgeManagerPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 		// Recréer le service container avec les nouveaux paramètres
-		this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
+		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
 	}
 
 	async resetSettings() {

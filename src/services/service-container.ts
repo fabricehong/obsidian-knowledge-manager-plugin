@@ -59,6 +59,7 @@ import { OpenAIModelService } from './llm/openai-model.service';
 
 import { OllamaEmbeddings } from '@langchain/ollama';
 import { ChatService } from './chat/chat.service';
+import { getTracer } from './langsmith-tracer';
 import { Embeddings } from '@langchain/core/embeddings';
 import { randomUUID } from 'crypto';
 import { OpenAIEmbeddings } from '@langchain/openai';
@@ -71,11 +72,12 @@ import { ChatSemanticSearchService } from './semantic/search/ChatSemanticSearchS
 
 
 export class ServiceContainer {
+    public readonly tracer?: any; // LangChainTracer type, mais évite l'import direct si absent
     /**
      * Identifiant unique pour chaque instance de ServiceContainer
      */
     public readonly serviceContainerId: string;
-    public readonly editorChatService: ChatService; // Service de chat éditeur
+    public readonly chatService: ChatService; // Service de chat éditeur
 
     public readonly editorChunkingService: EditorChunkingService;
     public readonly editorChunkInsertionService: EditorChunkInsertionService;
@@ -131,7 +133,15 @@ export class ServiceContainer {
     public readonly chatSemanticSearchService: ChatSemanticSearchService;
     public readonly editorChunkIndexingService: EditorChunkIndexingService;
 
+    static async create(app: App, settings: PluginSettings, plugin: KnowledgeManagerPlugin) {
+        // Création de l'instance avec initialisation synchrones
+        const container = new ServiceContainer(app, settings, plugin);
 
+        // --- Initialisation vector stores ---
+        await container.initVectorStores();
+        return container;
+    }
+    
     constructor(private app: App, settings: PluginSettings, private plugin: KnowledgeManagerPlugin) {
         // Génère un UUID unique pour cette instance
         this.serviceContainerId = randomUUID();
@@ -254,13 +264,28 @@ export class ServiceContainer {
             this.documentationService
         );
 
+        // Initialisation du tracer LangSmith si clé présente
+        if (settings.langSmithApiKey) {
+            try {
+                this.tracer = getTracer(settings.langSmithApiKey);
+                console.log('tracer initialisé');
+            } catch (e) {
+                console.warn('Impossible d’initialiser le tracer LangSmith :', e);
+            }
+        }
+
         try {
-            this.editorChatService = new ChatService(
+            if (!settings.openAIApiKey) throw new Error('Clé OpenAI manquante');
+            this.chatService = new ChatService(
                 this.chatSemanticSearchService,
-                settings.openAIApiKey
+                settings.openAIApiKey,
+                this.tracer
             );
+            // Le tracer LangSmith est accessible via this.tracer et doit être passé lors des appels à postMessage
+            // Exemple d'appel :
+            // await this.chatService.postMessage('Bonjour', this.tracer ? { callbacks: [this.tracer] } : undefined);
         } catch (e) {
-            console.error('[ServiceContainer] Impossible d\'initialiser editorChatService:', e);
+            console.error('[ServiceContainer] Impossible d\'initialiser chatService:', e);
             // Important : toujours initialiser la propriété
             (this as any).editorChatService = null;
         }

@@ -29,7 +29,8 @@ export interface ChunkingFolderConfig {
 }
 
 export interface PluginSettings {
-    openAIApiKey: string; // Clé API OpenAI pour le chat et les embeddings
+    openAIApiKey?: string; // Clé API OpenAI pour le chat et les embeddings
+    langSmithApiKey?: string; // Clé API LangSmith pour le tracing et le monitoring
     llmOrganizations: LLMOrganization[];
     llmConfigurations: LLMConfiguration[];
     selectedLlmConfiguration: string;
@@ -51,7 +52,8 @@ export interface PluginSettings {
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
-  openAIApiKey: '',
+    openAIApiKey: '',
+    langSmithApiKey: '',
     llmOrganizations: [
         {
             id: 'openai', // generateId('org'),
