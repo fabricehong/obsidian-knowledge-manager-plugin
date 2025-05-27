@@ -1,4 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 // -----------------------------------------------------------------------------
 // CONFIGURATION & ENVIRONNEMENT (simulerait config.ts)
 // -----------------------------------------------------------------------------
@@ -28,10 +29,16 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { StructuredOutputParser } from "langchain/output_parsers";
 
-const searchToolOutputSchema = z.object({
-  summary: z.string(),
-  keywords: z.array(z.string())
+// Schéma Zod d'entrée pour le tool
+const searchToolInputSchema = z.object({
+  query: z.string().describe("Requête de recherche à exécuter"),
+  maxResults: z.number().optional().default(2).describe("Nombre maximum de résultats à retourner")
 });
+
+const searchToolOutputSchema = z.object({
+  summary: z.string().describe("Résumé synthétique de la recherche ou de la réponse"),
+  keywords: z.array(z.string()).describe("Liste des mots-clés ou concepts extraits de la réponse")
+}).describe("Structure de sortie attendue pour la recherche factice du tool");
 const searchToolOutputParser = StructuredOutputParser.fromZodSchema(searchToolOutputSchema);
 
 const searchToolPrompt = ChatPromptTemplate.fromMessages([
@@ -49,8 +56,8 @@ const searchToolChain = searchToolPrompt
   .pipe(searchToolOutputParser);
 
 const searchVaultTool = tool(
-  async (input: { query: string }, run_manager) => {
-    const rawResults = await fakeSearchService.search(input.query, 2);
+  async (input: z.infer<typeof searchToolInputSchema>, run_manager) => {
+    const rawResults = await fakeSearchService.search(input.query, input.maxResults ?? 2);
     const instructions = searchToolOutputParser.getFormatInstructions();
     const processed = await searchToolChain.invoke(
       {
@@ -65,7 +72,7 @@ const searchVaultTool = tool(
   {
     name: "search_vault",
     description: "Recherche factice pour test tracing LCEL",
-    schema: z.object({ query: z.string() })
+    schema: searchToolInputSchema
   }
 );
 
@@ -73,7 +80,6 @@ const searchVaultTool = tool(
 // AGENT : PROMPT, LLM, FACTORY (simulerait agents/agent.ts)
 // -----------------------------------------------------------------------------
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
-import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 
 const agentPrompt = ChatPromptTemplate.fromMessages([
   ["system", "Tu es un assistant de test."],
