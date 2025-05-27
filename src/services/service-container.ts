@@ -274,22 +274,6 @@ export class ServiceContainer {
             }
         }
 
-        try {
-            if (!settings.openAIApiKey) throw new Error('Clé OpenAI manquante');
-            this.chatService = new ChatService(
-                this.chatSemanticSearchService,
-                settings.openAIApiKey,
-                this.tracer
-            );
-            // Le tracer LangSmith est accessible via this.tracer et doit être passé lors des appels à postMessage
-            // Exemple d'appel :
-            // await this.chatService.postMessage('Bonjour', this.tracer ? { callbacks: [this.tracer] } : undefined);
-        } catch (e) {
-            console.error('[ServiceContainer] Impossible d\'initialiser chatService:', e);
-            // Important : toujours initialiser la propriété
-            (this as any).editorChatService = null;
-        }
-
         this.conversationTopicsService = new ConversationTopicsService(this.aiCompletionService);
         this.editorConversationTopicsService = new EditorConversationTopicsService(
             this.app,
@@ -443,6 +427,19 @@ export class ServiceContainer {
         this.multiSemanticSearchService = new MultiSemanticSearchService(
             semanticSearchServices
         );
+
+        try {
+            if (!settings.openAIApiKey) throw new Error('Clé OpenAI manquante');
+            this.chatService = new ChatService(
+                this.chatSemanticSearchService,
+                settings.openAIApiKey,
+                this.tracer
+            );
+        } catch (e) {
+            console.error('[ServiceContainer] Impossible d\'initialiser chatService:', e);
+            // Important : toujours initialiser la propriété
+            (this as any).editorChatService = null;
+        }
 
         this.initVectorStores();
     }

@@ -7,10 +7,10 @@ export interface ChatResponse {
 
 import { ChatOpenAI } from "@langchain/openai";
 
-import { createOpenAIFunctionsAgent, AgentExecutor } from "langchain/agents";
-import { pull } from "langchain/hub";
-import type { ChatPromptTemplate } from "@langchain/core/prompts";
-import { DynamicTool } from "@langchain/core/tools";
+import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
 
 export class ChatService {
   private agentExecutor: AgentExecutor | null = null;
@@ -31,21 +31,32 @@ export class ChatService {
     this.initializing = (async () => {
       // 1. LLM
       const llm = new ChatOpenAI({ model: "gpt-3.5-turbo", temperature: 0, openAIApiKey: this.openAIApiKey });
-      // 2. Tool: recherche dans la vault (RAG)
-      const searchVaultTool = new DynamicTool({
-        name: "search_vault",
-        description: "Recherche des informations pertinentes dans la base de connaissances Obsidian (RAG)",
-        func: async (input: string) => {
-          const results = await this.chatSemanticSearchService.search(input, 4);
-          // Vérifie que chaque résultat a bien la propriété chunk.pageContent
-          return results.map(r => JSON.stringify(r)).join("\n---\n");
+      // 2. Tool robuste avec schéma Zod et gestion d'erreur
+      const searchVaultTool = tool(
+        async ({ query }: { query: string }) => {
+          try {
+            const results = await this.chatSemanticSearchService.search(query, 4);
+            return results.map(r => JSON.stringify(r)).join("\n---\n");
+          } catch (e) {
+            console.error('[search_vault] Erreur:', e);
+            return "Erreur lors de la recherche.";
+          }
         },
-      });
+        {
+          name: "search_vault",
+          description: "Recherche des informations pertinentes dans la base de connaissances Obsidian (RAG)",
+          schema: z.object({ query: z.string() }),
+        }
+      );
       const tools = [searchVaultTool];
-      // 3. Prompt recommandé par LangChain
-      const prompt: ChatPromptTemplate = await pull<ChatPromptTemplate>("hwchase17/openai-functions-agent");
-      // 4. Agent LangChain
-      const agent = await createOpenAIFunctionsAgent({ llm, tools, prompt });
+      // 3. Prompt avec agent_scratchpad
+      const prompt = ChatPromptTemplate.fromMessages([
+        ["system", "Tu es un assistant Obsidian expert."],
+        ["human", "{input}"],
+        new MessagesPlaceholder("agent_scratchpad")
+      ]);
+      // 4. Agent tool-calling
+      const agent = await createToolCallingAgent({ llm, tools, prompt });
       // 5. Executor
       this.agentExecutor = new AgentExecutor({ agent, tools });
     })();
@@ -67,12 +78,23 @@ export class ChatService {
       return { role: 'assistant', content: "Erreur d'initialisation de l'agent." };
     }
     const callbacks = this.tracer ? [this.tracer] : undefined;
-    console.log('[LangSmith] Callbacks utilisés', callbacks);
-    const result = await this.agentExecutor.invoke({ input: message }, callbacks ? { callbacks } : undefined);
-    return {
-      role: 'assistant',
-      content: result.output ?? '',
-    };
+    try {
+      console.log('[LangSmith] Callbacks utilisés', callbacks);
+      const result = await this.agentExecutor.invoke(
+        { input: message },
+        callbacks ? { callbacks } : undefined
+      );
+      return {
+        role: 'assistant',
+        content: result.output ?? '',
+      };
+    } catch (e) {
+      console.error('[ChatService] Erreur agentExecutor.invoke', e);
+      return {
+        role: 'assistant',
+        content: "Erreur lors de la génération de la réponse.",
+      };
+    }
   }
 }
 
