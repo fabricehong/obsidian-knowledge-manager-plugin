@@ -2,6 +2,8 @@ import { ChatSemanticSearchService } from "../semantic/search/ChatSemanticSearch
 import type { AgentExecutor } from "langchain/agents";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { createChatAgentExecutor } from "./agent/chat-agent.factory";
+import { RunnableWithMessageHistory } from "@langchain/core/runnables";
+import { ChatMessage } from "@langchain/core/messages";
 
 export interface ChatResponse {
   role: 'user' | 'assistant';
@@ -9,7 +11,7 @@ export interface ChatResponse {
 }
 
 export class ChatService {
-  private agentExecutor: AgentExecutor | null = null;
+  private agentExecutor: RunnableWithMessageHistory<{ input: string }, any> | null = null;
   private initializing: Promise<void> | null = null;
 
   constructor(
@@ -48,8 +50,17 @@ export class ChatService {
     const callbacks = this.tracer ? [this.tracer] : undefined;
     try {
       const result = await this.agentExecutor.invoke(
-        { input: message },
-        callbacks ? { callbacks } : undefined
+        { 
+          input: message,
+        },
+        {
+          // This is needed because in most real world scenarios, a session id is needed per user.
+          // It isn't really used here because we are using a simple in memory ChatMessageHistory.
+          configurable: {
+            sessionId: "foo",
+          },
+          callbacks,
+        },
       );
       return {
         role: 'assistant',

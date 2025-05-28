@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Setting } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Setting, MarkdownRenderer } from 'obsidian';
 import { ChatService, ChatResponse } from './chat.service';
 
 export const VIEW_TYPE_CHAT = 'chat-view';
@@ -60,15 +60,26 @@ export class EditorChatPanel extends ItemView {
     this.renderHistory();
     const response = await this.chatService.postMessage(message);
     this.chatHistory.push(response);
-    this.renderHistory();
+    await this.renderHistory();
     this.historyEl.scrollTop = this.historyEl.scrollHeight;
   }
 
-  renderHistory() {
+  async renderHistory() {
     this.historyEl.empty();
     for (const msg of this.chatHistory) {
       const msgDiv = this.historyEl.createDiv({ cls: `chat-msg chat-msg-${msg.role}` });
-      msgDiv.setText(`${msg.role === 'user' ? 'Vous' : 'Assistant'} : ${msg.content}`);
+      if (msg.role === 'user') {
+        const prefix = msgDiv.createSpan({ text: 'Vous : ', cls: 'chat-prefix chat-prefix-user' });
+        const userText = msgDiv.createSpan({ text: msg.content, cls: 'chat-user-content' });
+      } else {
+        const prefix = msgDiv.createSpan({ text: 'Assistant : ', cls: 'chat-prefix chat-prefix-assistant' });
+        await MarkdownRenderer.renderMarkdown(
+          msg.content,
+          msgDiv,
+          '',
+          this
+        );
+      }
     }
   }
 

@@ -19,18 +19,23 @@ const TOOL_DESCRIPTION = `
 Recherche d'informations dans la base de connaissances Obsidian (RAG)
 `.trim();
 
-// Prompts LCEL lisibles grâce aux template literals
+// Prompts du traitement LLM des résultats de recherche sémantique
 const systemPrompt = `
+{instructions}
+
 Tu es un assistant de recherche Obsidian.
-Tu dois synthétiser des résultats pour l'utilisateur.
+
+Ton objectif est de d'extraire les informations pertinentes d'une recherche.
+
+Analyse chaque résultat de recherche, ne garde que ceux qui sont pertinents par rapport à la requête.
+
+Pour chacun des résultats pertinents, extrait les informations pertinentes.
 `.trim();
 
 const humanPrompt = `
-{instructions}
+Requête utilisateur: "{userQuery}"
 
-Ta tâche :
-À partir des résultats suivants, synthétise les infos pertinentes pour : "{originalQuery}"
-Résultats :
+Résultats de recherche:
 {rawResults}
 `.trim();
 
@@ -40,17 +45,15 @@ export type SearchToolOutput = z.infer<typeof searchToolOutputSchema>;
 
 // Schéma Zod d'entrée pour l'outil de recherche structuré
 export const searchToolInputSchema = z.object({
-  query: z.string().describe("Requête de recherche à exécuter"),
+  userQuery: z.string().describe("Information recherchée par l'utilisateur. Utilisé pour la recherche d'information pertinente dans les résultats de recherche sémantique."),
+  semanticQuery: z.string().describe("Texte qui sera transformée en embedding. Celle-ci doit optimiser le matching avec le contenu recherché"),
 });
 
 // Schéma Zod de sortie structuré
 export const searchToolOutputSchema = z.object({
   relevantInformation: z.array(z.object({
-    title: z.string().describe("Titre du document ou de la note trouvée"),
-    summary: z.string().describe("Résumé synthétique du contenu pertinent extrait"),
-    relevanceScore: z.number().min(0).max(1).describe("Score de pertinence (0 à 1) pour la requête"),
-    source: z.string().describe("Chemin ou référence à la source d'origine dans le vault"),
-    extractedFacts: z.array(z.string()).describe("Faits ou informations clés extraits de la source")
+    source: z.string().describe("Chemin ou référence à la source d'origine dans le vault (devrait se trouver dans 'filepath')"),
+    extractedFacts: z.array(z.string()).describe("Faits ou informations clés extraits de la source qui puisse donner une information pertinente par rapport à la requête")
   }).describe("Informations pertinentes extraites pour chaque résultat")),
   keyInsights: z.array(z.string()).describe("Synthèse des points clés ou enseignements globaux"),
   confidence: z.number().min(0).max(1).describe("Niveau de confiance global de la synthèse (0 à 1)"),
@@ -90,13 +93,13 @@ export function createSearchVaultTool({
   const searchVaultTool = tool(
     async (input: SearchToolInput, run_manager): Promise<string> => {
       // Validation stricte de l'entrée utilisateur
-      validateSearchInput(input);
-      const rawResults = await chatSemanticSearchService.search(input.query, 10);
+      // validateSearchInput(input);
+      const rawResults = await chatSemanticSearchService.search(input.semanticQuery, 10);
       const instructions = searchToolOutputParser.getFormatInstructions();
       const processed: SearchToolOutput = await searchToolChain.invoke(
         {
           instructions,
-          originalQuery: input.query,
+          userQuery: input.userQuery,
           rawResults: JSON.stringify(rawResults, null, 2)
         },
         { callbacks: run_manager?.callbacks }
