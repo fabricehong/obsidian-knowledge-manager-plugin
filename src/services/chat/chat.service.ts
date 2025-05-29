@@ -1,5 +1,6 @@
 import { ChatSemanticSearchService } from "../semantic/search/ChatSemanticSearchService";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
+import { ChatMessageHistory } from "langchain/memory";
 import { ChatMessage } from "@langchain/core/messages";
 import { ChatAgentFactory } from "./agent/chat-agent.factory";
 
@@ -9,7 +10,16 @@ export interface ChatResponse {
 }
 
 export class ChatService {
+  /**
+   * Change dynamiquement l'agent utilisé pour le chat
+   */
+  public setAgent(agentId: string) {
+    this.agentId = agentId;
+    this.agentExecutor = null;
+    // Ne pas réinitialiser l'historique ici pour conserver l'historique global
+  }
   private agentExecutor: RunnableWithMessageHistory<{ input: string }, any> | null = null;
+  private messageHistory = new ChatMessageHistory();
   private initializing: Promise<void> | null = null;
 
   private agentId: string;
@@ -29,7 +39,7 @@ export class ChatService {
     if (this.agentExecutor) return;
     if (this.initializing) return this.initializing;
     this.initializing = (async () => {
-      this.agentExecutor = await this.agentFactory.createAgentExecutor(this.agentId);
+      this.agentExecutor = await this.agentFactory.createAgentExecutor(this.agentId, this.messageHistory);
     })();
     await this.initializing;
     this.initializing = null;

@@ -1,6 +1,7 @@
 import { App, Editor, MarkdownRenderer, MarkdownView, Modal, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import { ServiceContainer } from './services/service-container';
 import { EditorChatPanel, VIEW_TYPE_CHAT } from './services/chat/editor-chat-panel';
+import { AgentSuggestModal } from './services/chat/agent/agent-suggest-modal';
 import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from '@obsidian-utils/ui/folder-suggest-modal';
@@ -112,6 +113,19 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			name: 'semantic:chat',
 			callback: () => {
 				this.activateChatView();
+			}
+		});
+
+		// Commande pour sélectionner l'agent de chat
+		this.addCommand({
+			id: 'semantic:chat:select-agent',
+			name: 'semantic:chat:select-agent',
+			callback: () => {
+				const agents = this.serviceContainer.chatAgentFactory.listAgents();
+				new AgentSuggestModal(this.app, agents, (selectedAgent) => {
+					this.serviceContainer.chatService.setAgent(selectedAgent);
+					new Notice(`Agent sélectionné : ${selectedAgent}`);
+				}).open();
 			}
 		});
 

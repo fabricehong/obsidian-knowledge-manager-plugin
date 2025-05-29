@@ -76,6 +76,7 @@ export class ServiceContainer {
      */
     public readonly serviceContainerId: string;
     public readonly chatService: ChatService; // Service de chat éditeur
+    public readonly chatAgentFactory: ChatAgentFactory;
 
     public readonly editorChunkingService: EditorChunkingService;
     public readonly editorChunkInsertionService: EditorChunkInsertionService;
@@ -213,6 +214,7 @@ export class ServiceContainer {
         */
 
         const langchainModel = ModelFactory.createModel(organization, selectedConfig.model);
+
         this.aiCompletionService = new LangChainCompletionService(langchainModel, true);
 
         // Text corrector
@@ -426,15 +428,11 @@ export class ServiceContainer {
 
         try {
             if (!settings.openAIApiKey) throw new Error('Clé OpenAI manquante');
-            const ragAgent = new RagAgentInitializer(
-                this.chatSemanticSearchService,
-                langchainModel
-            );
-            const agentFactory = new ChatAgentFactory();
-            agentFactory.registerAgent(ragAgent);
+            this.chatAgentFactory = new ChatAgentFactory();
+            ChatAgentFactory.registerDefaultAgents(this.chatAgentFactory, langchainModel, this.chatSemanticSearchService);
             this.chatService = new ChatService(
-                agentFactory,
-                "default",
+                this.chatAgentFactory,
+                "rag-agent",
                 this.tracer
             );
         } catch (e) {

@@ -1,6 +1,7 @@
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
+import { ChatMessageHistory } from "langchain/memory";
 
 export interface IChatAgentInitializer {
   getId(): string;
-  initialize(): Promise<RunnableWithMessageHistory<{ input: string }, any>>;
+  initialize(messageHistory: ChatMessageHistory): Promise<RunnableWithMessageHistory<{ input: string }, any>>;
 }

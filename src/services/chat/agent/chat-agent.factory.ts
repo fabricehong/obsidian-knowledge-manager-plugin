@@ -7,6 +7,10 @@ const AGENT_HISTORY_KEY = "message_history";
 const AGENT_SCRATCHPAD_KEY = "agent_scratchpad";
 
 import { IChatAgentInitializer } from "./chat-agent-initializer.interface";
+import { RagAgentInitializer } from "./rag-agent.initializer";
+import { SloganAgentInitializer, SLOGAN_AGENT_ID } from "./slogan-agent.initializer";
+import { RunnableWithMessageHistory } from "@langchain/core/runnables";
+import { ChatMessageHistory } from "langchain/memory";
 
 /**
  * Factory orientée DI pour la création d'agents de chat.
@@ -19,17 +23,27 @@ export class ChatAgentFactory {
     this.registry.set(initializer.getId(), initializer);
   }
 
-  async createAgentExecutor(id: string) {
+  /**
+   * Enregistre tous les agents connus au démarrage (RAG, Slogan, etc.)
+   */
+  async createAgentExecutor(id: string, messageHistory: ChatMessageHistory) {
     const initializer = this.registry.get(id);
     if (!initializer) throw new Error(`Aucun agent enregistré avec l'id: ${id}`);
-    return initializer.initialize();
+    return initializer.initialize(messageHistory);
   }
 
   listAgents(): string[] {
     return Array.from(this.registry.keys());
   }
-}
 
+  /**
+   * Enregistre tous les agents connus au démarrage (RAG, Slogan, etc.)
+   */
+  static registerDefaultAgents(factory: ChatAgentFactory, llm: any, chatSemanticSearchService: any) {
+    factory.registerAgent(new RagAgentInitializer(chatSemanticSearchService, llm));
+    factory.registerAgent(new SloganAgentInitializer(llm));
+  }
+}
 
 /**
  * Factory pour créer un AgentExecutor LangChain pour le chat

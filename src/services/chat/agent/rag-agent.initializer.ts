@@ -4,8 +4,9 @@ import { IChatAgentInitializer } from "./chat-agent-initializer.interface";
 
 // Dépendances LangChain
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
-import { BufferWindowMemory, ChatMessageHistory } from "langchain/memory";
+import { BufferWindowMemory } from "langchain/memory";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import { ChatMessageHistory } from "langchain/memory";
 import { createSearchVaultTool } from "../tools/search-vault.tool";
 import { createDecomposeQueryTool } from "../tools/decompose-query.tool";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
@@ -148,13 +149,15 @@ export class RagAgentInitializer implements IChatAgentInitializer {
   constructor(
     private readonly chatSemanticSearchService: ChatSemanticSearchService,
     private readonly llm: BaseChatModel<any, any>
-  ) {}
+  ) {
 
-  getId(): string {
-    return "default";
   }
 
-  async initialize(): Promise<RunnableWithMessageHistory<{ input: string }, any>> {
+  getId(): string {
+    return "rag-agent";
+  }
+
+  async initialize(messageHistory: ChatMessageHistory): Promise<RunnableWithMessageHistory<{ input: string }, any>> {
     // TOOL (injecté, voir tools/search-vault.tool.ts)
     const { tool: decomposeQueryTool } = createDecomposeQueryTool({ processingLLM: this.llm });
     const { tool: intelligentSearchTool } = createSearchVaultTool({
@@ -174,7 +177,7 @@ export class RagAgentInitializer implements IChatAgentInitializer {
     // AGENT + EXECUTOR
     const agent = await createToolCallingAgent({ llm: this.llm, tools, prompt });
     const agentExecutor = new AgentExecutor({ agent, tools });
-    const messageHistory = new ChatMessageHistory();
+
     const agentWithChatHistory = new RunnableWithMessageHistory({
       runnable: agentExecutor,
       getMessageHistory: (_sessionId) => messageHistory,
