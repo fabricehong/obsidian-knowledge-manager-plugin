@@ -1,9 +1,7 @@
 import { ChatSemanticSearchService } from "../semantic/search/ChatSemanticSearchService";
-import type { AgentExecutor } from "langchain/agents";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { createChatAgentExecutor } from "./agent/chat-agent.factory";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { ChatMessage } from "@langchain/core/messages";
+import { ChatAgentFactory } from "./agent/chat-agent.factory";
 
 export interface ChatResponse {
   role: 'user' | 'assistant';
@@ -14,24 +12,24 @@ export class ChatService {
   private agentExecutor: RunnableWithMessageHistory<{ input: string }, any> | null = null;
   private initializing: Promise<void> | null = null;
 
+  private agentId: string;
+
   constructor(
-    private readonly chatSemanticSearchService: ChatSemanticSearchService,
-    private readonly llm: BaseChatModel,
+    private readonly agentFactory: ChatAgentFactory,
+    agentId: string = "default",
     private tracer?: any
-  ) {}
+  ) {
+    this.agentId = agentId;
+  }
 
   /**
-   * Initialise l'agent LangChain (LLM, tools, prompt, agent, executor)
+   * Initialise l'agent LangChain via la factory (LLM, tools, prompt, agent, executor)
    */
   private async initAgent(): Promise<void> {
     if (this.agentExecutor) return;
     if (this.initializing) return this.initializing;
     this.initializing = (async () => {
-      this.agentExecutor = await createChatAgentExecutor({
-        llm: this.llm,
-        chatSemanticSearchService: this.chatSemanticSearchService,
-        processingLLM: this.llm
-      });
+      this.agentExecutor = await this.agentFactory.createAgentExecutor(this.agentId);
     })();
     await this.initializing;
     this.initializing = null;

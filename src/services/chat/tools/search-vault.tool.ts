@@ -2,7 +2,8 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { StructuredOutputParser } from "langchain/output_parsers";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { ChatOpenAI } from "@langchain/openai";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { ChatOpenAI } from "@langchain/openai"; // Pour le fallback si besoin
 import { validateSearchInput } from "../utils/chat-validation.util";
 
 /**
@@ -50,15 +51,10 @@ export const searchToolInputSchema = z.object({
 });
 
 // Schéma Zod de sortie structuré
-export const searchToolOutputSchema = z.object({
-  relevantInformation: z.array(z.object({
+export const searchToolOutputSchema = z.array(z.object({
     source: z.string().describe("Chemin ou référence à la source d'origine dans le vault (devrait se trouver dans 'filepath')"),
     extractedFacts: z.array(z.string()).describe("Faits ou informations clés extraits de la source qui puisse donner une information pertinente par rapport à la requête")
-  }).describe("Informations pertinentes extraites pour chaque résultat")),
-  keyInsights: z.array(z.string()).describe("Synthèse des points clés ou enseignements globaux"),
-  confidence: z.number().min(0).max(1).describe("Niveau de confiance global de la synthèse (0 à 1)"),
-  recommendedActions: z.array(z.string()).describe("Actions recommandées à l'utilisateur selon la synthèse").optional()
-}).describe("Structure complète des résultats structurés de la recherche");
+  }).describe("Informations pertinentes extraites pour chaque résultat"));
 
 // Service de recherche minimalement typé
 export interface SearchService {
@@ -71,7 +67,7 @@ export function createSearchVaultTool({
   processingLLM
 }: {
   chatSemanticSearchService: SearchService;
-  processingLLM?: ChatOpenAI;
+  processingLLM?: BaseChatModel<any, any>;
 }): { tool: ReturnType<typeof tool>; outputParser: StructuredOutputParser<typeof searchToolOutputSchema> } {
   // Output parser basé sur le schéma de sortie
   const searchToolOutputParser = StructuredOutputParser.fromZodSchema(searchToolOutputSchema);

@@ -65,12 +65,9 @@ import { Embeddings } from '@langchain/core/embeddings';
 import { randomUUID } from 'crypto';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { SemanticSearchService } from './semantic/search/SemanticSearchService';
-import { ChatSemanticSearchService } from './semantic/search/ChatSemanticSearchService';
-
-
-
-
-
+import { ChatSemanticSearchService } from "./semantic/search/ChatSemanticSearchService";
+import { ChatAgentFactory } from "./chat/agent/chat-agent.factory";
+import { RagAgentInitializer } from "./chat/agent/rag-agent.initializer";
 
 export class ServiceContainer {
     public readonly tracer?: any; // LangChainTracer type, mais évite l'import direct si absent
@@ -379,7 +376,7 @@ export class ServiceContainer {
         [
             // 'nomic-embed-text', // Voir description ci-dessus
             // 'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
-            'bge-m3', // Voir description ci-dessus
+            // 'bge-m3', // Voir description ci-dessus
             // 'bge-large',
         ].forEach(element => {
             embeddingsModels.push(new OllamaEmbeddings({
@@ -390,7 +387,7 @@ export class ServiceContainer {
             }));
         });
 
-        // embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: settings.openAIApiKey }));
+        embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: settings.openAIApiKey }));
 
         this.vectorStores = embeddingsModels.map(
             (model: Embeddings) => {
@@ -429,9 +426,15 @@ export class ServiceContainer {
 
         try {
             if (!settings.openAIApiKey) throw new Error('Clé OpenAI manquante');
-            this.chatService = new ChatService(
+            const ragAgent = new RagAgentInitializer(
                 this.chatSemanticSearchService,
-                langchainModel,
+                langchainModel
+            );
+            const agentFactory = new ChatAgentFactory();
+            agentFactory.registerAgent(ragAgent);
+            this.chatService = new ChatService(
+                agentFactory,
+                "default",
                 this.tracer
             );
         } catch (e) {
