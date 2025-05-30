@@ -215,12 +215,6 @@ async function runAgentWithIntelligentSearch() {
 ```
 
 ## Optimisations et bonnes pratiques
-
-### Gestion de la mémoire et du cache
-
-Pour optimiser les performances, implémentez un système de cache pour éviter les recherches répétitives :
-
-```typescript
 class SearchCache {
   private cache = new Map();
   private readonly TTL = 3600000; // 1 heure en millisecondes
@@ -320,51 +314,3 @@ class ToolMetrics {
 ## Conclusion
 
 Cette architecture permet de créer un outil LangChain.js sophistiqué qui optimise l'utilisation du contexte en filtrant et structurant intelligemment les informations de recherche[1]. L'approche modulaire sépare clairement les responsabilités entre la recherche brute, le traitement par LLM, et la structuration des données. Cette séparation améliore la maintenabilité du code et permet d'optimiser chaque composant indépendamment. L'intégration d'un LLM secondaire spécialisé dans le traitement des données permet d'obtenir des résultats plus précis et pertinents, tout en préservant les ressources de l'agent principal pour les tâches de haut niveau. Les bonnes pratiques présentées, incluant la gestion d'erreurs, la mise en cache, et le monitoring, garantissent la robustesse et la performance de la solution en environnement de production.
-
-Citations:
-[1] https://js.langchain.com/docs/concepts/tools/
-[2] https://www.linkedin.com/posts/langchain_easier-langchainjs-custom-tools-we-activity-7209248485454356480-_Bq-
-[3] https://v03.api.js.langchain.com/interfaces/_langchain_core.tools.StructuredToolInterface.html
-[4] https://js.langchain.com/docs/how_to/tool_choice/
-[5] https://python.langchain.com/docs/integrations/tools/json/
-[6] https://js.langchain.com/docs/how_to/tools_builtin/
-[7] https://www.js-craft.io/blog/tool-calling-langchain-js-toolmessage-schemas/
-[8] https://www.youtube.com/watch?v=pi3C6y4gWFA
-[9] https://js.langchain.com/docs/how_to/custom_llm/
-[10] https://js.langchain.com/docs/integrations/tools/serpapi/
-[11] https://js.langchain.com/docs/how_to/functions/
-[12] https://www.youtube.com/watch?v=Ug1XhdiJWFQ
-[13] https://python.langchain.com/docs/how_to/custom_tools/
-[14] https://www.youtube.com/watch?v=jfqPp0RF8yM
-[15] https://github.com/langchain-ai/langchainjs/discussions/4806
-[16] https://js.langchain.com/docs/integrations/document_loaders/web_loaders/serpapi/
-[17] https://js.langchain.com/docs/how_to/custom_tools/
-[18] https://www.youtube.com/watch?v=_PyyCZbUX1Q
-[19] https://www.pinecone.io/learn/series/langchain/langchain-tools/
-[20] https://www.youtube.com/watch?v=gYsL_fHJY9A
-[21] https://github.com/hwchase17/langchainjs/blob/main/examples/src/agents/chat_convo_with_tracing.ts
-[22] https://v03.api.js.langchain.com/interfaces/_langchain_core.tools.ToolInterface.html
-[23] https://js.langchain.com/docs/how_to/tool_calling/
-[24] https://js.langchain.com/docs/concepts/tool_calling/
-[25] https://v03.api.js.langchain.com/classes/langchain.chains.LLMChain.html
-[26] https://python.langchain.com/docs/how_to/function_calling/
-[27] https://blog.langchain.dev/tool-calling-with-langchain/
-[28] https://api.js.langchain.com/classes/langchain_community_tools_serpapi.SerpAPI.html
-[29] https://v03.api.js.langchain.com/interfaces/_langchain_community.tools_serpapi.SerpAPIParameters.html
-[30] https://js.langchain.com/docs/integrations/tools/google_trends/
-[31] https://github.com/hwchase17/langchainjs/issues/1864
-[32] https://python.langchain.com/docs/integrations/tools/serpapi/
-[33] https://serpapi.com/integrations/javascript
-[34] https://js.langchain.com/docs/integrations/tools/searxng/
-[35] https://js.langchain.com/docs/integrations/tools/exa_search/
-[36] https://js.langchain.com/docs/integrations/tools/searchapi/
-[37] https://js.langchain.com/docs/tutorials/llm_chain/
-[38] https://github.com/IroncladDev/LangChain.js-LLM-Template
-[39] https://www.youtube.com/watch?v=VeqhLz3E_To
-[40] https://langchainers.hashnode.dev/getting-started-with-langchainjs
-[41] https://js.langchain.com/docs/how_to/custom_callbacks/
-[42] https://www.js-craft.io/blog/custom-functions-runnablelambda-langchain-js/
-[43] https://dev.to/oyemade/building-ai-powered-applications-w-javascript-using-langchain-js-for-beginners-388b
-
----
-Réponse de Perplexity: pplx.ai/share

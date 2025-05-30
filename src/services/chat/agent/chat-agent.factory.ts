@@ -9,6 +9,7 @@ const AGENT_SCRATCHPAD_KEY = "agent_scratchpad";
 import { IChatAgentInitializer } from "./chat-agent-initializer.interface";
 import { RagAgentInitializer } from "./rag-agent.initializer";
 import { SloganAgentInitializer, SLOGAN_AGENT_ID } from "./slogan-agent.initializer";
+import { SearchVaultAgentInitializer, SEARCH_VAULT_AGENT_ID } from "./search-vault-agent.initializer";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { ChatMessageHistory } from "langchain/memory";
 
@@ -42,6 +43,7 @@ export class ChatAgentFactory {
   static registerDefaultAgents(factory: ChatAgentFactory, llm: any, chatSemanticSearchService: any) {
     factory.registerAgent(new RagAgentInitializer(chatSemanticSearchService, llm));
     factory.registerAgent(new SloganAgentInitializer(llm));
+    factory.registerAgent(new SearchVaultAgentInitializer(chatSemanticSearchService, llm));
   }
 }
 

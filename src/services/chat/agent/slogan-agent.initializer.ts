@@ -1,8 +1,8 @@
 import { IChatAgentInitializer } from "./chat-agent-initializer.interface";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
+import { AGENT_INPUT_KEY, AGENT_HISTORY_KEY } from "./agent-keys.constants";
 import { ChatMessageHistory } from "langchain/memory";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
-import { RunnableWithMessageHistory as RunnableWithMessageHistoryClass } from "@langchain/core/runnables";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
 // Identifiant unique de l'agent
@@ -21,7 +21,7 @@ export class SloganAgentInitializer implements IChatAgentInitializer {
         "system",
         "Tu es un expert en marketing. Génère un slogan accrocheur pour un yaourt à base du fruit suivant : {input}. Réponds uniquement par le slogan."
       ],
-      new MessagesPlaceholder("history"),
+      new MessagesPlaceholder(AGENT_HISTORY_KEY),
       ["human", "{input}"]
     ]);
 
@@ -36,11 +36,11 @@ export class SloganAgentInitializer implements IChatAgentInitializer {
       }));
 
     // Ajoute le support de l'historique partagé
-    const agentWithHistory = new RunnableWithMessageHistoryClass({
+    const agentWithHistory = new RunnableWithMessageHistory({
       runnable: agent,
       getMessageHistory: (_sessionId) => messageHistory,
-      inputMessagesKey: "input",
-      historyMessagesKey: "history"
+      inputMessagesKey: AGENT_INPUT_KEY,
+      historyMessagesKey: AGENT_HISTORY_KEY
     });
     return agentWithHistory;
   }
