@@ -42,6 +42,7 @@ import { SpeakerDescriptionService } from './speaker-description/speaker-descrip
 import { EditorSpeakerDescriptionService } from './speaker-description/editor-speaker-description.service';
 import { LangChain2Service } from './others/LangChain2.service';
 import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
+import { ModelFactory } from '@obsidian-utils/services/llm/model.factory';
 import KnowledgeManagerPlugin from '../main';
 import { MultiTechniqueChunkTransformer } from './semantic/indexing/MultiTechniqueChunkTransformer';
 import { MultiVectorStoreIndexer } from './semantic/indexing/MultiVectorStoreIndexer';
@@ -214,10 +215,8 @@ export class ServiceContainer {
         }, true);
         */
 
-        this.aiCompletionService = new LangChainCompletionService({
-            organization,
-            configuration: selectedConfig
-        }, true);
+        const langchainModel = ModelFactory.createModel(organization, selectedConfig.model);
+        this.aiCompletionService = new LangChainCompletionService(langchainModel, true);
 
         // Text corrector
         this.textCorrector = new TextCorrector(
@@ -432,7 +431,7 @@ export class ServiceContainer {
             if (!settings.openAIApiKey) throw new Error('Clé OpenAI manquante');
             this.chatService = new ChatService(
                 this.chatSemanticSearchService,
-                settings.openAIApiKey,
+                langchainModel,
                 this.tracer
             );
         } catch (e) {
