@@ -137,6 +137,9 @@ export class ServiceContainer {
         const container = new ServiceContainer(app, settings, plugin);
 
         // --- Initialisation vector stores ---
+        if (container.chatService) {
+            await container.chatService.init();
+        }
         await container.initVectorStores();
         return container;
     }
@@ -432,9 +435,11 @@ export class ServiceContainer {
             ChatAgentFactory.registerDefaultAgents(this.chatAgentFactory, langchainModel, this.chatSemanticSearchService);
             this.chatService = new ChatService(
                 this.chatAgentFactory,
-                "rag-agent",
+                plugin,
                 this.tracer
             );
+            // Initialisation asynchrone déplacée dans ServiceContainer.create
+
         } catch (e) {
             console.error('[ServiceContainer] Impossible d\'initialiser chatService:', e);
             // Important : toujours initialiser la propriété

@@ -1,4 +1,8 @@
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
+import { ChatMessageHistory } from "langchain/memory";
+
+export const RAG_AGENT_ID = "rag-agent";
+
 import { ChatSemanticSearchService } from "../../semantic/search/ChatSemanticSearchService";
 import { IChatAgentInitializer } from "./chat-agent-initializer.interface";
 
@@ -6,7 +10,6 @@ import { IChatAgentInitializer } from "./chat-agent-initializer.interface";
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
 import { BufferWindowMemory } from "langchain/memory";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
-import { ChatMessageHistory } from "langchain/memory";
 import { createSearchVaultTool } from "../tools/search-vault.tool";
 import { createDecomposeQueryTool } from "../tools/decompose-query.tool";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
@@ -154,7 +157,7 @@ export class RagAgentInitializer implements IChatAgentInitializer {
   }
 
   getId(): string {
-    return "rag-agent";
+    return RAG_AGENT_ID;
   }
 
   async initialize(messageHistory: ChatMessageHistory): Promise<RunnableWithMessageHistory<{ input: string }, any>> {

@@ -1,4 +1,5 @@
 import { App, Editor, MarkdownRenderer, MarkdownView, Modal, Notice, Plugin, TFile, TFolder } from 'obsidian';
+import '../chat-panel.css';
 import { ServiceContainer } from './services/service-container';
 import { EditorChatPanel, VIEW_TYPE_CHAT } from './services/chat/editor-chat-panel';
 import { AgentSuggestModal } from './services/chat/agent/agent-suggest-modal';

@@ -9,27 +9,58 @@ export interface ChatResponse {
   content: string;
 }
 
+import type KnowledgeManagerPlugin from '../../main';
+import type { PluginSettings } from '../../settings/settings';
+import { RAG_AGENT_ID } from './agent/rag-agent.initializer';
+
+type AgentChangeListener = (agentId: string) => void;
+
 export class ChatService {
+  public getAgentId() {
+    return this.agentId;
+  }
+
   /**
    * Change dynamiquement l'agent utilisé pour le chat
    */
   public setAgent(agentId: string) {
     this.agentId = agentId;
     this.agentExecutor = null;
+    // Persistance dans les settings
+    if (this.settings && this.plugin) {
+      this.settings.selectedChatAgentId = agentId;
+      this.plugin.saveData(this.settings);
+    }
+    this.notifyAgentChange();
     // Ne pas réinitialiser l'historique ici pour conserver l'historique global
   }
   private agentExecutor: RunnableWithMessageHistory<{ input: string }, any> | null = null;
+  private agentChangeListeners: AgentChangeListener[] = [];
+
+  public onAgentChange(listener: AgentChangeListener) {
+    this.agentChangeListeners.push(listener);
+  }
+
+  private notifyAgentChange() {
+    for (const listener of this.agentChangeListeners) {
+      listener(this.agentId);
+    }
+  }
   private messageHistory = new ChatMessageHistory();
   private initializing: Promise<void> | null = null;
 
-  private agentId: string;
+  private agentId: string = RAG_AGENT_ID;
+  private settings?: PluginSettings;
 
   constructor(
     private readonly agentFactory: ChatAgentFactory,
-    agentId: string = "default",
-    private tracer?: any
-  ) {
-    this.agentId = agentId;
+    private plugin: KnowledgeManagerPlugin,
+    private tracer: any = undefined
+  ) {}
+
+  async init() {
+    this.settings = await this.plugin.loadData();
+    this.agentId = this.settings?.selectedChatAgentId || RAG_AGENT_ID;
   }
 
   /**

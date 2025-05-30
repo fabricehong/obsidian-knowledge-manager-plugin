@@ -29,6 +29,11 @@ export interface ChunkingFolderConfig {
 }
 
 export interface PluginSettings {
+    /**
+     * Identifiant de l'agent de chat sélectionné (persisté)
+     */
+    selectedChatAgentId?: string; // ex: "rag-agent" ou "slogan-yogurt-agent"
+
     openAIApiKey?: string; // Clé API OpenAI pour le chat et les embeddings
     langSmithApiKey?: string; // Clé API LangSmith pour le tracing et le monitoring
     llmOrganizations: LLMOrganization[];
@@ -52,6 +57,7 @@ export interface PluginSettings {
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
+    selectedChatAgentId: "rag-agent",
     openAIApiKey: '',
     langSmithApiKey: '',
     llmOrganizations: [
