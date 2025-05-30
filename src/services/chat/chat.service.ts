@@ -1,3 +1,4 @@
+import { App } from 'obsidian';
 import { ChatSemanticSearchService } from "../semantic/search/ChatSemanticSearchService";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { ChatMessageHistory } from "langchain/memory";
@@ -57,6 +58,20 @@ export class ChatService {
     private plugin: KnowledgeManagerPlugin,
     private tracer: any = undefined
   ) {}
+
+  /**
+   * Retourne la liste des agents disponibles pour le chat
+   */
+  public getAvailableAgents(): string[] {
+    return this.agentFactory.listAgents();
+  }
+
+  /**
+   * Retourne l'instance d'Obsidian App
+   */
+  public getApp(): App {
+    return this.plugin.app;
+  }
 
   async init() {
     this.settings = await this.plugin.loadData();

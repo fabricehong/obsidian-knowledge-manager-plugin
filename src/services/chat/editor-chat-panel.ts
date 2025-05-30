@@ -1,5 +1,6 @@
-import { ItemView, WorkspaceLeaf, Setting, MarkdownRenderer } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Setting, MarkdownRenderer, Notice } from 'obsidian';
 import { ChatService, ChatResponse } from './chat.service';
+import { ServiceContainer } from '../service-container';
 
 export const VIEW_TYPE_CHAT = 'chat-view';
 
@@ -30,11 +31,36 @@ export class EditorChatPanel extends ItemView {
     return 'Chat IA';
   }
 
+  /**
+   * Affiche un message système en italique dans le chat (non ajouté à l'historique)
+   */
+  private displaySystemMessage(message: string) {
+    if (!this.historyEl) return;
+    const sysMsg = document.createElement('div');
+    sysMsg.className = 'chat-system-message';
+    sysMsg.style.fontStyle = 'italic';
+    sysMsg.style.opacity = '0.7';
+    sysMsg.style.margin = '6px 0';
+    sysMsg.textContent = message;
+    this.historyEl.appendChild(sysMsg);
+    this.historyEl.scrollTop = this.historyEl.scrollHeight;
+  }
+
   async onOpen() {
     const { contentEl } = this;
     contentEl.empty();
     this.agentHeaderEl = contentEl.createEl('div', { cls: 'chat-agent-header' });
     this.updateAgentDisplay(this.chatService.getAgentId?.() ?? '');
+    // Ajout du gestionnaire de clic pour ouvrir la modale de sélection d'agent
+    this.agentHeaderEl.addEventListener('click', async () => {
+      const agents = this.chatService.getAvailableAgents();
+      const app = this.chatService.getApp();
+      const { AgentSuggestModal } = await import('./agent/agent-suggest-modal');
+      new AgentSuggestModal(app, agents, (selectedAgent: string) => {
+        this.chatService.setAgent(selectedAgent);
+        this.displaySystemMessage(`Agent sélectionné : ${selectedAgent}`);
+      }).open();
+    });
     contentEl.createEl('h2', { text: 'Chat IA' });
 
     // Historique

@@ -117,19 +117,6 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			}
 		});
 
-		// Commande pour sélectionner l'agent de chat
-		this.addCommand({
-			id: 'semantic:chat:select-agent',
-			name: 'semantic:chat:select-agent',
-			callback: () => {
-				const agents = this.serviceContainer.chatAgentFactory.listAgents();
-				new AgentSuggestModal(this.app, agents, (selectedAgent) => {
-					this.serviceContainer.chatService.setAgent(selectedAgent);
-					new Notice(`Agent sélectionné : ${selectedAgent}`);
-				}).open();
-			}
-		});
-
 		// --- Commande Create Chunks ---
 		this.addCommand({
 			id: 'semantic:print-indexable-chunks',
