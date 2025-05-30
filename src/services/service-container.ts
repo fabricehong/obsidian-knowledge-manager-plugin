@@ -1,10 +1,11 @@
+
 import { App } from 'obsidian';
 import { ContentFusionService } from './diffusion/content-fusion.service';
 import { VaultMapperService } from './vault-mapper.service';
 import { FilePathService } from './diffusion/file-path.service';
 import { DocumentCleaningService } from './diffusion/document-cleaning.service';
 import { TranscriptionReplacementService } from './replacement/apply-replacement/transcription-replacement.service';
-import { YamlService } from './document/yaml.service'; 
+import { YamlService } from './document/yaml.service';
 import { EditorTranscriptionReplacementService } from './replacement/apply-replacement/editor-transcription-replacement.service';
 import { EditorVocabularyReplacementService } from './vocabulary/editor-vocabulary-replacement.service';
 import { GlossaryReplacementService } from './replacement/specs-creation/glossary-replacement.service';
@@ -22,8 +23,6 @@ import { ReplacementSpecs, ReplacementSpecsSchema, VocabularySpecSchema, Vocabul
 import { TranscriptFileService } from './transcription-section/transcript-file.service';
 import { NoteSummarizationService } from './others/note-summarization.service';
 import { DocumentStructureService } from './document/document-structure.service';
-import { LLMCompletionService } from './llm/llm-completion.service';
-import { OpenAIModelService } from './llm/openai-model.service';
 import { ReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/replacement-specs-integration.service';
 import { TaggedFilesService } from './document/tagged-files.service';
 import { EditorReplacementSpecsIntegrationService } from './replacement/replacement-diffusion/editor-replacement-specs-integration.service';
@@ -43,9 +42,44 @@ import { SpeakerDescriptionService } from './speaker-description/speaker-descrip
 import { EditorSpeakerDescriptionService } from './speaker-description/editor-speaker-description.service';
 import { LangChain2Service } from './others/LangChain2.service';
 import { LangChainCompletionService } from '@obsidian-utils/services/llm/langchain-completion.service';
+import { ModelFactory } from '@obsidian-utils/services/llm/model.factory';
 import KnowledgeManagerPlugin from '../main';
+import { MultiTechniqueChunkTransformer } from './semantic/indexing/MultiTechniqueChunkTransformer';
+import { MultiVectorStoreIndexer } from './semantic/indexing/MultiVectorStoreIndexer';
+import { ChunkTransformService } from './semantic/indexing/ChunkTransformService';
+import { VectorStore } from './semantic/vector-store/VectorStore';
+import { ContextualizedChunkTransformService } from './semantic/indexing/ContextualizedChunkTransformService';
+
+import { PersistentOramaVectorStore } from './semantic/vector-store/PersistentOramaVectorStore';
+import { join } from 'path';
+import { EditorChunkingService } from './semantic/editor-chunking.service';
+import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
+import { EditorChunkIndexingService } from './semantic/editor-chunk-indexing.service';
+import { MultiSemanticSearchService } from './semantic/search/MultiSemanticSearchService';
+import { OpenAIModelService } from './llm/openai-model.service';
+
+import { OllamaEmbeddings } from '@langchain/ollama';
+import { ChatService } from './chat/chat.service';
+import { getTracer } from './langsmith-tracer';
+import { Embeddings } from '@langchain/core/embeddings';
+import { randomUUID } from 'crypto';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { SemanticSearchService } from './semantic/search/SemanticSearchService';
+import { ChatSemanticSearchService } from "./semantic/search/ChatSemanticSearchService";
+import { ChatAgentFactory } from "./chat/agent/chat-agent.factory";
+import { RagAgentInitializer } from "./chat/agent/rag-agent.initializer";
 
 export class ServiceContainer {
+    public readonly tracer?: any; // LangChainTracer type, mais évite l'import direct si absent
+    /**
+     * Identifiant unique pour chaque instance de ServiceContainer
+     */
+    public readonly serviceContainerId: string;
+    public readonly chatService: ChatService; // Service de chat éditeur
+    public readonly chatAgentFactory: ChatAgentFactory;
+
+    public readonly editorChunkingService: EditorChunkingService;
+    public readonly editorChunkInsertionService: EditorChunkInsertionService;
     public readonly documentStructureService: DocumentStructureService;
     public readonly yamlReplacementService: YamlService<ReplacementSpecs>;
     public readonly yamlVocabularyService: YamlService<VocabularySpecs>;
@@ -86,8 +120,35 @@ export class ServiceContainer {
     private readonly editorDocumentService: EditorDocumentService;
     private readonly textCorrector: TextCorrector;
     public readonly langChain2Service: LangChain2Service;
+    public readonly multiTechniqueChunkTransformer: MultiTechniqueChunkTransformer;
+    public readonly multiVectorStoreIndexer: MultiVectorStoreIndexer;
+    public readonly chunkTransformServices: ChunkTransformService[];
+    public readonly vectorStores: VectorStore[];
 
+
+    // Ajouter d'autres VectorStore mémoire ici si besoin
+
+    public readonly multiSemanticSearchService: MultiSemanticSearchService;
+    public readonly chatSemanticSearchService: ChatSemanticSearchService;
+    public readonly editorChunkIndexingService: EditorChunkIndexingService;
+
+    static async create(app: App, settings: PluginSettings, plugin: KnowledgeManagerPlugin) {
+        // Création de l'instance avec initialisation synchrones
+        const container = new ServiceContainer(app, settings, plugin);
+
+        // --- Initialisation vector stores ---
+        if (container.chatService) {
+            await container.chatService.init();
+        }
+        await container.initVectorStores();
+        return container;
+    }
+    
     constructor(private app: App, settings: PluginSettings, private plugin: KnowledgeManagerPlugin) {
+        // Génère un UUID unique pour cette instance
+        this.serviceContainerId = randomUUID();
+        console.log('creation du service container', this.serviceContainerId);
+        console.log('[ServiceContainer.constructor] called', (new Error().stack));
         // Services sans dépendances
         this.documentStructureService = new DocumentStructureService();
         this.yamlReplacementService = new YamlService<ReplacementSpecs>(ReplacementSpecsSchema, 'Invalid replacement specs');
@@ -135,7 +196,7 @@ export class ServiceContainer {
         if (!selectedConfig) {
             throw new Error('Selected LLM configuration not found');
         }
-        
+
         const organization = settings.llmOrganizations.find(o => o.id === selectedConfig.organisationId);
         if (!organization) {
             throw new Error('Organization not found for selected configuration');
@@ -143,6 +204,10 @@ export class ServiceContainer {
 
         this.openAIModelService = new OpenAIModelService();
         this.openAIModelService.initialize(organization.apiKey);
+        // Pour LangChain (OpenAIEmbeddings), on définit l'API key globalement
+        if (organization.apiKey) {
+            process.env.OPENAI_API_KEY = organization.apiKey;
+        }
 
         /*
         this.aiCompletionService = new LLMCompletionService({
@@ -151,10 +216,9 @@ export class ServiceContainer {
         }, true);
         */
 
-        this.aiCompletionService = new LangChainCompletionService({
-            organization,
-            configuration: selectedConfig
-        }, true);
+        const langchainModel = ModelFactory.createModel(organization, selectedConfig.model);
+
+        this.aiCompletionService = new LangChainCompletionService(langchainModel, true);
 
         // Text corrector
         this.textCorrector = new TextCorrector(
@@ -168,7 +232,7 @@ export class ServiceContainer {
         // Services dépendants
         this.noteSummarizationService = new NoteSummarizationService(this.openAIModelService);
         this.contentFusionService = new ContentFusionService(this.openAIModelService);
-        
+
         this.editorTranscriptionReplacementService = new EditorTranscriptionReplacementService(
             this.app,
             this.documentStructureService,
@@ -176,7 +240,7 @@ export class ServiceContainer {
             this.transcriptionReplacementService,
             this.taggedFilesService
         );
-        
+
         this.editorVocabularyReplacementService = new EditorVocabularyReplacementService(
             this.app,
             this.documentStructureService,
@@ -200,6 +264,16 @@ export class ServiceContainer {
             this.documentStructureService,
             this.documentationService
         );
+
+        // Initialisation du tracer LangSmith si clé présente
+        if (settings.langSmithApiKey) {
+            try {
+                this.tracer = getTracer(settings.langSmithApiKey);
+                console.log('tracer initialisé');
+            } catch (e) {
+                console.warn('Impossible d’initialiser le tracer LangSmith :', e);
+            }
+        }
 
         this.conversationTopicsService = new ConversationTopicsService(this.aiCompletionService);
         this.editorConversationTopicsService = new EditorConversationTopicsService(
@@ -270,5 +344,113 @@ export class ServiceContainer {
             this.speakerDescriptionService
         );
         this.langChain2Service = new LangChain2Service();
+        // Liste des techniques de transformation disponibles (à enrichir selon besoins)
+        const bestChunkTransformTechnique = new ContextualizedChunkTransformService();
+        this.chunkTransformServices = [
+            bestChunkTransformTechnique,
+            //new RawTextChunkTransformService(),
+        ];
+        this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformer(this.chunkTransformServices);
+
+        // Initialisation synchrone (à adapter si besoin d'async)
+        // Exemple : VectorStore mémoire OpenAI (ne reçoit QUE l'instance papa déjà initialisée)
+
+        // Pour Ollama :
+        // this.papaMemoryVectorStoreOllama = new PapaMemoryVectorStore(
+        //     this.papa,
+        //     OllamaEmbedModel.NOMIC_EMBED_TEXT,
+        //     OllamaGenModel.LLAMA2
+        // --- Modèles Ollama utilisés ---
+        //
+        // 1. nomic-embed-text
+        //    - Polyvalent, open-source, rapide
+        //    - Très bon pour la recherche sémantique sur documents variés
+        //    - Multilingue (français inclus)
+        //    - Idéal pour la plupart des usages Obsidian
+        // 2. jeffh/intfloat-multilingual-e5-large-instruct:q8_0
+        //    - Modèle multilingue très réputé pour le retrieval et la recherche contextuelle
+        //    - Excellente robustesse pour le français et les langues européennes
+        //    - Version quantized (q8_0) : rapide, léger, très bon compromis qualité/ressources
+        // 3. bge-m3
+        //    - Modèle BAAI de dernière génération, multilingue
+        //    - Très performant pour la recherche sémantique, supporte bien le français
+        //    - Recommandé pour les tâches avancées de vectorisation et de similarité
+        //    - Contexte plus grand que les autres
+        const embeddingsModels: Embeddings[] = [];
+
+        [
+            // 'nomic-embed-text', // Voir description ci-dessus
+            // 'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
+            // 'bge-m3', // Voir description ci-dessus
+            // 'bge-large',
+        ].forEach(element => {
+            embeddingsModels.push(new OllamaEmbeddings({
+                model: element,
+                requestOptions: {
+                    num_ctx: 8192,
+                }
+            }));
+        });
+
+        embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: settings.openAIApiKey }));
+
+        this.vectorStores = embeddingsModels.map(
+            (model: Embeddings) => {
+                // On crée un fichier de persistence unique par modèle
+                const safeModelName = (model as any).model?.replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown';
+                const persistencePath = join((this.app.vault.adapter as any).basePath, `vectorstore-orama-${safeModelName}.json`);
+                return new PersistentOramaVectorStore(model, persistencePath);
+            }
+        );
+
+        // Initialisation asynchrone déplacée dans une méthode dédiée
+
+        this.multiVectorStoreIndexer = new MultiVectorStoreIndexer(this.vectorStores);
+        // Ajout des services de chunking et d'insertion de chunk
+        this.editorChunkingService = new EditorChunkingService(this.app);
+        this.editorChunkInsertionService = new EditorChunkInsertionService(this.app);
+        this.editorChunkIndexingService = new EditorChunkIndexingService(
+            this.app,
+            this.editorChunkingService,
+            this.multiTechniqueChunkTransformer,
+            this.vectorStores
+        );
+        // Initialisation du service multi-recherche sémantique
+
+        // Prépare la liste alignée des SemanticSearchService pour chaque vectorStore
+        const semanticSearchServices = this.vectorStores.map(vs => new SemanticSearchService(vs));
+
+        this.chatSemanticSearchService = new ChatSemanticSearchService(
+            semanticSearchServices[0],
+            bestChunkTransformTechnique.technique,
+        );
+
+        this.multiSemanticSearchService = new MultiSemanticSearchService(
+            semanticSearchServices
+        );
+
+        try {
+            if (!settings.openAIApiKey) throw new Error('Clé OpenAI manquante');
+            this.chatAgentFactory = new ChatAgentFactory();
+            ChatAgentFactory.registerDefaultAgents(this.chatAgentFactory, langchainModel, this.chatSemanticSearchService);
+            this.chatService = new ChatService(
+                this.chatAgentFactory,
+                plugin,
+                this.tracer
+            );
+            // Initialisation asynchrone déplacée dans ServiceContainer.create
+
+        } catch (e) {
+            console.error('[ServiceContainer] Impossible d\'initialiser chatService:', e);
+            // Important : toujours initialiser la propriété
+            (this as any).editorChatService = null;
+        }
+
+        this.initVectorStores();
+    }
+
+    private async initVectorStores() {
+        console.log('initVectorStores', this.serviceContainerId);
+        await Promise.all(this.vectorStores.map(store => store.init?.()));
     }
 }

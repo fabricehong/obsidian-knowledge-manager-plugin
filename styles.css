@@ -63,6 +63,34 @@ If your plugin does not need CSS, delete this file.
     transition: all 0.2s ease;
 }
 
+/* Styles pour le chat panel */
+
+/* Rendre le texte du chat sélectionnable */
+.chat-history,
+.chat-msg,
+.chat-user-content,
+.chat-msg-assistant {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.chat-prefix {
+  font-weight: bold;
+}
+
+.chat-prefix-user {
+  color: #2563eb; /* bleu vif */
+}
+
+.chat-prefix-assistant {
+  color: #dc2626; /* rouge vif */
+}
+
+.chat-user-content {
+  color: #6b7280; /* gris légèrement plus clair que noir */
+}
+
+
 .file-drop-zone:hover {
     border-color: var(--interactive-accent);
     background-color: var(--background-modifier-form-field);

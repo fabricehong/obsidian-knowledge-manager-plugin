@@ -1,0 +1,30 @@
+/* chat-panel.css */
+.chat-agent-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5em;
+  padding: 0.4em 0;
+  border-radius: 6px;
+  background: var(--background-modifier-hover);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+.chat-agent-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-weight: 600;
+  color: var(--text-accent);
+  background: var(--background-modifier-active-hover);
+  border-radius: 4px;
+  padding: 0.15em 0.7em;
+}
+.chat-agent-badge svg {
+  width: 1.2em;
+  height: 1.2em;
+  opacity: 0.85;
+}
+.chat-agent-name {
+  margin-left: 0.3em;
+  font-size: 1.08em;
+}

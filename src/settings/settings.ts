@@ -20,7 +20,22 @@ export interface RootNode {
     children: HeaderNode[];
 }
 
+export interface ChunkingFolderConfig {
+    folder: string; // chemin du dossier obsidian
+    /**
+     * Liste de headings à extraire. Si non défini, tout le fichier est chunké.
+     */
+    headings?: string[];
+}
+
 export interface PluginSettings {
+    /**
+     * Identifiant de l'agent de chat sélectionné (persisté)
+     */
+    selectedChatAgentId?: string; // ex: "rag-agent" ou "slogan-yogurt-agent"
+
+    openAIApiKey?: string; // Clé API OpenAI pour le chat et les embeddings
+    langSmithApiKey?: string; // Clé API LangSmith pour le tracing et le monitoring
     llmOrganizations: LLMOrganization[];
     llmConfigurations: LLMConfiguration[];
     selectedLlmConfiguration: string;
@@ -33,9 +48,18 @@ export interface PluginSettings {
     replacementsHeader: string;
     assemblyAiApiKey: string;
     transcriptionFolder: string;
+
+    /**
+     * Configuration pour la fonctionnalité "Create Chunks" :
+     * Liste de paires (dossier, headings)
+     */
+    chunkingFolders: ChunkingFolderConfig[];
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
+    selectedChatAgentId: "rag-agent",
+    openAIApiKey: '',
+    langSmithApiKey: '',
     llmOrganizations: [
         {
             id: 'openai', // generateId('org'),
@@ -89,7 +113,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     maxGlossaryIterations: 5,
     replacementsHeader: 'Replacements',
     assemblyAiApiKey: '',
-    transcriptionFolder: ''
+    transcriptionFolder: '',
+
+    // Valeur par défaut pour la fonctionnalité Create Chunks
+    chunkingFolders: []
 };
 
 /**

@@ -1,15 +1,21 @@
 import { App, Editor, MarkdownRenderer, MarkdownView, Modal, Notice, Plugin, TFile, TFolder } from 'obsidian';
+import '../chat-panel.css';
 import { ServiceContainer } from './services/service-container';
+import { EditorChatPanel, VIEW_TYPE_CHAT } from './services/chat/editor-chat-panel';
+import { AgentSuggestModal } from './services/chat/agent/agent-suggest-modal';
 import { DEFAULT_SETTINGS, PluginSettings, updateDefaultReferences } from './settings/settings';
 import { SettingsTab } from './settings/settings-tab';
 import { FolderSuggestModal } from '@obsidian-utils/ui/folder-suggest-modal';
 import { TranscriptionModal } from './services/transcription/transcription-modal';
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
-import { LangChain2Service } from './services/others/LangChain2.service';
+
+import { PromptModal } from './services/semantic/ui/PromptModal';
+
+// Génère un header markdown détaillé pour tout vector store (type, modèle, etc)
 
 const HELP_CONTENT = `# Aide - Commandes de Remplacement de Transcript
 
-## Vue d'ensemble
+## Vue d'overview
 Les commandes de remplacement de transcript permettent de standardiser les noms et termes utilisés dans vos transcriptions de réunions.
 
 ## Commandes disponibles
@@ -42,475 +48,702 @@ Les commandes de remplacement de transcript permettent de standardiser les noms 
 5. Pour les cas simples, utiliser directement \`apply:from-vocabulary\``;
 
 class HelpModal extends Modal {
-    private plugin: KnowledgeManagerPlugin;
+	private plugin: KnowledgeManagerPlugin;
 
-    constructor(app: App, plugin: KnowledgeManagerPlugin) {
-        super(app);
-        this.plugin = plugin;
-    }
+	constructor(app: App, plugin: KnowledgeManagerPlugin) {
+		super(app);
+		this.plugin = plugin;
+	}
 
-    async onOpen() {
-        let { contentEl } = this;
-        
-        // Créer un conteneur pour le contenu markdown
-        const markdownContainer = contentEl.createDiv({
-            cls: 'markdown-preview-view markdown-rendered'
-        });
+	async onOpen() {
+		let { contentEl } = this;
 
-        // Rendre le markdown
-        await MarkdownRenderer.renderMarkdown(
-            HELP_CONTENT,
-            markdownContainer,
-            '',
-            this.plugin
-        );
-    }
+		// Créer un conteneur pour le contenu markdown
+		const markdownContainer = contentEl.createDiv({
+			cls: 'markdown-preview-view markdown-rendered'
+		});
 
-    onClose() {
-        let { contentEl } = this;
-        contentEl.empty();
-    }
+		// Rendre le markdown
+		await MarkdownRenderer.renderMarkdown(
+			HELP_CONTENT,
+			markdownContainer,
+			'',
+			this.plugin
+		);
+	}
+
+	onClose() {
+		let { contentEl } = this;
+		contentEl.empty();
+	}
 }
 
 export default class KnowledgeManagerPlugin extends Plugin {
-    settings: PluginSettings;
-    private serviceContainer: ServiceContainer;
-    private statusBarItem: HTMLElement;
+	async activateChatView() {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CHAT);
+		if (leaves.length > 0) {
+			this.app.workspace.revealLeaf(leaves[0]);
+			return;
+		}
+		const rightLeaf = this.app.workspace.getRightLeaf(false);
+		if (rightLeaf) {
+			await rightLeaf.setViewState({
+				type: VIEW_TYPE_CHAT,
+				active: true,
+			});
+		}
+	}
 
-    async onload() {
-        await this.loadSettings();
-        this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
-        
-        // Ajout de la barre de statut
-        this.statusBarItem = this.addStatusBarItem();
-        this.statusBarItem.style.display = 'none';
+	settings: PluginSettings;
+	private serviceContainer: ServiceContainer;
+	private statusBarItem: HTMLElement;
 
-        // Register commands
-        this.addCommand({
-            id: 'note-dissusion:diffuse-current-note',
-            name: 'note-dissusion:diffuse-current-note',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorKnowledgeDiffusionService.diffuseCurrentNote(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+	async onload() {
+		await this.loadSettings();
+		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
 
-        // Add the remove references content command
-        this.addCommand({
-            id: 'note-diffusion:remove-refs-content',
-            name: 'note-diffusion:remove-refs-content',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorDocumentCleaningService.cleanReferenceContent(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Enregistrement de la vue chat dans le panneau latéral
+		this.registerView(
+			VIEW_TYPE_CHAT,
+			(leaf) => new EditorChatPanel(leaf, this.serviceContainer.chatService)
+		);
 
-        // Add the add replacements section command
-        this.addCommand({
-            id: 'transcript-replacement:replacement-specs:create:from-speakers',
-            name: 'transcript-replacement:replacement-specs:create:from-speakers',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorReplacementSpecsCreationService.createReplacementSpecsFromSpeakers(
-                            markdownView,
-                            this.settings.headerContainingTranscript,
-                            this.settings.replacementsHeader
-                        );
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Commande pour ouvrir explicitement le panneau de chat IA
+		this.addCommand({
+			id: 'semantic:chat',
+			name: 'semantic:chat',
+			callback: () => {
+				this.activateChatView();
+			}
+		});
 
-        // Add the add glossary replacements section command
-        this.addCommand({
-            id: 'transcript-replacement:replacement-specs:create:from-ai',
-            name: 'transcript-replacement:replacement-specs:create:from-ai',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView && markdownView.file) {
-                    if (!checking) {
-                        this.serviceContainer.editorAIReplacementSpecsCreationService.createReplacementSpecs(
-                            markdownView.file,
-                            this.settings.headerContainingTranscript,
-                            this.settings.replacementsHeader,
-                            this.settings.maxGlossaryIterations
-                        );
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// --- Commande Create Chunks ---
+		this.addCommand({
+			id: 'semantic:print-indexable-chunks',
+			name: 'semantic:print-indexable-chunks',
+			callback: async () => {
+				try {
+					await this.printIndexableChunksInActiveFile();
+				} catch (error) {
+					console.error('Erreur lors de la création des chunks:', error);
+					new Notice('Erreur lors de la création des chunks. Voir la console pour plus de détails.');
+				}
+			}
+		});
 
-        // Add the replace transcription command
-        this.addCommand({
-            id: 'transcript-replacement:apply:from-specs',
-            name: 'transcript-replacement:apply:from-specs',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorTranscriptionReplacementService.replaceTranscription(
-                            markdownView,
-                            this.settings.replacementSpecsTag,
-                            this.settings.headerContainingTranscript,
-                            this.settings.replacementsHeader,
-                        );
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Commande pour tester les embeddings sur tous les vector stores du fichier actif
+		this.addCommand({
+			id: 'semantic-:test-embeddings-active-file',
+			name: 'semantic-:test-embeddings-active-file',
+			callback: async () => {
+				try {
+					await this.serviceContainer.editorChunkIndexingService.testEmbeddingsForActiveFileChunksAllStores();
+				} catch (error) {
+					console.error('Erreur lors du test des embeddings:', error);
+					new Notice('Erreur lors du test des embeddings. Voir la console.');
+				}
+			}
+		});
 
-        // Add vocabulary replacement command
-        this.addCommand({
-            id: 'transcript-replacement:apply:from-vocabulary',
-            name: 'transcript-replacement:apply:from-vocabulary',
-            editorCallback: (editor: Editor) => {
-                const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (view) {
-                    this.serviceContainer.editorVocabularyReplacementService.replaceWithVocabulary(
-                        view,
-                        this.settings.vocabularySpecsTag,
-                        this.settings.headerContainingTranscript,
-                        this.settings.replacementsHeader
-                    );
-                }
-            }
-        });
+		// --- Commande Index Chunks ---
+		this.addCommand({
+			id: 'semantic:vector-store:index-all',
+			name: 'semantic:vector-store:index-all',
+			callback: async () => {
+				try {
+					await this.indexChunks();
+				} catch (error) {
+					console.error('Erreur lors de l\'indexation des chunks:', error);
+				}
+			}
+		});
 
-        // Add the analyze replacement specs command
-        this.addCommand({
-            id: 'transcript-replacement:replacement-specs:to-vault',
-            name: 'transcript-replacement:replacement-specs:to-vault',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorReplacementSpecsIntegrationService.publishCurrentFileSpecs(
-                            markdownView,
-                            this.settings.replacementSpecsTag,
-                            this.settings.replacementsHeader
-                        );
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Commande pour afficher tous les documents du vector store mémoire
+		this.addCommand({
+			id: 'semantic:vector-store:print-all-documents',
+			name: 'semantic:vector-store:print-all-documents',
+			callback: async () => {
+				try {
+					await this.printAllVectorStoreDocumentsInActiveFile();
+				} catch (error) {
+					console.error('Erreur lors de l\'insertion des documents vector store:', error);
+					new Notice('Erreur lors de l\'insertion des documents vector store. Voir la console pour plus de détails.');
+				}
+			}
+		});
 
-        // Add the create documentation command
-        this.addCommand({
-            id: 'enrich:create-documentation',
-            name: 'enrich:create-documentation',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorDocumentationService.createDocumentation(
-                            markdownView,
-                            this.settings.headerContainingTranscript
-                        );
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Commande pour la recherche sémantique multi-vector store
+		this.addCommand({
+			id: 'semantic:vector-store:search-all',
+			name: 'semantic:vector-store:search-all',
+			callback: async () => {
+				try {
+					await this.searchInAllVectorStoresAndPrintResults();
+				} catch (e) {
+					console.error('Erreur lors de la recherche sémantique multi-vector store:', e);
+					new Notice('Erreur lors de la recherche sémantique. Voir la console.');
+				}
+			}
+		});
 
-        // Add the list conversation topics command
-        this.addCommand({
-            id: 'enrich:list-conversation-topics',
-            name: 'enrich:list-conversation-topics',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorConversationTopicsService.listTopics(
-                            markdownView,
-                            this.settings.headerContainingTranscript
-                        );
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		this.addCommand({
+			id: 'semantic:vector-store:reset',
+			name: 'semantic:vector-store:reset',
+			callback: async () => {
+				await this.resetVectorStores();
+			},
+		});
 
-        // Add the describe speakers command
-        this.addCommand({
-            id: 'enrich:describe-speakers',
-            name: 'enrich:describe-speakers',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorSpeakerDescriptionService.describeSpeakers(
-                            markdownView,
-                            this.settings.headerContainingTranscript,
-                            "Speaker description"  // Valeur en dur comme demandé
-                        );
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Ajout de la barre de statut
+		this.statusBarItem = this.addStatusBarItem();
+		this.statusBarItem.style.display = 'none';
 
-        // Add the summarize command
-        this.addCommand({
-            id: 'debug:summarize-note',
-            name: 'debug:summarize-note',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.summarizeNote(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Register commands
+		this.addCommand({
+			id: 'note-dissusion:diffuse-current-note',
+			name: 'note-dissusion:diffuse-current-note',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorKnowledgeDiffusionService.diffuseCurrentNote(markdownView);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        // Add the map vault command
-        this.addCommand({
-            id: 'debug:map-vault',
-            name: 'debug:map-vault',
-            callback: () => {
-                new FolderSuggestModal(this.app, (folder: TFolder) => {
-                    try {
-                        const vaultMap = this.serviceContainer.vaultMapperService.mapDirectory(folder);
-                        const stringRepresentation = this.serviceContainer.vaultMapperService.getStringRepresentation(vaultMap);
-                        console.log(`Structure for folder "${folder.path}":\n${stringRepresentation}`);
-                        new Notice(`Map generated for "${folder.path}"! Check the console for details.`);
-                    } catch (error) {
-                        console.error('Error mapping folder:', error);
-                        new Notice('Error mapping folder. Check the console for details.');
-                    }
-                }).open();
-            }
-        });
+		// Add the remove references content command
+		this.addCommand({
+			id: 'note-diffusion:remove-refs-content',
+			name: 'note-diffusion:remove-refs-content',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorDocumentCleaningService.cleanReferenceContent(markdownView);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        // Add the print file cache command
-        this.addCommand({
-            id: 'debug:print-file-cache',
-            name: 'debug:print-file-cache',
-            checkCallback: (checking: boolean) => {
-                const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (activeView?.file) {
-                    if (!checking) {
-                        const file = activeView.file;
-                        const cache = this.app.metadataCache.getFileCache(file);
-                        if (cache) {
-                            const headerTree = this.serviceContainer.documentStructureService.buildHeaderTree(this.app, file);
-                            console.log('Header tree for', file.path + ':', headerTree);
-                            new Notice('Header tree printed to console');
-                        } else {
-                            new Notice('No cache available for this file');
-                        }
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Add the add replacements section command
+		this.addCommand({
+			id: 'transcript-replacement:replacement-specs:create:from-speakers',
+			name: 'transcript-replacement:replacement-specs:create:from-speakers',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorReplacementSpecsCreationService.createReplacementSpecsFromSpeakers(
+							markdownView,
+							this.settings.headerContainingTranscript,
+							this.settings.replacementsHeader
+						);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        // Add command to print translation prompt template
-        this.addCommand({
-            id: 'debug:print-translation-template',
-            name: 'debug:print-translation-template',
-            callback: async () => {
-                const templatePath = this.settings.translationPromptTemplate;
-                if (!templatePath) {
-                    new Notice('No translation prompt template set in settings');
-                    return;
-                }
+		// Add the add glossary replacements section command
+		this.addCommand({
+			id: 'transcript-replacement:replacement-specs:create:from-ai',
+			name: 'transcript-replacement:replacement-specs:create:from-ai',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView && markdownView.file) {
+					if (!checking) {
+						this.serviceContainer.editorAIReplacementSpecsCreationService.createReplacementSpecs(
+							markdownView.file,
+							this.settings.headerContainingTranscript,
+							this.settings.replacementsHeader,
+							this.settings.maxGlossaryIterations
+						);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-                try {
-                    const file = this.app.vault.getAbstractFileByPath(templatePath);
-                    if (file instanceof TFile) {
-                        const content = await this.app.vault.read(file);
-                        console.log('Translation Prompt Template Content:');
-                        console.log('----------------------------------------');
-                        console.log(content);
-                        console.log('----------------------------------------');
-                        new Notice('Translation prompt template content printed to console');
-                    } else {
-                        new Notice('Template file not found: ' + templatePath);
-                    }
-                } catch (error) {
-                    console.error('Error reading template file:', error);
-                    new Notice('Error reading template file');
-                }
-            }
-        });
+		// Add the replace transcription command
+		this.addCommand({
+			id: 'transcript-replacement:apply:from-specs',
+			name: 'transcript-replacement:apply:from-specs',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorTranscriptionReplacementService.replaceTranscription(
+							markdownView,
+							this.settings.replacementSpecsTag,
+							this.settings.headerContainingTranscript,
+							this.settings.replacementsHeader,
+						);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
+		// Add vocabulary replacement command
+		this.addCommand({
+			id: 'transcript-replacement:apply:from-vocabulary',
+			name: 'transcript-replacement:apply:from-vocabulary',
+			editorCallback: (editor: Editor) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (view) {
+					this.serviceContainer.editorVocabularyReplacementService.replaceWithVocabulary(
+						view,
+						this.settings.vocabularySpecsTag,
+						this.settings.headerContainingTranscript,
+						this.settings.replacementsHeader
+					);
+				}
+			}
+		});
 
-        // This adds a settings tab so the user can configure various aspects of the plugin
-        this.addSettingTab(new SettingsTab(this.app, this));
+		// Add the analyze replacement specs command
+		this.addCommand({
+			id: 'transcript-replacement:replacement-specs:to-vault',
+			name: 'transcript-replacement:replacement-specs:to-vault',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorReplacementSpecsIntegrationService.publishCurrentFileSpecs(
+							markdownView,
+							this.settings.replacementSpecsTag,
+							this.settings.replacementsHeader
+						);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        // Add a simple command to test LangChain2Service
-        this.addCommand({
-            id: 'test-langchain2-service',
-            name: 'Test LangChain2 Service',
-            editorCallback: async (editor: Editor, view: MarkdownView) => {
-                const selectedConfig = this.settings.llmConfigurations.find(c => c.id === this.settings.selectedLlmConfiguration);
-                if (!selectedConfig) {
-                    new Notice('No LLM configuration selected');
-                    return;
-                }
-                const organization = this.settings.llmOrganizations.find(o => o.id === selectedConfig.organisationId);
-                if (!organization) {
-                    new Notice('Organization not found for selected configuration');
-                    return;
-                }
-                const apiKey = organization.apiKey;
-                const modelName = selectedConfig.model;
-                const temperature = 0.7;
-                const promptTemplate = "You are a helpful assistant. Please respond to the following question: {text}";
-                const text = editor.getSelection() || "What is the capital of France?";
+		// Add the create documentation command
+		this.addCommand({
+			id: 'enrich:create-documentation',
+			name: 'enrich:create-documentation',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorDocumentationService.createDocumentation(
+							markdownView,
+							this.settings.headerContainingTranscript
+						);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-                try {
-                    await this.serviceContainer.langChain2Service.initialize(apiKey, modelName, temperature, promptTemplate);
-                    const result = await this.serviceContainer.langChain2Service.run(text);
-                    new Notice(`LangChain2 Result: ${result}`);
-                } catch (error) {
-                    new Notice(`Error: ${error.message}`);
-                }
-            }
-        });
+		// Add the list conversation topics command
+		this.addCommand({
+			id: 'enrich:list-conversation-topics',
+			name: 'enrich:list-conversation-topics',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorConversationTopicsService.listTopics(
+							markdownView,
+							this.settings.headerContainingTranscript
+						);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        // Add the help command
-        this.addCommand({
-            id: 'transcript-replacement:help',
-            name: 'transcript-replacement:help',
-            callback: () => {
-                try {
-                    new HelpModal(this.app, this).open();
-                } catch (error) {
-                    console.error('Error showing help:', error);
-                    new Notice('Erreur lors de l\'affichage de l\'aide');
-                }
-            }
-        });
+		// Add the describe speakers command
+		this.addCommand({
+			id: 'enrich:describe-speakers',
+			name: 'enrich:describe-speakers',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorSpeakerDescriptionService.describeSpeakers(
+							markdownView,
+							this.settings.headerContainingTranscript,
+							"Speaker description"  // Valeur en dur comme demandé
+						);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        // Add the show transcript replacement help command
-        // Add the transcript copy command
-        this.addCommand({
-            id: 'transcript:copy',
-            name: 'transcript:copy',
-            checkCallback: (checking: boolean) => {
-                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                if (markdownView) {
-                    if (!checking) {
-                        this.serviceContainer.editorTranscriptCopyService.copyTranscript(markdownView);
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
+		// Add the summarize command
+		this.addCommand({
+			id: 'debug:summarize-note',
+			name: 'debug:summarize-note',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.summarizeNote(markdownView);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        // Commande de transcription
-        this.addCommand({
-            id: 'transcribe-audio',
-            name: 'Transcrire un fichier audio',
-            callback: () => {
-                new TranscriptionModal(this.app, this.serviceContainer.editorTranscriptionService).open();
-            }
-        });
+		// Add the map vault command
+		this.addCommand({
+			id: 'debug:map-vault',
+			name: 'debug:map-vault',
+			callback: () => {
+				new FolderSuggestModal(this.app, (folder: TFolder) => {
+					try {
+						const vaultMap = this.serviceContainer.vaultMapperService.mapDirectory(folder);
+						const stringRepresentation = this.serviceContainer.vaultMapperService.getStringRepresentation(vaultMap);
+						console.log(`Structure for folder "${folder.path}":\n${stringRepresentation}`);
+						new Notice(`Map generated for "${folder.path}"! Check the console for details.`);
+					} catch (error) {
+						console.error('Error mapping folder:', error);
+						new Notice('Error mapping folder. Check the console for details.');
+					}
+				}).open();
+			}
+		});
 
-        this.addCommand({
-            id: 'start-live-transcription',
-            name: 'Démarrer la transcription en direct',
-            editorCallback: async (editor) => {
-                await this.serviceContainer.editorLiveTranscriptionService.startTranscription(editor);
-            }
-        });
+		// Add the print file cache command
+		this.addCommand({
+			id: 'debug:print-file-cache',
+			name: 'debug:print-file-cache',
+			checkCallback: (checking: boolean) => {
+				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (activeView?.file) {
+					if (!checking) {
+						const file = activeView.file;
+						const cache = this.app.metadataCache.getFileCache(file);
+						if (cache) {
+							const headerTree = this.serviceContainer.documentStructureService.buildHeaderTree(this.app, file);
+							console.log('Header tree for', file.path + ':', headerTree);
+							new Notice('Header tree printed to console');
+						} else {
+							new Notice('No cache available for this file');
+						}
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 
-        this.addCommand({
-            id: 'stop-live-transcription',
-            name: 'Arrêter la transcription en direct',
-            checkCallback: (checking) => {
-                const isTranscribing = this.serviceContainer.editorLiveTranscriptionService.isTranscribing();
-                if (checking) return isTranscribing;
-                
-                this.serviceContainer.editorLiveTranscriptionService.stopTranscription();
-                return true;
-            }
-        });
+		// Add command to print translation prompt template
+		this.addCommand({
+			id: 'debug:print-translation-template',
+			name: 'debug:print-translation-template',
+			callback: async () => {
+				const templatePath = this.settings.translationPromptTemplate;
+				if (!templatePath) {
+					new Notice('No translation prompt template set in settings');
+					return;
+				}
 
-        // Add quick LLM configuration switch command
-        this.addCommand({
-            id: 'llm:select-model',
-            name: 'llm:select-model',
-            callback: () => {
-                new QuickLLMConfigModal(this.app, this).open();
-            }
-        });
-    }
+				try {
+					const file = this.app.vault.getAbstractFileByPath(templatePath);
+					if (file instanceof TFile) {
+						const content = await this.app.vault.read(file);
+						console.log('Translation Prompt Template Content:');
+						console.log('----------------------------------------');
+						console.log(content);
+						console.log('----------------------------------------');
+						new Notice('Translation prompt template content printed to console');
+					} else {
+						new Notice('Template file not found: ' + templatePath);
+					}
+				} catch (error) {
+					console.error('Error reading template file:', error);
+					new Notice('Error reading template file');
+				}
+			}
+		});
 
-    async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-        // Met à jour les références si c'est une nouvelle installation
-        if (!this.settings.selectedLlmConfiguration) {
-            updateDefaultReferences(this.settings);
-            await this.saveSettings();
-        }
-    }
+		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
 
-    async saveSettings() {
-        await this.saveData(this.settings);
-        // Recréer le service container avec les nouveaux paramètres
-        this.serviceContainer = new ServiceContainer(this.app, this.settings, this);
-    }
+		// This adds a settings tab so the user can configure various aspects of the plugin
+		this.addSettingTab(new SettingsTab(this.app, this));
 
-    async resetSettings() {
-        this.settings = DEFAULT_SETTINGS;
-        await this.saveSettings();
-    }
+		// Add a simple command to test LangChain2Service
+		this.addCommand({
+			id: 'test-langchain2-service',
+			name: 'Test LangChain2 Service',
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				const selectedConfig = this.settings.llmConfigurations.find(c => c.id === this.settings.selectedLlmConfiguration);
+				if (!selectedConfig) {
+					new Notice('No LLM configuration selected');
+					return;
+				}
+				const organization = this.settings.llmOrganizations.find(o => o.id === selectedConfig.organisationId);
+				if (!organization) {
+					new Notice('Organization not found for selected configuration');
+					return;
+				}
+				const apiKey = organization.apiKey;
+				const modelName = selectedConfig.model;
+				const temperature = 0.7;
+				const promptTemplate = "You are a helpful assistant. Please respond to the following question: {text}";
+				const text = editor.getSelection() || "What is the capital of France?";
 
-    private async summarizeNote(markdownView: MarkdownView) {
-        const editor = markdownView.editor;
-        const content = editor.getValue();
-        
-        try {
-            new Notice('Summarizing note...');
-            const summary = await this.serviceContainer.noteSummarizationService.summarize(content);
+				try {
+					await this.serviceContainer.langChain2Service.initialize(apiKey, modelName, temperature, promptTemplate);
+					const result = await this.serviceContainer.langChain2Service.run(text);
+					new Notice(`LangChain2 Result: ${result}`);
+				} catch (error) {
+					new Notice(`Error: ${error.message}`);
+				}
+			}
+		});
 
-            console.log('Summary result:', summary);
-            new Notice('Note has been summarized! Check the console for details.');
-        } catch (error) {
-            console.error('Error during summarization:', error);
-            new Notice('Error during summarization. Check the console for details.');
-        }
-    }
+		// Add the help command
+		this.addCommand({
+			id: 'transcript-replacement:help',
+			name: 'transcript-replacement:help',
+			callback: () => {
+				try {
+					new HelpModal(this.app, this).open();
+				} catch (error) {
+					console.error('Error showing help:', error);
+					new Notice('Erreur lors de l\'affichage de l\'aide');
+				}
+			}
+		});
 
-    setStatusBarText(text: string) {
-        if (text) {
-            this.statusBarItem.setText(text);
-            this.statusBarItem.style.display = 'block';
-        } else {
-            this.statusBarItem.style.display = 'none';
-        }
-    }
+		// Add the show transcript replacement help command
+		// Add the transcript copy command
+		this.addCommand({
+			id: 'transcript:copy',
+			name: 'transcript:copy',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorTranscriptCopyService.copyTranscript(markdownView);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
+
+		// Commande de transcription
+		this.addCommand({
+			id: 'transcribe-audio',
+			name: 'Transcrire un fichier audio',
+			callback: () => {
+				new TranscriptionModal(this.app, this.serviceContainer.editorTranscriptionService).open();
+			}
+		});
+
+		this.addCommand({
+			id: 'start-live-transcription',
+			name: 'Démarrer la transcription en direct',
+			editorCallback: async (editor) => {
+				await this.serviceContainer.editorLiveTranscriptionService.startTranscription(editor);
+			}
+		});
+
+		this.addCommand({
+			id: 'stop-live-transcription',
+			name: 'Arrêter la transcription en direct',
+			checkCallback: (checking) => {
+				const isTranscribing = this.serviceContainer.editorLiveTranscriptionService.isTranscribing();
+				if (checking) return isTranscribing;
+
+				this.serviceContainer.editorLiveTranscriptionService.stopTranscription();
+				return true;
+			}
+		});
+
+		// Add quick LLM configuration switch command
+		this.addCommand({
+			id: 'llm:select-model',
+			name: 'llm:select-model',
+			callback: () => {
+				new QuickLLMConfigModal(this.app, this).open();
+			}
+		});
+	}
+
+
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		// Met à jour les références si c'est une nouvelle installation
+		if (!this.settings.selectedLlmConfiguration) {
+			updateDefaultReferences(this.settings);
+			await this.saveSettings();
+		}
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+		// Recréer le service container avec les nouveaux paramètres
+		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
+	}
+
+	async resetSettings() {
+		this.settings = DEFAULT_SETTINGS;
+		await this.saveSettings();
+	}
+
+	private async summarizeNote(markdownView: MarkdownView) {
+		const editor = markdownView.editor;
+		const content = editor.getValue();
+
+		try {
+			new Notice('Summarizing note...');
+			const summary = await this.serviceContainer.noteSummarizationService.summarize(content);
+
+			console.log('Summary result:', summary);
+			new Notice('Note has been summarized! Check the console for details.');
+		} catch (error) {
+			console.error('Error during summarization:', error);
+			new Notice('Error during summarization. Check the console for details.');
+		}
+	}
+
+	setStatusBarText(text: string) {
+		if (text) {
+			this.statusBarItem.setText(text);
+			this.statusBarItem.style.display = 'block';
+		} else {
+			this.statusBarItem.style.display = 'none';
+		}
+	}
+
+	/**
+	 * Crée les chunks à partir de la config et les insère dans le fichier actif.
+	 */
+	async printIndexableChunksInActiveFile() {
+		const configs = this.settings.chunkingFolders;
+		if (!configs || configs.length === 0) {
+			new Notice('Aucune configuration de dossiers pour Create Chunks.');
+			return;
+		}
+		new Notice('Analyse des dossiers en cours...');
+		const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
+
+		// Utilisation du multiTechniqueChunkTransformer comme dans indexChunks
+		const transformed = await this.serviceContainer.multiTechniqueChunkTransformer.transformAllTechniquesToIndexableChunks(chunks);
+
+		// Fusionne tous les indexableChunks de toutes les techniques
+		const allIndexableChunks = Object.values(transformed).flat();
+
+		this.serviceContainer.editorChunkInsertionService.insertChunksInActiveFile([
+			{ header: "# Chunks générés (toutes techniques)", chunks: allIndexableChunks }
+		]);
+
+		new Notice(`Chunks insérés (${allIndexableChunks.length}) pour toutes les techniques.`);
+	}
+
+	/**
+	 * Indexe les chunks issus de la config, sans insertion ni feedback UI.
+	 */
+	private async indexChunks() {
+		// S'assurer que tous les vector stores sont initialisés (sécurité anti-course)
+		const configs = this.settings.chunkingFolders;
+		if (!configs || configs.length === 0) {
+			return;
+		}
+		const chunks = await this.serviceContainer.editorChunkingService.getChunksFromConfigs(configs);
+		const transformed = await this.serviceContainer.multiTechniqueChunkTransformer.transformAllTechniquesToIndexableChunks(chunks);
+		try {
+			await this.serviceContainer.multiVectorStoreIndexer.indexTransformedChunks(transformed);
+			new Notice("Indexation terminée avec succès !");
+		} catch (error: any) {
+			console.error("Erreur lors de l'indexation des chunks :", error);
+			new Notice("Erreur lors de l'indexation (voir la console pour le détail).");
+		}
+	}
+
+	async printAllVectorStoreDocumentsInActiveFile() {
+		// Sécurité : s'assurer que tous les vector stores sont initialisés
+		const vectorStores: import("./services/semantic/vector-store/VectorStore").VectorStore[] = this.serviceContainer.vectorStores;
+		if (!vectorStores.length) {
+			new Notice('Aucun vector store mémoire trouvé.');
+			return;
+		}
+		const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const editor = markdownView?.editor;
+		if (!editor) {
+			new Notice('Aucun fichier markdown actif pour insérer les documents.');
+			return;
+		}
+		// Prépare tous les exports (header + documents) pour tous les vector stores et leurs collections
+		const exports: { header: string; documents: any[] }[] = [];
+		for (const vs of vectorStores) {
+			const collections = vs.getAllCollections();
+			for (const collection of collections) {
+				const docs = vs.getAllDocuments(collection);
+				const header = `# Documents du vector store ${vs.id} (collection: ${collection})`;
+				exports.push({ header, documents: docs });
+			}
+		}
+		console.log('[KnowledgeManagerPlugin.printAllVectorStoreDocumentsInActiveFile] exports:', exports);
+		for (const exp of exports) {
+			console.log(`[KnowledgeManagerPlugin] Collection: ${exp.header}, nb docs: ${exp.documents.length}`);
+		}
+		this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
+
+		new Notice(`Insertion de tous les documents (${exports.reduce((acc, e) => acc + e.documents.length, 0)}) dans la note active.`);
+	}
+
+	/**
+	 * Lance une recherche sémantique sur tous les vector stores et techniques,
+	 * puis insère les résultats dans la note active, structurés par vector store et technique.
+	 */
+	async searchInAllVectorStoresAndPrintResults() {
+		new PromptModal(this.app, async (query: string, topK: number) => {
+			console.log('searchInAllVectorStoresAndPrintResults', this.serviceContainer.serviceContainerId);
+			// Appel simplifié : le service multi-recherche gère tout lui-même
+			const multiSemanticSearchService = this.serviceContainer.multiSemanticSearchService;
+			if (!multiSemanticSearchService) {
+				new Notice('Service multi-recherche indisponible.');
+				return;
+			}
+			let resultsByCombination;
+			try {
+				resultsByCombination = await multiSemanticSearchService.searchEverywhere(query, topK);
+			} catch (e) {
+				console.error('Erreur lors de la recherche sémantique multi-vector store:', e);
+				new Notice('Erreur lors de la recherche sémantique. Voir la console.');
+				return;
+			}
+			// Préparation des exports pour l'insertion
+			const exports = Object.entries(resultsByCombination).map(([vectorStoreKey, results]: [string, any[]]) => {
+				const header = `# Documents du vector store ${vectorStoreKey}`;
+				const documents = results.map(r => ({ ...r }));
+				return { header, documents };
+			});
+			this.serviceContainer.editorChunkInsertionService.insertAllVectorStoreJsonObjects(exports);
+			new Notice('Résultats de la recherche insérés dans la note active.');
+		}).open();
+	}
+
+	private async resetVectorStores() {
+		const container = (this as any).serviceContainer as any;
+		if (container?.vectorStores) {
+			await Promise.all(container.vectorStores.map((store: any) => store.reset?.()));
+			new Notice('Tous les Vector Stores ont été réinitialisés.');
+		} else {
+			new Notice('Impossible de trouver les Vector Stores.');
+		}
+	}
 }

@@ -79,6 +79,32 @@ export class SettingsTab extends PluginSettingTab {
 
         containerEl.empty();
 
+        // Champ pour la clé OpenAI
+        new Setting(containerEl)
+          .setName('OpenAI API Key')
+          .setDesc('Clé API utilisée pour le chat IA et les embeddings OpenAI')
+          .addText(text => text
+            .setPlaceholder('sk-...')
+            .setValue(this.plugin.settings.openAIApiKey || '')
+            .onChange(async (value) => {
+              this.plugin.settings.openAIApiKey = value;
+              await this.plugin.saveSettings();
+            })
+          );
+
+        // Champ pour la clé LangSmith
+        new Setting(containerEl)
+          .setName('LangSmith API Key')
+          .setDesc('Clé API utilisée pour le tracing et le monitoring LangSmith (https://smith.langchain.com)')
+          .addText(text => text
+            .setPlaceholder('ls__...')
+            .setValue(this.plugin.settings.langSmithApiKey || '')
+            .onChange(async (value) => {
+              this.plugin.settings.langSmithApiKey = value;
+              await this.plugin.saveSettings();
+            })
+          );
+
         containerEl.createEl('h2', { text: 'Knowledge Manager Settings' });
 
         // Section LLM Organizations
@@ -444,5 +470,72 @@ export class SettingsTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }
                 }));
+
+        // --- Section Create Chunks ---
+        containerEl.createEl('h3', { text: 'Create Chunks' });
+        containerEl.createEl('p', { text: 'Configure the folders and headings for the Create Chunks command.' });
+
+        this.plugin.settings.chunkingFolders.forEach((chunkConfig, idx) => {
+            const setting = new Setting(containerEl)
+                .setName(`Folder #${idx + 1}`)
+                .setDesc('Select folder and headings');
+
+            // Folder selection (readonly text + bouton pour ouvrir la modal)
+            setting.addText(text => {
+                text.setPlaceholder('Select folder...')
+                    .setValue(chunkConfig.folder)
+                    .setDisabled(true);
+            });
+            setting.addButton(btn => {
+                btn.setButtonText('Change Folder')
+                    .onClick(() => {
+                        new FolderSuggestModal(
+                            this.app,
+                            async (folder: any) => {
+                                const folderPath = folder.path;
+                                chunkConfig.folder = folderPath;
+                                await this.plugin.saveSettings();
+                                this.display();
+                            }
+                        ).open();
+                    });
+            });
+
+            // Headings (champ texte, headings séparés par des virgules)
+            setting.addTextArea(text => {
+                text.setPlaceholder('(optionnel) : liste de heading séparés par des virgules')
+                    .setValue(Array.isArray(chunkConfig.headings) ? chunkConfig.headings.join(', ') : '')
+                    .onChange(async (value) => {
+                        const trimmed = value.split(',').map(s => s.trim()).filter(Boolean);
+                        chunkConfig.headings = trimmed.length > 0 ? trimmed : undefined;
+                        await this.plugin.saveSettings();
+                    });
+                text.inputEl.rows = 2;
+                text.inputEl.style.width = '80%';
+            });
+
+            // Bouton de suppression
+            setting.addExtraButton(btn => {
+                btn.setIcon('trash')
+                    .setTooltip('Remove this folder')
+                    .onClick(async () => {
+                        this.plugin.settings.chunkingFolders.splice(idx, 1);
+                        await this.plugin.saveSettings();
+                        this.display();
+                    });
+            });
+        });
+
+        // Bouton d'ajout
+        new Setting(containerEl)
+            .addButton(btn => {
+                btn.setButtonText('Add Folder + Headings')
+                    .setCta()
+                    .onClick(async () => {
+                        this.plugin.settings.chunkingFolders.push({ folder: '', headings: undefined });
+                        await this.plugin.saveSettings();
+                        this.display();
+                    });
+            });
     }
 }
