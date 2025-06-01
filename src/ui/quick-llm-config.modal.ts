@@ -30,6 +30,7 @@ export class QuickLLMConfigModal extends Modal {
                 dropdown.onChange(async (value) => {
                     this.plugin.settings.selectedLlmConfiguration = value;
                     await this.plugin.saveSettings();
+                    this.plugin.notifyChatPanelsOfServiceChange();
                     new Notice('LLM Configuration updated');
                     this.close();
                 });

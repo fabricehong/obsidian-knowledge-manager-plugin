@@ -79,6 +79,7 @@ class HelpModal extends Modal {
 }
 
 export default class KnowledgeManagerPlugin extends Plugin {
+    public activeChatPanels = new Set<EditorChatPanel>();
 	async activateChatView() {
 		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CHAT);
 		if (leaves.length > 0) {
@@ -99,14 +100,19 @@ export default class KnowledgeManagerPlugin extends Plugin {
 	private statusBarItem: HTMLElement;
 
 	async onload() {
+        this.activeChatPanels = new Set<EditorChatPanel>();
 		await this.loadSettings();
 		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
 
 		// Enregistrement de la vue chat dans le panneau latéral
 		this.registerView(
-			VIEW_TYPE_CHAT,
-			(leaf) => new EditorChatPanel(leaf, this.serviceContainer.chatService)
-		);
+            VIEW_TYPE_CHAT,
+            (leaf) => {
+                const panel = new EditorChatPanel(leaf, this.serviceContainer.chatService, this);
+                this.activeChatPanels.add(panel);
+                return panel;
+            }
+        );
 
 		// Commande pour ouvrir explicitement le panneau de chat IA
 		this.addCommand({
@@ -476,8 +482,6 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			}
 		});
 
-		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
-
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SettingsTab(this.app, this));
 
@@ -593,9 +597,20 @@ export default class KnowledgeManagerPlugin extends Plugin {
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
-		// Recréer le service container avec les nouveaux paramètres
-		this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
+        await this.saveData(this.settings);
+        // Recréer le service container avec les nouveaux paramètres
+        this.serviceContainer = await ServiceContainer.create(this.app, this.settings, this);
+        // Notifier tous les panels du changement de service
+        this.notifyChatPanelsOfServiceChange();
+    }
+
+	/**
+	 * Notifie tous les panels de chat actifs du changement de chatService
+	 */
+	public notifyChatPanelsOfServiceChange() {
+		for (const panel of this.activeChatPanels) {
+			panel.updateChatService(this.serviceContainer.chatService);
+		}
 	}
 
 	async resetSettings() {

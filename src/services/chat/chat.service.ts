@@ -2,7 +2,10 @@ import { App } from 'obsidian';
 import { ChatSemanticSearchService } from "../semantic/search/ChatSemanticSearchService";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { ChatMessageHistory } from "langchain/memory";
-import { ChatMessage } from "@langchain/core/messages";
+import { ChatMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
+
+// Type UI pour l’historique panel (brut, pas LangChain)
+export type PanelChatMessage = { role: 'user' | 'assistant', content: string };
 import { ChatAgentFactory } from "./agent/chat-agent.factory";
 
 export interface ChatResponse {
@@ -48,6 +51,36 @@ export class ChatService {
     }
   }
   private messageHistory = new ChatMessageHistory();
+
+  public async getMessageHistory(): Promise<PanelChatMessage[]> {
+    if (typeof this.messageHistory.getMessages === 'function') {
+      const baseMessages = await this.messageHistory.getMessages();
+      // Conversion explicite BaseMessage -> ChatMessage
+      return baseMessages.map((msg: any) => ({
+        role: (msg.role ?? (typeof msg._getType === 'function' ? msg._getType() : msg.type)) === 'ai' ? 'assistant' : 'user',
+        content: msg.content ?? msg.text ?? ''
+      }));
+    }
+    return [];
+  }
+
+  public setMessageHistory(messages: PanelChatMessage[]) {
+    this.messageHistory.clear();
+    for (const msg of messages) {
+      if (typeof this.messageHistory.addMessage === 'function') {
+        // Reconstruit un message compatible LangChain
+        // On suppose que addMessage accepte { role, content }
+        // On tente d’utiliser addMessage({ role, content }) si LangChain le supporte,
+        // sinon il faudra utiliser les factories HumanMessage/AIMessage si besoin.
+        if (msg.role === 'assistant') {
+          this.messageHistory.addMessage(new AIMessage(msg.content));
+        } else {
+          this.messageHistory.addMessage(new HumanMessage(msg.content));
+        }
+      }
+      // Pas d’accès à .messages qui est privé
+    }
+  }
 
   /**
    * Réinitialise l'historique des messages du chat

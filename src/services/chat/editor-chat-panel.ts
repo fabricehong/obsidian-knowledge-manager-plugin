@@ -13,20 +13,29 @@ export type ActionButtonSpec = {
 
 export const VIEW_TYPE_CHAT = 'chat-view';
 
+import KnowledgeManagerPlugin from '../../main';
+
+import type { PanelChatMessage } from './chat.service';
+
 export class EditorChatPanel extends ItemView {
+  private llmMessageHistory: PanelChatMessage[] = [];
+
   private agentHeaderEl: HTMLElement | null = null;
   getIcon(): string {
     return 'message-square'; // Icône native Obsidian pour le chat
   }
   private chatService: ChatService;
+  private plugin: KnowledgeManagerPlugin;
   private historyEl: HTMLElement;
   private inputEl: HTMLInputElement;
   private sendBtn: HTMLButtonElement;
   private chatHistory: ChatResponse[] = [];
 
-  constructor(leaf: WorkspaceLeaf, chatService: ChatService) {
+  constructor(leaf: WorkspaceLeaf, chatService: ChatService, plugin: KnowledgeManagerPlugin) {
     super(leaf);
     this.chatService = chatService;
+    this.plugin = plugin;
+    this.plugin.activeChatPanels.add(this);
     this.chatService.onAgentChange((agentId) => {
       this.updateAgentDisplay(agentId);
     });
@@ -59,49 +68,11 @@ export class EditorChatPanel extends ItemView {
     const { contentEl } = this;
     contentEl.empty();
     this.agentHeaderEl = contentEl.createEl('div', { cls: 'chat-agent-header', attr: { style: 'display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 2; background: var(--background-primary); border-bottom: 1px solid var(--background-modifier-border); padding: 6px 12px; box-sizing: border-box;' } });
-
-    // Badge agent à gauche
-    const agentBadge = this.agentHeaderEl.createDiv({ cls: 'chat-agent-badge', attr: { style: 'display: flex; align-items: center; cursor: pointer;' } });
-    // Affichage dynamique du badge
-    agentBadge.innerHTML = `
-      <svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:middle;"><circle cx="12" cy="12" r="10" fill="#b4c9ff"/><rect x="7" y="14" width="10" height="3" rx="1.5" fill="#5561c9"/><circle cx="9" cy="11" r="1.2" fill="#5561c9"/><circle cx="15" cy="11" r="1.2" fill="#5561c9"/></svg>
-      <span class="chat-agent-name" style="margin-left: 6px;">${this.chatService.getAgentId?.() ?? ''}</span>
-    `;
-    agentBadge.title = 'Changer d’agent';
-    agentBadge.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const agents = this.chatService.getAvailableAgents();
-      const app = this.chatService.getApp();
-      const { AgentSuggestModal } = await import('./agent/agent-suggest-modal');
-      new AgentSuggestModal(app, agents, (selectedAgent: string) => {
-        this.chatService.setAgent(selectedAgent);
-        this.displaySystemMessage(`Agent sélectionné : ${selectedAgent}`);
-        // Met à jour l'affichage du badge
-        agentBadge.querySelector('.chat-agent-name')!.textContent = selectedAgent;
-      }).open();
-    });
-
-    // Icône poubelle à droite
-    const trashBtn = this.agentHeaderEl.createEl('button', { cls: 'chat-header-trash-btn', attr: { style: 'width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;padding:0;margin-left:auto;border-radius:6px;' } });
-    trashBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c23c2b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
-    trashBtn.title = 'Réinitialiser la conversation';
-    trashBtn.onclick = () => {
-      this.chatService.clearMessageHistory();
-      // Efface toutes les références d'objets
-      import('./utils/object-reference.service').then(mod => {
-        mod.ObjectReferenceService.getInstance().clearAll();
-        this.chatHistory = [];
-        this.renderHistory();
-        new Notice('Conversation réinitialisée');
-      });
-    };
-
+    this.renderAgentHeader();
     contentEl.createEl('h2', { text: 'Chat IA' });
-
     // Historique
     this.historyEl = contentEl.createDiv({ cls: 'chat-history' });
     this.renderHistory();
-
     // Saisie + bouton
     new Setting(contentEl)
       .addText((text) => {
@@ -113,9 +84,12 @@ export class EditorChatPanel extends ItemView {
       })
       .addButton((btn) => {
         this.sendBtn = btn.buttonEl;
-        btn.setButtonText('Envoyer')
+        btn.setButtonText('')
           .setCta()
           .onClick(() => this.handleSend());
+        // Icône SVG d’envoi (taille 16, style partagé)
+        btn.buttonEl.innerHTML = this.getIconSvg('send');
+        btn.buttonEl.title = 'Envoyer';
       });
   }
 
@@ -171,7 +145,7 @@ export class EditorChatPanel extends ItemView {
   }
 
   // Type pour la spécification d'un bouton d'action
-  
+
 
   async renderHistory() {
     this.historyEl.empty();
@@ -248,20 +222,96 @@ export class EditorChatPanel extends ItemView {
     return btn;
   }
 
-  updateAgentDisplay(agentId: string) {
+  private getCurrentModelName(): string {
+    try {
+      const plugin = this.chatService['plugin'];
+      const settings = plugin?.settings;
+      const configId = settings?.selectedLlmConfiguration;
+      const config = settings?.llmConfigurations?.find((c: any) => c.id === configId);
+      return config?.model || '';
+    } catch (e) { return ''; }
+  }
+
+  private renderAgentHeader() {
     if (!this.agentHeaderEl) return;
-    // Exemples d'icônes SVG : robot ou bulle de chat
-    const agentIcon = `<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:middle;"><circle cx="12" cy="12" r="10" fill="#b4c9ff"/><rect x="7" y="14" width="10" height="3" rx="1.5" fill="#5561c9"/><circle cx="9" cy="11" r="1.2" fill="#5561c9"/><circle cx="15" cy="11" r="1.2" fill="#5561c9"/></svg>`;
-    // Pour une vraie UX, on pourrait récupérer le nom complet de l'agent via ChatService, ici on affiche juste l'ID
-    this.agentHeaderEl.innerHTML = `
-      <div class="chat-agent-badge">
-        ${agentIcon}
-        <span class="chat-agent-name">${agentId}</span>
+    this.agentHeaderEl.empty();
+    // Container flex
+    const container = this.agentHeaderEl.createDiv({
+      attr: {
+        style: 'display: flex; align-items: center; justify-content: space-between; width: 100%;'
+      }
+    });
+    // Badge agent à gauche
+    const modelName = this.getCurrentModelName();
+    const agentBadge = container.createDiv({ cls: 'chat-agent-badge', attr: { style: 'display: flex; flex-direction: column; align-items: flex-start; cursor: pointer;' } });
+    agentBadge.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: flex-start;">
+        <div style="display: flex; align-items: center;">
+          <svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:middle;"><circle cx="12" cy="12" r="10" fill="#b4c9ff"/><rect x="7" y="14" width="10" height="3" rx="1.5" fill="#5561c9"/><circle cx="9" cy="11" r="1.2" fill="#5561c9"/><circle cx="15" cy="11" r="1.2" fill="#5561c9"/></svg>
+          <span class="chat-agent-name" style="margin-left: 6px;">${this.chatService.getAgentId?.() ?? ''}</span>
+        </div>
+        <span class="chat-model-name" style="margin-left: 26px; color: var(--text-muted); font-size: 0.9em;">${modelName ? `model: ${modelName}` : ''}</span>
       </div>
     `;
+    agentBadge.title = 'Changer d’agent';
+    agentBadge.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const agents = this.chatService.getAvailableAgents();
+      const app = this.chatService.getApp();
+      const { AgentSuggestModal } = await import('./agent/agent-suggest-modal');
+      new AgentSuggestModal(app, agents, (selectedAgent: string) => {
+        this.chatService.setAgent(selectedAgent);
+        this.displaySystemMessage(`Agent sélectionné : ${selectedAgent}`);
+        this.updateAgentDisplay(selectedAgent);
+      }).open();
+    });
+    // Corbeille à droite
+    const trashBtn = container.createEl('button', { cls: 'chat-header-trash-btn', attr: { style: 'width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;padding:0;margin-left:auto;border-radius:6px;' } });
+    trashBtn.innerHTML = this.getIconSvg('trash');
+    trashBtn.title = 'Réinitialiser la conversation';
+    trashBtn.onclick = () => {
+      this.chatService.clearMessageHistory();
+      import('./utils/object-reference.service').then(mod => {
+        mod.ObjectReferenceService.getInstance().clearAll();
+        this.chatHistory = [];
+        this.renderHistory();
+        new Notice('Conversation réinitialisée');
+      });
+    };
+  }
+
+  public updateAgentDisplay(agentId: string) {
+    if (!this.agentHeaderEl) return;
+    this.renderAgentHeader();
+  }
+
+  public async updateChatService(newChatService: ChatService) {
+    // 1. Sauvegarde l’historique courant du service sortant (await car async)
+    if (this.chatService.getMessageHistory) {
+      this.llmMessageHistory = await this.chatService.getMessageHistory();
+    }
+    // 2. Réinjecte dans le nouveau service
+    await newChatService.setMessageHistory?.(this.llmMessageHistory);
+    // 3. Change la référence
+    this.chatService = newChatService;
+    this.updateAgentDisplay(this.chatService.getAgentId?.() ?? '');
   }
 
   async onClose() {
     this.contentEl.empty();
+    if (this.plugin?.activeChatPanels) {
+      this.plugin.activeChatPanels.delete(this);
+    }
+  }
+
+  /**
+   * Retourne le SVG string pour une icône ("send" ou "trash") avec style et taille homogènes
+   */
+  private getIconSvg(type: 'send' | 'trash'): string {
+    if (type === 'send') {
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+    } else {
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c23c2b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+    }
   }
 }
