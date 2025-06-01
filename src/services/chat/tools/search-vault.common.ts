@@ -22,6 +22,9 @@ dans un bloc markdown, avant d'afficher les résultats.
 Ensuite, présente les résultats de recherche de façon brute : structure identique à la sortie du tool,
 sans modification du contenu, mais formaté en markdown sans bloc de code.
 
+Chaque résultat pour proposer des actions pour l'utilisateur. Il faut les afficher telle quelle les actions proposées,
+sans crochets carrés (même si ca ressemble à une URI).
+
 Les textes entre / sont les placeholders. ex: /user_query/
 
 Exemple:
@@ -34,10 +37,16 @@ Exemple:
 - /fact1 de résultat 1/
 - /fact2 de résultat 1/
 
+/action1 de résultat 1/
+/action2 de résultat 1/
+
 **Source:** /source de résultat 2/
 **Faits extraits:**
 - /fact1 de résultat 2/
 - /fact2 de résultat 2/
+
+/action1 de résultat 2/
+/action2 de résultat 2/
 
 ### /user_query/ de call 2
 ...etc...

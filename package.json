@@ -28,6 +28,7 @@
 		"fastest-levenshtein": "^1.0.16",
 		"langchain": "^0.3.27",
 		"talisman": "^1.1.4",
+		"uuid": "^9.0.1",
 		"zod": "^3.24.1"
 	},
 	"devDependencies": {

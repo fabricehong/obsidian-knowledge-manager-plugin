@@ -48,6 +48,13 @@ export class ChatService {
     }
   }
   private messageHistory = new ChatMessageHistory();
+
+  /**
+   * Réinitialise l'historique des messages du chat
+   */
+  public clearMessageHistory() {
+    this.messageHistory.clear();
+  }
   private initializing: Promise<void> | null = null;
 
   private agentId: string = RAG_AGENT_ID;

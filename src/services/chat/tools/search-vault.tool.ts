@@ -5,6 +5,9 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ChatOpenAI } from "@langchain/openai"; // Pour le fallback si besoin
 import { validateSearchInput } from "../utils/chat-validation.util";
+import { ObjectReferenceService } from '../utils/object-reference.service';
+import { v4 as uuidv4 } from 'uuid';
+import { generateActionString } from "../utils/chat-segment.util";
 
 /**
  * Factory pour créer le tool intelligent de recherche pour l'agent et son output parser
@@ -53,12 +56,21 @@ export const searchToolInputSchema = z.object({
 // Schéma Zod de sortie structuré
 export const searchToolOutputSchema = z.array(z.object({
     source: z.string().describe("Chemin ou référence à la source d'origine dans le vault (devrait se trouver dans 'filepath')"),
-    extractedFacts: z.array(z.string()).describe("Faits ou informations clés extraits de la source qui puisse donner une information pertinente par rapport à la requête")
+    extractedFacts: z.array(z.string()).describe("Faits ou informations clés extraits de la source qui puisse donner une information pertinente par rapport à la requête"),
+    actions: z.array(z.string()).describe("Actions utilisateurs devant être imprimés après le résultat")
   }).describe("Informations pertinentes extraites pour chaque résultat"));
 
 // Service de recherche minimalement typé
 export interface SearchService {
   search(query: string, maxResults: number): Promise<any[]>;
+}
+
+// Formatte un résultat pour insertion dans le scratchpad
+function formatResultForScratchpad(userQuery: string, result: any): string {
+  const facts = (result.extractedFacts || []).map((fact: string) => `- ${fact}`).join('\n');
+  return `### ${userQuery}:
+${facts}
+[[${result.source}]]`;
 }
 
 // Factory LCEL pure pour créer le tool intelligent de recherche
@@ -100,7 +112,20 @@ export function createSearchVaultTool({
         },
         { callbacks: run_manager?.callbacks }
       );
-      return JSON.stringify(processed);
+      // Générer un id pour chaque résultat, enregistrer l'objet, et enrichir le JSON
+      const refService = ObjectReferenceService.getInstance();
+      const processedWithIds = processed.map(result => {
+        const id = uuidv4();
+        refService.registerObject(id, formatResultForScratchpad(input.userQuery, result));
+        const actions: string[] = [generateActionString({
+          type: 'action',
+          action: 'add_to_scratchpad',
+          buttonLabel: 'Ajouter au scratchpad',
+          params: { id }
+        })];
+        return { ...result, actions };
+      });
+      return JSON.stringify(processedWithIds);
     },
     {
       name: TOOL_NAME,
