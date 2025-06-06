@@ -23,7 +23,7 @@ export class MultiVectorStoreIndexer {
         for (let i = 0; i < indexableChunks.length; i += MultiVectorStoreIndexer.BATCH_SIZE) {
           const batch = indexableChunks.slice(i, i + MultiVectorStoreIndexer.BATCH_SIZE);
           const batchNumber = i / MultiVectorStoreIndexer.BATCH_SIZE + 1;
-          console.log(`Indexing batch ${batchNumber} (${batch.length} chunks) for technique ${technique}`);
+          console.log(`Indexing batch ${batchNumber} (${batch.length} chunks) for technique ${technique} using embedding ${vectorStore.id}`);
 
           try {
             await vectorStore.indexBatch(batch, technique);

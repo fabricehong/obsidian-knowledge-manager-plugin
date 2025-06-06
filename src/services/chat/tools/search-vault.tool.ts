@@ -20,7 +20,19 @@ import { generateActionString } from "../utils/chat-segment.util";
 
 const TOOL_NAME = "search_vault";
 const TOOL_DESCRIPTION = `
-Recherche d'informations dans la base de connaissances Obsidian (RAG)
+Cet outil effectue une recherche d'information dans la vault Obsidian (RAG semantic search), et retourne des informations extraits des résultats de recherche pouvant aider à répondre à la question de l'utilisateur.
+
+**Utilisation de l'outil**:
+comprendre userQuery et semanticQuery:
+- userQuery: Information recherchée par l'utilisateur. Utilisé pour filtrer les résultats retournés par le RAG, ainsi que pour la formulation des informations retournées
+- semanticQuery: Texte utilisé pour la recherche sémantique RAG. Ce texte sera transformé en embedding. Celle-ci doit optimiser le matching avec le contenu recherché. Doit être formulé de manière déclarative car il doit matcher le contenu informatif de la vault.
+
+exemples:
+userQuery: "Pourquoi la fonctionnalité X a-t-elle été choisie ?"
+semanticQuery: "Description du besoin de la fonctionnalité X"
+
+userQuery: "Quels objectifs ont été fixés pour Orion lors de la réunion de mai 2025 ?"
+semanticQuery: "Meeting 2025-05: Objectifs décidés pour le projet Orion"
 `.trim();
 
 // Prompts du traitement LLM des résultats de recherche sémantique
@@ -49,8 +61,8 @@ export type SearchToolOutput = z.infer<typeof searchToolOutputSchema>;
 
 // Schéma Zod d'entrée pour l'outil de recherche structuré
 export const searchToolInputSchema = z.object({
-  userQuery: z.string().describe("Information recherchée par l'utilisateur. Utilisé pour la recherche d'information pertinente dans les résultats de recherche sémantique."),
-  semanticQuery: z.string().describe("Texte qui sera transformée en embedding. Celle-ci doit optimiser le matching avec le contenu recherché"),
+  userQuery: z.string().describe("Information recherchée par l'utilisateur"),
+  semanticQuery: z.string().describe("Texte utilisé pour la recherche semantique RAG dans la vault Obsidian."),
 });
 
 // Schéma Zod de sortie structuré

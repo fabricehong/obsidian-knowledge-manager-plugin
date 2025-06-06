@@ -4,13 +4,15 @@ import { Embeddings } from '@langchain/core/embeddings';
 import { promises as fs } from 'fs';
 import { Document } from '@langchain/core/documents';
 
+const SIMILARITY_THRESHOLD = 0.4;
+
 // Classe persistante basée sur OramaVectorStore
 export class PersistentOramaVectorStore implements VectorStore {
 	/**
 	 * Réinitialise complètement le vector store (supprime tous les documents).
 	 */
 	public async reset(): Promise<void> {
-		this.store = new OramaVectorStore(this.embeddingsProvider, { similarityThreshold: 0.8 });
+		this.store = new OramaVectorStore(this.embeddingsProvider, { similarityThreshold: SIMILARITY_THRESHOLD });
 		await this.store.create('default');
 		this.lastRestoredDocumentCount = 0;
 		this.initialized = true;
@@ -42,7 +44,7 @@ export class PersistentOramaVectorStore implements VectorStore {
 			console.log('[PersistentOramaVectorStore.init] already initialized');
 			return;
 		}
-		this.store = new OramaVectorStore(this.embeddingsProvider, { similarityThreshold: 0.4 });
+		this.store = new OramaVectorStore(this.embeddingsProvider, { similarityThreshold: SIMILARITY_THRESHOLD });
 		try {
 			console.log('[PersistentOramaVectorStore.init] checking persistencePath');
 			await fs.access(this.persistencePath);

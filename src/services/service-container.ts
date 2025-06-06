@@ -68,6 +68,7 @@ import { SemanticSearchService } from './semantic/search/SemanticSearchService';
 import { ChatSemanticSearchService } from "./semantic/search/ChatSemanticSearchService";
 import { ChatAgentFactory } from "./chat/agent/chat-agent.factory";
 import { RagAgentInitializer } from "./chat/agent/rag-agent.initializer";
+import { RawTextChunkTransformService } from './semantic/indexing/RawTextChunkTransformService';
 
 export class ServiceContainer {
     public readonly tracer?: any; // LangChainTracer type, mais évite l'import direct si absent
@@ -348,7 +349,7 @@ export class ServiceContainer {
         const bestChunkTransformTechnique = new ContextualizedChunkTransformService();
         this.chunkTransformServices = [
             bestChunkTransformTechnique,
-            //new RawTextChunkTransformService(),
+            // new RawTextChunkTransformService(),
         ];
         this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformer(this.chunkTransformServices);
 
@@ -381,8 +382,7 @@ export class ServiceContainer {
         [
             // 'nomic-embed-text', // Voir description ci-dessus
             // 'jeffh/intfloat-multilingual-e5-large-instruct:q8_0', // Voir description ci-dessus
-            // 'bge-m3', // Voir description ci-dessus
-            // 'bge-large',
+            'bge-m3', // Voir description ci-dessus
         ].forEach(element => {
             embeddingsModels.push(new OllamaEmbeddings({
                 model: element,
@@ -392,7 +392,13 @@ export class ServiceContainer {
             }));
         });
 
-        embeddingsModels.push(new OpenAIEmbeddings({ openAIApiKey: settings.openAIApiKey }));
+        /*
+        embeddingsModels.push(new OpenAIEmbeddings({
+            openAIApiKey: settings.openAIApiKey,
+            model: "text-embedding-3-small",
+            // model: "text-embedding-3-large",
+        }));
+        */
 
         this.vectorStores = embeddingsModels.map(
             (model: Embeddings) => {

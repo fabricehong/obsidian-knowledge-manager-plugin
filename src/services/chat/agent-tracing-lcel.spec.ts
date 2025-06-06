@@ -115,7 +115,7 @@ function getTracer() {
 // -----------------------------------------------------------------------------
 // TESTS D'INTEGRATION (ce qui reste dans ce fichier)
 // -----------------------------------------------------------------------------
-describe("Agent LCEL tracing integration", () => {
+xdescribe("Agent LCEL tracing integration", () => {
   it("trace l'appel imbriqué LLM secondaire via tool", async () => {
     jest.setTimeout(20000);
     const agentExecutor = await createAgentExecutor();

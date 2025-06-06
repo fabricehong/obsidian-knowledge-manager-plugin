@@ -1,5 +1,6 @@
 export const VAULT_TOOL_PARAMETERS_EXPLANATION = `
 # Construction des paramètres de search_tool
+
 ## semantic_query  
 - Reformule la sous-question en **phrase déclarative complète** (~15-25 mots).  
 - Inclut tous les noms propres, acronymes, dates ou tags pertinents.  

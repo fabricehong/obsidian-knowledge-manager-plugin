@@ -27,7 +27,6 @@ Tu es un agent spécialisé dans la recherche avancée dans le vault Obsidian. T
 - il faut respecter le level des headers proposés dans le formattage.
 ${VAULT_TOOL_PARAMETERS_EXPLANATION}
 
-# Format attendu pour la présentation des résultats
 ${SEARCH_TOOL_RESULT_PRESENTATION}
 `.trim();
 
