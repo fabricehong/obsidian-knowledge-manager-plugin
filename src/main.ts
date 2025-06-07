@@ -192,6 +192,20 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			}
 		});
 
+		// Commande pour exporter embeddings + métadonnées pour Embedding Projector
+		this.addCommand({
+			id: 'semantic:vector-store:export-embedding-projector',
+			name: 'semantic:vector-store:export-embedding-projector',
+			callback: async () => {
+				try {
+					await this.serviceContainer.editorEmbeddingExportService.exportEmbeddingsForProjector();
+				} catch (error) {
+					console.error('Erreur lors de l\'export Embedding Projector:', error);
+					new Notice('Erreur lors de l\'export Embedding Projector. Voir la console.');
+				}
+			}
+		});
+
 		this.addCommand({
 			id: 'semantic:vector-store:reset',
 			name: 'semantic:vector-store:reset',

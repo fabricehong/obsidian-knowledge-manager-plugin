@@ -208,6 +208,26 @@ describe('TranscriptionReplacementService', () => {
         });
 
         it('should handle mixed normal terms and regex patterns', () => {
+            // ---
+        });
+
+        it('should replace regardless of case (case-insensitive)', () => {
+            const content = 'got GOT GoT gOt';
+            const specs: ReplacementSpecs = {
+                category: 'Test',
+                replacements: [
+                    {
+                        target: 'Game of Thrones',
+                        toSearch: ['/GOT/']
+                    }
+                ]
+            };
+            const result = service.applyReplacements(content, [specs]);
+            expect(result.result).toBe('Game of Thrones Game of Thrones Game of Thrones Game of Thrones');
+            expect(result.reports[0].replacements).toHaveLength(4);
+        });
+
+        it('should handle mixed normal terms and regex patterns', () => {
             const content = 'nova14 and nova-14 and simple-term';
             const specs: ReplacementSpecs = {
                 category: 'Test',

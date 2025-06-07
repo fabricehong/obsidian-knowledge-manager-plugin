@@ -55,6 +55,7 @@ import { join } from 'path';
 import { EditorChunkingService } from './semantic/editor-chunking.service';
 import { EditorChunkInsertionService } from './semantic/editor-chunk-insertion.service';
 import { EditorChunkIndexingService } from './semantic/editor-chunk-indexing.service';
+import { EditorEmbeddingExportService } from './semantic/editor-embedding-export.service';
 import { MultiSemanticSearchService } from './semantic/search/MultiSemanticSearchService';
 import { OpenAIModelService } from './llm/openai-model.service';
 
@@ -132,6 +133,7 @@ export class ServiceContainer {
     public readonly multiSemanticSearchService: MultiSemanticSearchService;
     public readonly chatSemanticSearchService: ChatSemanticSearchService;
     public readonly editorChunkIndexingService: EditorChunkIndexingService;
+    public readonly editorEmbeddingExportService: EditorEmbeddingExportService; // Export embedding projector
 
     static async create(app: App, settings: PluginSettings, plugin: KnowledgeManagerPlugin) {
         // Création de l'instance avec initialisation synchrones
@@ -349,7 +351,7 @@ export class ServiceContainer {
         const bestChunkTransformTechnique = new ContextualizedChunkTransformService();
         this.chunkTransformServices = [
             bestChunkTransformTechnique,
-            // new RawTextChunkTransformService(),
+            new RawTextChunkTransformService(),
         ];
         this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformer(this.chunkTransformServices);
 
@@ -392,13 +394,13 @@ export class ServiceContainer {
             }));
         });
 
-        /*
+        
         embeddingsModels.push(new OpenAIEmbeddings({
             openAIApiKey: settings.openAIApiKey,
             model: "text-embedding-3-small",
             // model: "text-embedding-3-large",
         }));
-        */
+        
 
         this.vectorStores = embeddingsModels.map(
             (model: Embeddings) => {
@@ -421,6 +423,7 @@ export class ServiceContainer {
             this.multiTechniqueChunkTransformer,
             this.vectorStores
         );
+        this.editorEmbeddingExportService = new EditorEmbeddingExportService(this.app, this.vectorStores);
         // Initialisation du service multi-recherche sémantique
 
         // Prépare la liste alignée des SemanticSearchService pour chaque vectorStore
