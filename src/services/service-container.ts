@@ -351,7 +351,7 @@ export class ServiceContainer {
         const bestChunkTransformTechnique = new ContextualizedChunkTransformService();
         this.chunkTransformServices = [
             bestChunkTransformTechnique,
-            new RawTextChunkTransformService(),
+            // new RawTextChunkTransformService(),
         ];
         this.multiTechniqueChunkTransformer = new MultiTechniqueChunkTransformer(this.chunkTransformServices);
 
@@ -394,19 +394,20 @@ export class ServiceContainer {
             }));
         });
 
-        
+        /*
         embeddingsModels.push(new OpenAIEmbeddings({
             openAIApiKey: settings.openAIApiKey,
             model: "text-embedding-3-small",
             // model: "text-embedding-3-large",
         }));
-        
+        */
 
         this.vectorStores = embeddingsModels.map(
             (model: Embeddings) => {
                 // On crée un fichier de persistence unique par modèle
                 const safeModelName = (model as any).model?.replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown';
-                const persistencePath = join((this.app.vault.adapter as any).basePath, `vectorstore-orama-${safeModelName}.json`);
+                const vectorDbDir = join((this.app.vault.adapter as any).basePath, 'vector-database');
+                const persistencePath = join(vectorDbDir, `vectorstore-orama-${safeModelName}.json`);
                 return new PersistentOramaVectorStore(model, persistencePath);
             }
         );

@@ -3,6 +3,7 @@ import { OramaVectorStore, VectorStoreBackup } from './OramaVectorStore';
 import { Embeddings } from '@langchain/core/embeddings';
 import { promises as fs } from 'fs';
 import { Document } from '@langchain/core/documents';
+import { dirname } from 'path';
 
 const SIMILARITY_THRESHOLD = 0.4;
 
@@ -79,6 +80,9 @@ export class PersistentOramaVectorStore implements VectorStore {
 	public async save() {
 		this.ensureInitialized();
 		const backup = await this.store!.getData();
+		// Ensure the directory exists before writing
+		const dir = dirname(this.persistencePath);
+		await fs.mkdir(dir, { recursive: true });
 		await fs.writeFile(this.persistencePath, JSON.stringify(backup), 'utf-8');
 	}
 
