@@ -7,6 +7,7 @@ import { ChatMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 // Type UI pour l’historique panel (brut, pas LangChain)
 export type PanelChatMessage = { role: 'user' | 'assistant', content: string };
 import { ChatAgentFactory } from "./agent/chat-agent.factory";
+import type { LangChainTracer } from 'langchain/callbacks';
 
 export interface ChatResponse {
   role: 'user' | 'assistant';
@@ -96,7 +97,7 @@ export class ChatService {
   constructor(
     private readonly agentFactory: ChatAgentFactory,
     private plugin: KnowledgeManagerPlugin,
-    private tracer: any = undefined
+    private tracer: LangChainTracer | undefined = undefined
   ) {}
 
   /**

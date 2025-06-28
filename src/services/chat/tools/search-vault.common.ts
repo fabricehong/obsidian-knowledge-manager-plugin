@@ -1,5 +1,8 @@
 export const VAULT_TOOL_PARAMETERS_EXPLANATION = `
-# Construction des paramètres de search_tool
+# Nombres d'appels à \`search_tool\`
+\`search_tool\` se base sur de la recherche sémantique. Il est plus efficace lorsqu'il recherche une seule information à la fois.
+
+Si tu détectes que la requête de l'utilisateur peut-être scindée en plusieurs sous-questions.
 
 ## semantic_query  
 - Reformule la sous-question en **phrase déclarative complète** (~15-25 mots).  

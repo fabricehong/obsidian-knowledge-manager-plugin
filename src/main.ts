@@ -590,6 +590,26 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			}
 		});
 
+		// Command to identify speakers in transcript using AI
+		this.addCommand({
+			id: 'ai-identify-speakers-in-transcript',
+			name: 'AI: Identify Speakers in Transcript',
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				if (!this.serviceContainer.editorAISpeakerIdentificationService) {
+					new Notice('AI Speaker Identification Service is not available.');
+					return;
+				}
+				try {
+					new Notice('AI Speaker Identification started...');
+					await this.serviceContainer.editorAISpeakerIdentificationService.identifyAndWriteSpeakers(editor, view);
+					// Notice of success is handled within the service itself
+				} catch (error: any) {
+					console.error('Error during AI speaker identification command:', error);
+					new Notice(`Error identifying speakers: ${error.message}`);
+				}
+			}
+		});
+
 		// Add quick LLM configuration switch command
 		this.addCommand({
 			id: 'llm:select-model',

@@ -70,9 +70,12 @@ import { ChatSemanticSearchService } from "./semantic/search/ChatSemanticSearchS
 import { ChatAgentFactory } from "./chat/agent/chat-agent.factory";
 import { RagAgentInitializer } from "./chat/agent/rag-agent.initializer";
 import { RawTextChunkTransformService } from './semantic/indexing/RawTextChunkTransformService';
+import { SpeakerIdentificationService } from './ai/speaker-identification.service';
+import { EditorAISpeakerIdentificationService } from './editor/editor-ai-speaker-identification.service';
+import type { LangChainTracer } from 'langchain/callbacks';
 
 export class ServiceContainer {
-    public readonly tracer?: any; // LangChainTracer type, mais évite l'import direct si absent
+    public readonly tracer: LangChainTracer | undefined = undefined; // LangChainTracer type, mais évite l'import direct si absent
     /**
      * Identifiant unique pour chaque instance de ServiceContainer
      */
@@ -124,8 +127,13 @@ export class ServiceContainer {
     public readonly langChain2Service: LangChain2Service;
     public readonly multiTechniqueChunkTransformer: MultiTechniqueChunkTransformer;
     public readonly multiVectorStoreIndexer: MultiVectorStoreIndexer;
-    public readonly chunkTransformServices: ChunkTransformService[];
+    public readonly chunkTransformServices: ChunkTransformService[]; // Assuming ChunkTransformService is the correct type for the array elements
+    public readonly ragAgentInitializer: RagAgentInitializer;
+    public readonly rawTextChunkTransformService: RawTextChunkTransformService;
     public readonly vectorStores: VectorStore[];
+    // AI Speaker Identification Services
+    public readonly speakerIdentificationService: SpeakerIdentificationService;
+    public readonly editorAISpeakerIdentificationService: EditorAISpeakerIdentificationService;
 
 
     // Ajouter d'autres VectorStore mémoire ici si besoin
@@ -155,18 +163,17 @@ export class ServiceContainer {
         // Services sans dépendances
         this.documentStructureService = new DocumentStructureService();
         this.yamlReplacementService = new YamlService<ReplacementSpecs>(ReplacementSpecsSchema, 'Invalid replacement specs');
-        this.yamlVocabularyService = new YamlService<VocabularySpecs>(VocabularySpecSchema, 'Invalid vocabulary specs');
+        this.yamlVocabularyService = new YamlService<VocabularySpecs>(VocabularySpecSchema, 'Invalid vocabulary specs'); // Restore Vocabulary YamlService
         this.transcriptFileService = new TranscriptFileService();
         this.filePathService = new FilePathService();
         this.documentCleaningService = new DocumentCleaningService();
         this.glossaryReplacementService = new GlossaryReplacementService();
         this.vaultMapperService = new VaultMapperService(this.app.vault);
-        this.transcriptionReplacementService = new TranscriptionReplacementService();
-        this.replacementSpecsIntegrationService = new ReplacementSpecsIntegrationService();
+        this.transcriptionReplacementService = new TranscriptionReplacementService(); // Use parameterless constructor
         this.taggedFilesService = new TaggedFilesService(this.app);
         this.editorReplacementSpecsStorageService = new EditorReplacementSpecsStorageService(
             this.app,
-            this.yamlReplacementService,
+            this.yamlReplacementService, // Use the typed yamlReplacementService
             this.taggedFilesService,
             this.documentStructureService,
             settings.replacementsHeader
@@ -457,6 +464,21 @@ export class ServiceContainer {
         }
 
         this.initVectorStores();
+
+        // AI Speaker Identification Services
+        // Utilise le modèle déjà sélectionné par aiCompletionService
+        this.speakerIdentificationService = new SpeakerIdentificationService(
+            this.aiCompletionService,
+            this.tracer
+        );
+        this.editorAISpeakerIdentificationService = new EditorAISpeakerIdentificationService(
+            settings, // Argument 1: settings
+            this.speakerIdentificationService, // Argument 2: speakerIdentificationService
+            this.editorDocumentService, // Argument 3: editorDocumentService
+            // Argument 4: YamlService specifically for ReplacementSpecs
+            new YamlService<ReplacementSpecs>(ReplacementSpecsSchema, 'Invalid AI Speaker Replacement Specs YAML'),
+            this.transcriptFileService, // Argument 5: transcriptFileService
+        );
     }
 
     private async initVectorStores() {
