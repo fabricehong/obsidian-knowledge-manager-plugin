@@ -621,14 +621,31 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
 		// Information Research command
 		this.addCommand({
-			id: 'information-research:linked-files',
-			name: 'Information Research',
+			id: 'information-research:search',
+			name: 'information-research:search',
 			checkCallback: (checking: boolean) => {
 				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
 				if (markdownView) {
 					if (!checking) {
 						this.serviceContainer.editorInformationResearchService
 							.processInformationResearch(markdownView);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
+
+		// Information Synthesis Summary command
+		this.addCommand({
+			id: 'information-research:summary',
+			name: 'information-research:summary',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorInformationSynthesisSummaryService
+							.processInformationSynthesis(markdownView);
 					}
 					return true;
 				}

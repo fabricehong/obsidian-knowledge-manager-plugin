@@ -4,6 +4,7 @@ import { InformationResearchService } from './information-research.service';
 import { InformationResearchDTO } from '../../models/interfaces';
 import { LoadingModal } from '../../ui/loading.modal';
 import { PluginSettings } from '../../settings/settings';
+import { INFORMATION_SYNTHESIS_SECTIONS, INFORMATION_SYNTHESIS_MESSAGES, INFORMATION_SYNTHESIS_PATTERNS } from './information-synthesis.constants';
 
 export class EditorInformationResearchService {
     constructor(
@@ -22,7 +23,7 @@ export class EditorInformationResearchService {
             // 2. Vérifier si section Résultat existe déjà
             const hasExistingResults = await this.checkExistingResultSection(markdownView);
             if (hasExistingResults) {
-                new Notice('❌ Une section "Résultat" existe déjà. Supprimez-la d\'abord ou renommez-la pour continuer.');
+                new Notice(INFORMATION_SYNTHESIS_MESSAGES.RESULT_SECTION_EXISTS);
                 return;
             }
 
@@ -33,50 +34,49 @@ export class EditorInformationResearchService {
             await this.processFilesWithProgress(markdownView, dto);
 
         } catch (error) {
-            console.error('EditorInformationResearchService: Erreur lors du traitement:', error);
-            new Notice(`Erreur lors du traitement: ${error.message}`);
+            console.error('EditorInformationResearchService:', INFORMATION_SYNTHESIS_MESSAGES.PROCESSING_ERROR, error);
+            new Notice(`${INFORMATION_SYNTHESIS_MESSAGES.PROCESSING_ERROR} ${error.message}`);
         }
     }
 
-    private async parseActiveNote(markdownView: MarkdownView): Promise<InformationResearchDTO | null> {
+    public async parseActiveNote(markdownView: MarkdownView): Promise<InformationResearchDTO | null> {
         if (!markdownView.file) {
-            new Notice('❌ Aucun fichier actif trouvé.');
+            new Notice(INFORMATION_SYNTHESIS_MESSAGES.NO_ACTIVE_FILE);
             return null;
         }
         
         const doc = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
         
         // Rechercher sections Question et Fichiers
-        const questionNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, 'Question');
-        const filesNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, 'Fichiers');
+        const questionNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, INFORMATION_SYNTHESIS_SECTIONS.QUESTION);
+        const filesNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, INFORMATION_SYNTHESIS_SECTIONS.FILES);
 
         if (!questionNode || !filesNode) {
-            new Notice('❌ Format invalide : veuillez inclure une section # Question et une section # Fichiers contenant des liens Obsidian.');
+            new Notice(INFORMATION_SYNTHESIS_MESSAGES.INVALID_FORMAT);
             return null;
         }
 
         const question = questionNode.content.trim();
         if (!question) {
-            new Notice('❌ La section # Question ne peut pas être vide.');
+            new Notice(INFORMATION_SYNTHESIS_MESSAGES.EMPTY_QUESTION);
             return null;
         }
 
         // Extraire les liens [[filename]] du contenu de la section Fichiers
         const filePaths = this.extractObsidianLinks(filesNode.content);
         if (filePaths.length === 0) {
-            new Notice('❌ Aucun lien Obsidian trouvé dans la section # Fichiers.');
+            new Notice(INFORMATION_SYNTHESIS_MESSAGES.NO_OBSIDIAN_LINKS);
             return null;
         }
 
         return { question, filePaths };
     }
 
-    private extractObsidianLinks(content: string): string[] {
-        const linkPattern = /\[\[([^\]]+)\]\]/g;
+    public extractObsidianLinks(content: string): string[] {
         const links: string[] = [];
         let match;
         
-        while ((match = linkPattern.exec(content)) !== null) {
+        while ((match = INFORMATION_SYNTHESIS_PATTERNS.OBSIDIAN_LINK.exec(content)) !== null) {
             links.push(match[1]);
         }
         
@@ -87,7 +87,7 @@ export class EditorInformationResearchService {
         if (!markdownView.file) return false;
         
         const doc = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
-        const existingResultNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, 'Résultat');
+        const existingResultNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, INFORMATION_SYNTHESIS_SECTIONS.RESULT);
         
         return existingResultNode !== null;
     }
@@ -98,7 +98,7 @@ export class EditorInformationResearchService {
         const doc = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
         
         // Vérifier si section Résultat existe déjà
-        const existingResultNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, 'Résultat');
+        const existingResultNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, INFORMATION_SYNTHESIS_SECTIONS.RESULT);
         
         if (existingResultNode) {
             // Remplacer la section existante
@@ -108,7 +108,7 @@ export class EditorInformationResearchService {
             // Créer nouvelle section
             const resultHeader = {
                 level: 1,
-                heading: 'Résultat',
+                heading: INFORMATION_SYNTHESIS_SECTIONS.RESULT,
                 content: '',
                 children: []
             };
@@ -128,11 +128,11 @@ export class EditorInformationResearchService {
         loadingModal.open();
 
         try {
-            loadingModal.updateTitle('Information Research');
+            loadingModal.updateTitle(INFORMATION_SYNTHESIS_MESSAGES.RESEARCH_TITLE);
             
             for (let i = 0; i < dto.filePaths.length; i++) {
                 if (isCancelled) {
-                    new Notice('Opération annulée');
+                    new Notice(INFORMATION_SYNTHESIS_MESSAGES.OPERATION_CANCELLED);
                     return;
                 }
                 
@@ -149,7 +149,7 @@ export class EditorInformationResearchService {
                 await this.insertResultInActiveFile(markdownView, fileName, result);
             }
             
-            loadingModal.updateProgress('Traitement terminé !');
+            loadingModal.updateProgress(INFORMATION_SYNTHESIS_MESSAGES.PROCESSING_FINISHED);
             
         } finally {
             // Petit délai pour voir le message final
@@ -159,11 +159,8 @@ export class EditorInformationResearchService {
 
     private async processFile(filePath: string, question: string): Promise<string> {
         try {
-            console.log(`DEBUG: processFile - recherche du fichier: "${filePath}"`);
-            
             // Utiliser la méthode Obsidian pour résoudre les liens
             const resolvedFile = this.app.metadataCache.getFirstLinkpathDest(filePath, '');
-            console.log(`DEBUG: resolvedFile via getFirstLinkpathDest:`, resolvedFile);
             
             if (!resolvedFile) {
                 return `⚠️ Fichier ${filePath} introuvable.`;
@@ -199,20 +196,13 @@ export class EditorInformationResearchService {
     private async insertResultInActiveFile(markdownView: MarkdownView, fileName: string, result: string): Promise<void> {
         if (!markdownView.file) return;
         
-        console.log(`DEBUG: insertResultInActiveFile pour ${fileName}, fichier actif: ${markdownView.file.path}`);
-        
-        const metadataBefore = this.app.metadataCache.getFileCache(markdownView.file);
-        console.log(`DEBUG: metadata cache AVANT buildHeaderTree:`, metadataBefore);
-        
         try {
             // Vérifier que le cache est encore valide avant de continuer
             const metadataCheck = this.app.metadataCache.getFileCache(markdownView.file);
             if (!metadataCheck) {
-                console.log(`DEBUG: Cache invalide, on réessaie après un court délai`);
                 await new Promise(resolve => setTimeout(resolve, 100));
                 const metadataRetry = this.app.metadataCache.getFileCache(markdownView.file);
                 if (!metadataRetry) {
-                    console.error(`DEBUG: Cache toujours invalide après retry`);
                     throw new Error('Cache metadata invalide pour le fichier actif');
                 }
             }
@@ -220,7 +210,7 @@ export class EditorInformationResearchService {
             const doc = await this.documentStructureService.buildHeaderTree(this.app, markdownView.file);
         
             // Trouver la section Résultat
-            const resultNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, 'Résultat');
+            const resultNode = this.documentStructureService.findFirstNodeMatchingHeading(doc.root, INFORMATION_SYNTHESIS_SECTIONS.RESULT);
             if (!resultNode) {
                 new Notice('Erreur: Section Résultat introuvable');
                 return;
@@ -240,9 +230,6 @@ export class EditorInformationResearchService {
             const newContent = this.documentStructureService.renderToMarkdown(doc.root);
             await this.app.vault.modify(markdownView.file, newContent);
         } catch (error) {
-            const metadataAfter = this.app.metadataCache.getFileCache(markdownView.file);
-            console.log(`DEBUG: metadata cache APRES erreur:`, metadataAfter);
-            console.error(`DEBUG: Erreur dans insertResultInActiveFile:`, error);
             throw error;
         }
     }

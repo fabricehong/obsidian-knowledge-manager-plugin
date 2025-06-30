@@ -74,6 +74,8 @@ import { SpeakerIdentificationService } from './ai/speaker-identification.servic
 import { EditorAISpeakerIdentificationService } from './editor/editor-ai-speaker-identification.service';
 import { InformationResearchService } from './information-synthesis/information-research.service';
 import { EditorInformationResearchService } from './information-synthesis/editor-information-research.service';
+import { InformationSynthesisSummaryService } from './information-synthesis/information-synthesis-summary.service';
+import { EditorInformationSynthesisSummaryService } from './information-synthesis/editor-information-synthesis-summary.service';
 import type { LangChainTracer } from 'langchain/callbacks';
 
 export class ServiceContainer {
@@ -140,6 +142,10 @@ export class ServiceContainer {
     // Information Research Services
     public readonly informationResearchService: InformationResearchService;
     public readonly editorInformationResearchService: EditorInformationResearchService;
+    
+    // Information Synthesis Summary Services
+    public readonly informationSynthesisSummaryService: InformationSynthesisSummaryService;
+    public readonly editorInformationSynthesisSummaryService: EditorInformationSynthesisSummaryService;
 
 
     // Ajouter d'autres VectorStore mémoire ici si besoin
@@ -234,7 +240,17 @@ export class ServiceContainer {
 
         const langchainModel = ModelFactory.createModel(organization, selectedConfig.model);
 
-        this.aiCompletionService = new LangChainCompletionService(langchainModel, true);
+        // Initialisation du tracer LangSmith si clé présente (AVANT la création des services)
+        if (settings.langSmithApiKey) {
+            try {
+                this.tracer = getTracer(settings.langSmithApiKey);
+                console.log('tracer initialisé');
+            } catch (e) {
+                console.warn('Impossible d\'initialiser le tracer LangSmith :', e);
+            }
+        }
+
+        this.aiCompletionService = new LangChainCompletionService(langchainModel, true, this.tracer);
 
         // Text corrector
         this.textCorrector = new TextCorrector(
@@ -493,6 +509,16 @@ export class ServiceContainer {
             settings,
             this.documentStructureService,
             this.informationResearchService
+        );
+        
+        // Information Synthesis Summary Services
+        this.informationSynthesisSummaryService = new InformationSynthesisSummaryService(this.aiCompletionService);
+        this.editorInformationSynthesisSummaryService = new EditorInformationSynthesisSummaryService(
+            this.app,
+            settings,
+            this.documentStructureService,
+            this.informationSynthesisSummaryService,
+            this.editorInformationResearchService
         );
     }
 
