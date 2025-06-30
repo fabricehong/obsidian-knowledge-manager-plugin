@@ -1,7 +1,9 @@
 import { App, Modal, ButtonComponent } from 'obsidian';
 
 export class LoadingModal extends Modal {
-    constructor(app: App, private onCancel: () => void) {
+    private progressTextEl: HTMLElement;
+    
+    constructor(app: App, private onCancel: () => void, initialMessage?: string) {
         super(app);
         this.titleEl.setText('Working...');
         
@@ -14,8 +16,8 @@ export class LoadingModal extends Modal {
         // Ajouter le spinner et le texte
         const contentEl = this.contentEl.createEl('div', { cls: 'loading-container' });
         contentEl.createEl('div', { cls: 'loading-spinner' });
-        contentEl.createEl('div', { 
-            text: 'This may take a minute...',
+        this.progressTextEl = contentEl.createEl('div', { 
+            text: initialMessage || 'This may take a minute...',
             cls: 'loading-text'
         });
 
@@ -49,6 +51,17 @@ export class LoadingModal extends Modal {
     forceClose() {
         this._shouldAllowClose = true;
         this.close();
+    }
+
+    // Méthodes pour mettre à jour la progression
+    updateProgress(message: string): void {
+        if (this.progressTextEl) {
+            this.progressTextEl.textContent = message;
+        }
+    }
+    
+    updateTitle(title: string): void {
+        this.titleEl.textContent = title;
     }
 
     private _shouldAllowClose: boolean;

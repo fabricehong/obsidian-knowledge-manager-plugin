@@ -72,6 +72,8 @@ import { RagAgentInitializer } from "./chat/agent/rag-agent.initializer";
 import { RawTextChunkTransformService } from './semantic/indexing/RawTextChunkTransformService';
 import { SpeakerIdentificationService } from './ai/speaker-identification.service';
 import { EditorAISpeakerIdentificationService } from './editor/editor-ai-speaker-identification.service';
+import { InformationResearchService } from './information-synthesis/information-research.service';
+import { EditorInformationResearchService } from './information-synthesis/editor-information-research.service';
 import type { LangChainTracer } from 'langchain/callbacks';
 
 export class ServiceContainer {
@@ -134,6 +136,10 @@ export class ServiceContainer {
     // AI Speaker Identification Services
     public readonly speakerIdentificationService: SpeakerIdentificationService;
     public readonly editorAISpeakerIdentificationService: EditorAISpeakerIdentificationService;
+    
+    // Information Research Services
+    public readonly informationResearchService: InformationResearchService;
+    public readonly editorInformationResearchService: EditorInformationResearchService;
 
 
     // Ajouter d'autres VectorStore mémoire ici si besoin
@@ -478,6 +484,15 @@ export class ServiceContainer {
             // Argument 4: YamlService specifically for ReplacementSpecs
             new YamlService<ReplacementSpecs>(ReplacementSpecsSchema, 'Invalid AI Speaker Replacement Specs YAML'),
             this.transcriptFileService, // Argument 5: transcriptFileService
+        );
+        
+        // Information Research Services
+        this.informationResearchService = new InformationResearchService(this.aiCompletionService);
+        this.editorInformationResearchService = new EditorInformationResearchService(
+            this.app,
+            settings,
+            this.documentStructureService,
+            this.informationResearchService
         );
     }
 

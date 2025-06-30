@@ -112,3 +112,8 @@ export interface VocabularySpecsFile {
     file: string;
     voc: VocabularySpecs;
 }
+
+export interface InformationResearchDTO {
+    question: string;
+    filePaths: string[];
+}

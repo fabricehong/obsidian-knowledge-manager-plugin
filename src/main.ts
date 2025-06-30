@@ -618,6 +618,23 @@ export default class KnowledgeManagerPlugin extends Plugin {
 				new QuickLLMConfigModal(this.app, this).open();
 			}
 		});
+
+		// Information Research command
+		this.addCommand({
+			id: 'information-research:linked-files',
+			name: 'Information Research',
+			checkCallback: (checking: boolean) => {
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView) {
+					if (!checking) {
+						this.serviceContainer.editorInformationResearchService
+							.processInformationResearch(markdownView);
+					}
+					return true;
+				}
+				return false;
+			}
+		});
 	}
 
 
