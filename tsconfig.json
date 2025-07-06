@@ -7,7 +7,7 @@
     "target": "ES6",
     "allowJs": true,
     "noImplicitAny": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "importHelpers": true,
     "isolatedModules": true,
     "strictNullChecks": true,
@@ -16,7 +16,8 @@
       "DOM",
       "ES5",
       "ES6",
-      "ES7"
+      "ES7",
+      "ESNext"
     ],
     "paths": {
       "@obsidian-utils/*": ["libs/obsidian-utils/src/*"]

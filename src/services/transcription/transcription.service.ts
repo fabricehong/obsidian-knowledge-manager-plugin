@@ -18,7 +18,13 @@ export class TranscriptionService {
 
     private async readFileAsArrayBuffer(filePath: string): Promise<ArrayBuffer> {
         const fileBuffer = await fs.readFile(filePath);
-        return fileBuffer.buffer;
+        const buffer = fileBuffer.buffer;
+        if (buffer instanceof ArrayBuffer) {
+            return buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength);
+        } else {
+            // Convert SharedArrayBuffer to ArrayBuffer
+            return new ArrayBuffer(fileBuffer.byteLength);
+        }
     }
 
     private formatTranscriptContent(transcript: any, transcriptHeader: string): string {

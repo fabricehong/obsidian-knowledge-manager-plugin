@@ -142,6 +142,42 @@ export class EditorTranscriptionReplacementService {
 - **Focus**: Primarily test pure business logic services (non-editor services)
 - **Structure**: Tests follow Jest patterns with describe/it blocks
 
+## MCP (Model Context Protocol) Integration
+
+The plugin includes a **separate MCP server** (`mcp-server/`) that exposes semantic search functionality via the Model Context Protocol. This allows external tools like Claude Code CLI to access the plugin's semantic search capabilities.
+
+### MCP Architecture
+
+**Two-tier architecture**:
+1. **Plugin REST API** (`src/services/api/`): HTTP server running within the Obsidian plugin
+2. **MCP Server** (`mcp-server/`): Standalone Node.js application that communicates with the plugin's REST API
+
+### MCP Server Commands
+
+In the `mcp-server/` directory:
+- `npm run build` - Build the MCP server
+- `npm run start` - Start the MCP server (after building)
+- `npm run dev` - Build and start in one command
+- `npm run inspect` - Debug the MCP server with the MCP inspector tool
+
+### Plugin API Server Commands
+
+Within Obsidian:
+- `semantic:start-api-server` - Start the HTTP API server in the plugin
+- `semantic:stop-api-server` - Stop the HTTP API server
+- Status bar shows API server state (green dot when running)
+
+### Integration Flow
+
+1. Start the plugin's API server using `semantic:start-api-server`
+2. Build and start the MCP server with `npm run dev` in `mcp-server/`
+3. The MCP server connects to the plugin's REST API on `http://localhost:3000`
+4. External tools can use the MCP server to access semantic search via `semantic_search` tool
+
+### MCP Server Configuration
+
+The MCP server must be configured in Claude Code CLI's settings to enable the semantic search tool. The server runs on stdio transport and provides the `semantic_search` tool for querying the Obsidian knowledge base.
+
 ## Important Notes
 
 - Vector stores require async initialization via `ServiceContainer.create()`
@@ -149,3 +185,4 @@ export class EditorTranscriptionReplacementService {
 - Submodules need separate dependency installation for development
 - Chat service requires OpenAI API key for initialization
 - Always create pure business logic services for complex operations to enable unit testing
+- **MCP Integration**: The plugin's API server must be running before starting the MCP server

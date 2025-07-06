@@ -319,6 +319,8 @@ export class ServiceContainer {
             true
         );
 
+        this.replacementSpecsIntegrationService = new ReplacementSpecsIntegrationService();
+
         this.editorReplacementSpecsIntegrationService = new EditorReplacementSpecsIntegrationService(
             this.app,
             this.yamlReplacementService,

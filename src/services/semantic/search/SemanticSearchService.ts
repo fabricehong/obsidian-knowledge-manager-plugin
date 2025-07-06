@@ -2,8 +2,15 @@ import { VectorStore } from '../vector-store/VectorStore';
 import { Chunk } from '../../../models/chunk';
 
 export interface SearchResult {
-  chunk: Chunk;
+  chunk: {id?: string, pageContent?: string, metadata?: ChunkMetadata}; // Le chunk trouvé, avec ses métadonnées
   score: number;
+}
+
+export interface ChunkMetadata {
+    collection: string; // Nom de la collection/namespace
+    filepath?: string; // Chemin du fichier source (si applicable)
+    header?: string; // Header du chunk (si applicable)
+    order?: number; // Ordre du chunk dans le fichier (si applicable)
 }
 
 /**
@@ -26,11 +33,7 @@ export class SemanticSearchService {
 
   async search(query: string, topK: number, collection: string): Promise<SearchResult[]> {
     // Recherche via le vector store
-    const results: any[] = await this.vectorStore.search(query, topK, collection);
-    // Adapter le format si nécessaire (si déjà SearchResult, retourne tel quel)
-    if (results.length && results[0].chunk && typeof results[0].score === 'number') {
-      return results as SearchResult[];
-    }
-    return results.map((r: any) => ({ chunk: r.metadata as Chunk, score: r.score }));
+    const results: SearchResult[] = await this.vectorStore.search(query, topK, collection);
+    return results;
   }
 }

@@ -3,6 +3,7 @@
  * Permet d'indexer des objets (chunk + texte indexable) par batch.
  */
 import { Chunk } from "../../../models/chunk";
+import { SearchResult } from "../search/SemanticSearchService";
 
 
 export interface IndexableChunk {
@@ -29,7 +30,7 @@ export interface VectorStore {
   /**
    * Recherche sémantique dans le vector store/collection
    */
-  search(query: string, topK: number, collection: string): Promise<any[]>;
+  search(query: string, topK: number, collection: string): Promise<SearchResult[]>;
 
   /**
    * Retourne tous les documents du vector store, ou uniquement ceux d'une collection si précisé.

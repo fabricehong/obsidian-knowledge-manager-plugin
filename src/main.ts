@@ -10,6 +10,9 @@ import { TranscriptionModal } from './services/transcription/transcription-modal
 import { QuickLLMConfigModal } from './ui/quick-llm-config.modal';
 
 import { PromptModal } from './services/semantic/ui/PromptModal';
+import { ApiStatusBar } from './ui/mcp-status-bar';
+import { SemanticSearchApiService } from './services/api/semantic-search-api.service';
+import { HttpServerService } from './services/api/http-server.service';
 
 // Génère un header markdown détaillé pour tout vector store (type, modèle, etc)
 
@@ -98,6 +101,9 @@ export default class KnowledgeManagerPlugin extends Plugin {
 	settings: PluginSettings;
 	private serviceContainer: ServiceContainer;
 	private statusBarItem: HTMLElement;
+	private apiStatusBar: ApiStatusBar;
+	private semanticSearchApiService: SemanticSearchApiService;
+	private httpServerService: HttpServerService;
 
 	async onload() {
         this.activeChatPanels = new Set<EditorChatPanel>();
@@ -216,7 +222,33 @@ export default class KnowledgeManagerPlugin extends Plugin {
 
 		// Ajout de la barre de statut
 		this.statusBarItem = this.addStatusBarItem();
-		this.statusBarItem.style.display = 'none';
+		
+		// Initialisation des services API
+		this.semanticSearchApiService = new SemanticSearchApiService(this.serviceContainer.chatSemanticSearchService);
+		this.httpServerService = new HttpServerService(this.semanticSearchApiService);
+		
+		// Initialisation du status bar API
+		this.apiStatusBar = new ApiStatusBar(this.statusBarItem);
+		this.apiStatusBar.setOnToggle(() => {
+			this.toggleApiServer();
+		});
+
+		// Commandes API
+		this.addCommand({
+			id: 'semantic:start-api-server',
+			name: 'semantic:start-api-server',
+			callback: () => {
+				this.startApiServer();
+			}
+		});
+
+		this.addCommand({
+			id: 'semantic:stop-api-server',
+			name: 'semantic:stop-api-server',
+			callback: () => {
+				this.stopApiServer();
+			}
+		});
 
 		// Register commands
 		this.addCommand({
@@ -827,6 +859,78 @@ export default class KnowledgeManagerPlugin extends Plugin {
 			new Notice('Tous les Vector Stores ont été réinitialisés.');
 		} else {
 			new Notice('Impossible de trouver les Vector Stores.');
+		}
+	}
+
+	/**
+	 * Démarre le serveur API
+	 */
+	private async startApiServer() {
+		if (this.httpServerService.isServerRunning()) {
+			new Notice('Semantic Search API is already running');
+			return;
+		}
+
+		try {
+			await this.httpServerService.start();
+			this.apiStatusBar.setServerRunning(true);
+			const serverUrl = this.httpServerService.getServerUrl();
+			new Notice(`Semantic Search API started successfully at ${serverUrl}`);
+			console.log(`[API] Semantic Search API started at ${serverUrl}`);
+			console.log(`[API] Available endpoints:`);
+			console.log(`[API] - POST ${serverUrl}/semantic-search`);
+			console.log(`[API] - GET ${serverUrl}/health`);
+
+		} catch (error) {
+			console.error('[API] Failed to start server:', error);
+			new Notice('Failed to start Semantic Search API: ' + (error instanceof Error ? error.message : 'Unknown error'));
+		}
+	}
+
+	/**
+	 * Arrête le serveur API
+	 */
+	private async stopApiServer() {
+		if (!this.httpServerService.isServerRunning()) {
+			new Notice('Semantic Search API is not running');
+			return;
+		}
+
+		try {
+			await this.httpServerService.stop();
+			this.apiStatusBar.setServerRunning(false);
+			new Notice('Semantic Search API stopped');
+			console.log('[API] Semantic Search API stopped');
+
+		} catch (error) {
+			console.error('[API] Failed to stop server:', error);
+			new Notice('Failed to stop Semantic Search API: ' + (error instanceof Error ? error.message : 'Unknown error'));
+		}
+	}
+
+	/**
+	 * Toggle du serveur API (utilisé par le status bar)
+	 */
+	private toggleApiServer() {
+		if (this.httpServerService.isServerRunning()) {
+			this.stopApiServer();
+		} else {
+			this.startApiServer();
+		}
+	}
+
+	/**
+	 * Nettoyage à la fermeture du plugin
+	 */
+	async onunload() {
+		// Arrêter le serveur API si il est en cours
+		if (this.httpServerService && this.httpServerService.isServerRunning()) {
+			await this.stopApiServer();
+		}
+		
+		// Nettoyer le status bar
+		if (this.apiStatusBar) {
+			this.apiStatusBar.destroy();
 		}
 	}
 }
