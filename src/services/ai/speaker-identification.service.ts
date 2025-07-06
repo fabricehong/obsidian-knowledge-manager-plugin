@@ -10,52 +10,48 @@ import { LangChainTracer } from "langchain/callbacks";
 
 
 export type FullSpeakerIdentificationOutput = {
-    exclusions: any; // Parsed JSON from exclusionsChain
-    hypotheses: any; // Parsed JSON from hypothesesChain
+    exclusions: z.infer<typeof ExclusionsSchema>; // Record<string, string[]>
+    hypotheses: z.infer<typeof HypothesesSchema>; // Record<string, Array<{nom: string, raison: string, score: number}>>
 };
 
 
 const exclusionsPromptText = `
 {format_instructions}
 
-STRUCTURE DU TRANSCRIPT : 
-Le transcript est délimité par les labels "Speaker X:" suivis du texte de ce speaker.
-Chaque nouveau "Speaker Y:" indique un changement de locuteur.
+CONTEXTE ET OBJECTIF :
+Tu analyses un transcript de réunion où les vrais noms des participants ont été remplacés par des labels anonymes ("Speaker A", "Speaker B", etc.). 
+Pour désanonymiser ce transcript, tu dois d'abord identifier qui chaque speaker NE PEUT PAS être, en analysant leur façon de s'adresser aux autres participants.
 
-EXEMPLE DE STRUCTURE :
-Speaker A:
-[Tout le texte ici appartient à Speaker A jusqu'au prochain label]
+TÂCHE :
+Pour chaque speaker, identifie tous les prénoms qu'il NE PEUT PAS être, basé sur ses propres paroles.
+La logique est simple : si quelqu'un s'adresse directement à une personne, il ne peut pas être cette personne.
 
-Speaker B:
-[Tout le texte ici appartient à Speaker B jusqu'au prochain label]
+EXEMPLES DE LOGIQUE CONVERSATIONNELLE :
 
-TÂCHE : Pour chaque speaker, liste UNIQUEMENT les prénoms qu'IL mentionne dans SES PROPRES paroles ET qui l'excluent.
+Speaker A dit : "Merci Paul pour ton aide"
+→ Speaker A s'adresse à Paul, donc Speaker A ≠ Paul
 
-RÈGLE SIMPLE : Un speaker ne peut PAS être quelqu'un à qui il s'adresse directement.
+Speaker B dit : "Paul, tu as raison. Marie, qu'en penses-tu ?"
+→ Speaker B s'adresse à Paul et Marie, donc Speaker B ≠ Paul ET Speaker B ≠ Marie
 
-EXEMPLES AVEC DÉLIMITATIONS :
-Speaker A:
-Merci Paul pour ton aide.
-→ Speaker A exclut "Paul"
+Speaker C dit : "Moi, Jean, je pense que c'est une bonne idée"
+→ Speaker C s'identifie comme Jean, donc AUCUNE exclusion (auto-identification)
 
-Speaker B:
-Paul, tu as raison. Je passe la parole à Marie.
-→ Speaker B exclut "Paul" ET "Marie"
+COMMENT PROCÉDER :
+1. Examine chaque intervention de speaker individuellement
+2. Identifie tous les prénoms auxquels ce speaker s'adresse directement
+3. Ces prénoms deviennent des exclusions pour ce speaker
+4. Ignore les auto-identifications ("Moi, X..." ou "Je suis X...")
 
-CONTRE-EXEMPLES (NE PAS EXCLURE) :
-Speaker A:
-Moi, Paul, je pense que...
-→ Speaker A ne s'exclut PAS "Paul" (auto-identification)
+Speakers à analyser : {all_speakers_list}
 
-MÉTHODE STRICTE :
-1. Identifie le bloc de texte de "Speaker A:" (jusqu'au prochain "Speaker X:")
-2. Dans CE BLOC UNIQUEMENT, cherche les prénoms auxquels Speaker A s'adresse
-3. Mets ces prénoms dans les exclusions de Speaker A
-4. Répète pour chaque speaker séparément
+IMPORTANT :
+• Analyse uniquement les propres paroles de chaque speaker
+• Base-toi sur la logique conversationnelle naturelle
+• Une personne ne peut pas s'adresser à elle-même dans une conversation
+• Génère des exclusions UNIQUEMENT pour les speakers listés ci-dessus
 
-CRUCIAL : Ne confonds jamais les paroles d'un speaker avec celles d'un autre. Chaque speaker a ses propres exclusions basées UNIQUEMENT sur SES paroles délimitées.
-
-Transcript :
+Transcript à analyser :
 """
 {transcript}
 """
@@ -63,26 +59,78 @@ Transcript :
 
 const hypothesesPromptText = `
 {format_instructions}
-Tu reçois le même transcript balisé (labels « Speaker X: »).
 
-Étape : générer des HYPOTHÈSES de prénom pour chaque label, avec une courte raison ET un score de probabilité.
-Indices possibles (liste non exhaustive) :
-• Le tour immédiatement précédent passe explicitement la parole à N  
-  (ex. « …la main, N »).  
-• Le tour immédiatement suivant commence par « Merci N ».  
-• Le locuteur se nomme lui-même « Moi, N, … ».  
-• Tout autre indice contextuel crédible.
+CONTEXTE ET OBJECTIF :
+Tu analyses un transcript de réunion où les vrais noms des participants ont été remplacés par des labels anonymes ("Speaker A", "Speaker B", etc.). 
+Ton objectif est de désanonymiser ce transcript en identifiant qui est réellement chaque speaker, en analysant les indices contextuels dans la conversation.
 
-Pour chaque hypothèse, attribue un score entre 0 et 1 :
-• 0.9-1.0 : Évidence très forte (auto-identification, passation directe)
-• 0.7-0.8 : Évidence forte (contexte très clair)
-• 0.5-0.6 : Évidence modérée (indices contextuels)
-• 0.3-0.4 : Évidence faible (supposition)
+TÂCHE :
+Pour chaque label de speaker, génère des hypothèses sur l'identité réelle de cette personne. 
+Chaque hypothèse doit inclure :
+• Le prénom candidat
+• Une explication claire de pourquoi ce prénom correspond à ce speaker
+• Un score de probabilité entre 0 et 1
 
-Ne crée jamais de prénom absent du transcript.  
-Ne renvoie **que** le JSON demandé.
+BONS INDICES - Exemples de vraies hypothèses :
 
-Transcript :
+• Passation directe : "Paul, à toi maintenant" → le speaker suivant = Paul
+  (Transition claire de parole vers une personne spécifique)
+
+• Remerciement pour intervention précédente : "Merci Marie pour cette explication" → speaker précédent = Marie
+  (Remerciement APRÈS une intervention suggère qui vient de parler)
+
+• Auto-identification explicite : "Moi, Jean, je pense que..." → ce speaker = Jean
+  (La personne se nomme directement)
+
+• Confirmation d'identité : "Oui, c'est bien moi, Sophie" → ce speaker = Sophie
+  (Validation explicite de son identité)
+
+MAUVAIS INDICES - Exemples de NON-hypothèses :
+
+• Simple mention : "J'ai discuté avec Thomas hier" → Speaker ≠ Thomas
+  (Parler DE quelqu'un n'indique pas qu'on EST cette personne)
+
+• Relation professionnelle : "Mon collègue Pierre m'a envoyé un mail" → Speaker ≠ Pierre
+  (Avoir une relation avec quelqu'un ne signifie pas être cette personne)
+
+• Action dirigée vers autrui : "Je vais voir Sophie à 15h" → Speaker ≠ Sophie
+  (Aller voir quelqu'un implique qu'on n'est pas cette personne)
+
+• Discussion sur absence : "Lucas n'est pas disponible" → Speaker ≠ Lucas
+  (Parler de l'absence de quelqu'un à la 3ème personne)
+
+RÈGLE FONDAMENTALE : 
+Une "relation" ou "mention" de quelqu'un N'EST PAS un indice d'identité.
+Seules les références DIRECTES (passation, remerciement, auto-identification) sont valides.
+
+IMPORTANT - Pas d'hypothèse forcée :
+• Il est PARFAITEMENT ACCEPTABLE qu'un speaker n'ait AUCUNE hypothèse
+• Si aucun indice valide n'existe pour un speaker, laisse sa liste vide : []
+• Mieux vaut AUCUNE hypothèse qu'une hypothèse faible basée sur de simples mentions
+• La qualité prime sur la quantité - ne force jamais d'hypothèses douteuses
+
+EXEMPLE DE RÉPONSE ACCEPTABLE :
+{{
+  "Speaker A": [{{"nom": "Paul", "raison": "...", "score": 0.9}}],
+  "Speaker B": [],  // Aucun indice valide trouvé
+  "Speaker C": [{{"nom": "Marie", "raison": "...", "score": 0.8}}]
+}}
+
+SCORES DE PROBABILITÉ :
+• 0.9-1.0 : Évidence très forte (auto-identification claire, passation directe explicite)
+• 0.7-0.8 : Évidence forte (contexte conversationnel très clair)
+• 0.5-0.6 : Évidence modérée (indices contextuels cohérents)
+• 0.3-0.4 : Évidence faible (supposition basée sur des indices faibles)
+
+Speakers à analyser : {all_speakers_list}
+
+IMPORTANT : 
+• Utilise uniquement les prénoms présents dans le transcript
+• Base-toi sur la logique conversationnelle naturelle
+• Chaque hypothèse doit avoir une justification claire
+• Génère des hypothèses UNIQUEMENT pour les speakers listés ci-dessus
+
+Transcript à analyser :
 """
 {transcript}
 """
@@ -128,12 +176,18 @@ export class SpeakerIdentificationService {
             .assign({
                 // Phase 1: Run exclusionsChain
                 exclusions_obj: RunnableSequence.from([
-                    (input: { transcript: string }) => ({ transcript: input.transcript }),
+                    (input: { transcript: string; all_speakers_list: string[] }) => ({ 
+                        transcript: input.transcript,
+                        all_speakers_list: input.all_speakers_list.join(", ")
+                    }),
                     exclusionsProcessingChain
                 ]),
                 // Phase 2: Run hypothesesChain
                 hypotheses_obj: RunnableSequence.from([
-                    (input: { transcript: string }) => ({ transcript: input.transcript }),
+                    (input: { transcript: string; all_speakers_list: string[] }) => ({ 
+                        transcript: input.transcript,
+                        all_speakers_list: input.all_speakers_list.join(", ")
+                    }),
                     hypothesesProcessingChain
                 ])
             })
